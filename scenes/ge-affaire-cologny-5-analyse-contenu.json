@@ -1,0 +1,163 @@
+{
+  "id": "ge-affaire-cologny-5-analyse-contenu",
+  "title": "Affaire Cologny #5 — Analyse du contenu enregistré",
+  "icon": "🎧",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Le tri médical/familial/politique est exécuté par l'expert indépendant, les segments politiques révèlent 3 mois d'enregistrements ciblés sur les Conseils administratifs et réunions stratégiques, les logs GPS confirment que le dispositif n'a jamais quitté le bureau. Une exfiltration vers une IP allemande est mise en évidence : transfert au MPC en réserve.",
+    "degraded": "Le tri est partiel, certains segments restent ambigus médical/politique, l'analyse est ralentie mais avance.",
+    "failure": "Un segment couvert par le secret médical est analysé sans tri préalable, la défense plaide la nullité de toute l'analyse de contenu."
+  },
+  "tags": [
+    "DFIR",
+    "ANALYSE AUDIO",
+    "OPUS",
+    "GPS LOGS",
+    "EXFILTRATION",
+    "MPC",
+    "GENÈVE"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 246 CPP",
+      "title": "Perquisition supports de données — exécution sur image acquise scène 4"
+    },
+    {
+      "label": "Art. 264 al. 1 let. c CPP",
+      "title": "Documents protégés par le secret professionnel (médical art. 321 CP)"
+    },
+    {
+      "label": "Art. 248a CPP",
+      "title": "Procédure de tri par expert indépendant"
+    },
+    {
+      "label": "Art. 24 CPP",
+      "title": "Compétence MPC — déclenchement par exfiltration vers acteur étranger (art. 272 CP)"
+    },
+    {
+      "label": "Art. 272 CP",
+      "title": "Service de renseignements politiques — éléments constitutifs"
+    },
+    {
+      "label": "ATF 144 IV 74",
+      "title": "Tri par expert et secret professionnel — méthodologie validée"
+    }
+  ],
+  "intro": "<p>Mardi 14 avril 2026, 09h30. Treize jours après l'acquisition forensique. Beretta a consenti au protocole de pré-analyse structurelle (cf. scène 4). Sutter a produit en 4 jours un inventaire structurel complet : <strong>2'847 fichiers audio au format Opus/Ogg</strong> (codec libre, optimisé pour la voix, compression efficace), <strong>3 journaux d'éveil GPS</strong> au format texte, <strong>1 fichier de configuration</strong> chiffré (clé AES-128 dérivée du modèle SIM7000G — Sutter a trouvé la clé dans la datasheet d'application notes du fabricant). Les enregistrements couvrent la période <strong>1<sup>er</sup> janvier 2026 → 31 mars 2026</strong> (3 mois pleins), avec une densité variable : 14-22 fichiers/jour en semaine, 0-3 le week-end. Tailles individuelles : 800 KB à 5 MB par fichier, soit ~3 à 18 minutes par enregistrement.</p><p>L'analyse des <strong>logs GPS</strong> est particulièrement instructive (et licite à analyser puisque ce ne sont pas des contenus de conversation). Le dispositif n'a jamais quitté un cercle de 7 mètres autour des coordonnées (46.2204° N, 6.1739° E) = mairie de Cologny, route de la Capite 2A. Les éveils GPS coïncident systématiquement avec les éveils audio (corrélation 99.4%), suggérant que le dispositif s'allumait par <strong>détection de voix (VOX)</strong> et calculait sa position pendant les enregistrements pour confirmer la localisation à un destinataire.</p><p>Le fichier de <strong>configuration</strong>, déchiffré, contient le numéro APN du MVNO de la carte SIM (« mucho-data ») et — élément crucial — une <strong>adresse IP de destination C2</strong> : <code>185.220.101.42:8443</code> avec un certificat TLS dont le SHA-1 est dans le fichier. Première vérification : cette IP géolocalisée Allemagne (Munich), hébergement IPHM (Inter Hosting Munich GmbH), ce qui ne dit rien sur le commanditaire réel mais ouvre l'hypothèse exfiltration intercantonale ou internationale.</p><p>L'audience de levée des scellés est aujourd'hui à 14h. Sutter doit présenter sa proposition de tri par catégories. Vous (Pasche) et Cottier (procureure MP-GE désormais en charge formelle) êtes présents.</p>",
+  "alertLevel": "🎧 ANALYSE CONTENU · 2847 FICHIERS AUDIO · IP C2 ALLEMAGNE DÉTECTÉE · Réserve 272 CP activée · MPC à informer",
+  "objectives": [
+    "Valider à l'audience la méthodologie de tri par catégories proposée par Sutter",
+    "Analyser les logs GPS et le fichier de configuration (licite, pas couvert par scellement)",
+    "Évaluer la dimension extra-cantonale via l'IP de destination",
+    "Décider du timing d'information du MPC sans déclencher prématurément un transfert"
+  ],
+  "debrief": "<p><strong>Codec Opus</strong> (RFC 6716) : codec audio libre, conçu en 2012 par Xiph.Org et IETF. Très utilisé pour la voix (WhatsApp, Discord, Signal) et le streaming. Optimisé pour faible débit (6 kbit/s peut être lisible pour la voix) et faible latence. <strong>Conséquence forensique</strong> : un fichier .opus de quelques centaines de KB peut contenir 10-30 minutes d'audio intelligible. Décodage : <code>opusdec</code>, <code>ffmpeg</code>, bibliothèques natives sur tous OS. Pas de chiffrement côté codec — le contenu est donc directement écoutable.</p><p><strong>Logs GPS d'un dispositif de tracking</strong> : généralement format NMEA-0183 (texte) ou propriétaire compact. NMEA contient $GPGGA (fix position), $GPRMC (recommended minimum), $GPGSA (satellites utilisés). Pour un dispositif en intérieur (bureau), le signal GPS est faible (atténuation par les murs) — le dispositif utilisera typiquement l'<strong>AGPS</strong> (Assisted GPS) avec aide du modem GSM, ou le calcul de position par <strong>cellule GSM</strong> (moins précis, ~100-500m). Dans le cas Cologny, la stabilité de la position dans un rayon de 7m suggère soit un signal GPS exceptionnel (fenêtre proche), soit l'utilisation de WiFi-positioning (BSSID des points d'accès environnants envoyés à Google Maps Geolocation API ou équivalent).</p><p><strong>Détection VOX</strong> (Voice Operated eXchange) : technique d'enregistrement déclenché par seuil de niveau sonore. Le dispositif est en veille profonde (consommation ~50 µA), un seuil dépassé (parole détectée) déclenche l'enregistrement, qui s'arrête après N secondes de silence. <strong>Conséquence économique</strong> : la batterie LiPo 850 mAh peut tenir 3-6 mois en VOX, contre 5-15 jours en enregistrement continu. C'est cohérent avec la période couverte (3 mois pleins jusqu'à découverte).</p><p><strong>IP C2 et géolocalisation</strong> : 185.220.x.x est un range hébergement allemand IPHM, fournisseur Hetzner-adjacent. Pour identifier le réel destinataire (qui contrôle l'IP), il faut une <strong>demande d'identification du locataire</strong> via entraide UE (Allemagne réactive : 4-12 semaines). L'hébergeur peut être de bonne foi (loue à un client qui paie en crypto, ne sait rien) ou complice. <strong>Réflexes BCFI</strong> : vérifier d'abord si l'IP est connue de Threat Intel (MISP, AbuseIPDB, registre de l'OFCS/NCSC) — une IP déjà associée à des campagnes d'espionnage économique change radicalement la donne.</p>",
+  "steps": [
+    {
+      "phase": "🏛️ 14h00 — Audience de levée des scellés (TMC Genève)",
+      "situation": "Devant Mme Vaucher : vous (Pasche), Genoud, Sutter, Cottier, Beretta, von Steiger. Sutter présente sa méthodologie de tri sur les 2847 fichiers : (1) <strong>tri par GPS</strong> = tous les fichiers sont dans le bureau communal, donc aucun n'est exclu géographiquement. (2) <strong>Tri temporel</strong> = recoupement avec l'agenda du Maire (transmis volontairement par von Steiger via Beretta) : fichiers correspondant aux créneaux « Conseil administratif », « Réunion technique », « Audience publique » = présumés politiques. Fichiers correspondant à « Consultation médicale » (von Steiger a tenu 3 demi-journées de consultation en mars dans son cabinet à Veyrier, hors mairie, mais il a pu prendre des appels de patients dans son bureau communal) = présumés médicaux, scellés permanents. (3) <strong>Tri par locuteur</strong> = analyse vocale rapide (sans transcription) pour identifier la présence de la voix du Maire vs voix de tiers non identifiés.<br>Beretta accepte la méthodologie. Mme Vaucher la valide formellement.",
+      "law": "<strong>Art. 248a CPP</strong> — Procédure de levée par TMC, méthodologie de tri validée en audience.<br><strong>Art. 264 al. 1 let. c CPP</strong> — Documents médicaux exclus du tri politique.<br><strong>ATF 144 IV 74</strong> — Validation d'une méthodologie de tri par expert indépendant.",
+      "question": "<strong>Quel élément de la méthodologie est le plus crucial pour la suite de l'enquête ?</strong>",
+      "choices": [
+        {
+          "text": "Le recoupement temporel avec l'agenda du Maire (transmis volontairement) — il permet de prouver, fichier par fichier, le contexte de l'enregistrement, et donc d'établir le caractère politique (Conseil administratif, négociations) vs personnel (appels, conversations privées). Sans ce recoupement, chaque fichier serait isolé et le tri serait arbitraire.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ COMPRÉHENSION FINE DE LA PROCÉDURE. (1) Le tri par GPS seul ne suffit pas (tous les fichiers viennent du bureau). (2) Le tri par locuteur identifie qui parle mais pas <em>de quoi</em>. (3) <strong>Le recoupement temporel avec l'agenda</strong> = élément contextuel décisif. Un enregistrement à 14h-16h le 12 février peut être un Conseil administratif (donc clairement politique, levée des scellés justifiée) ou un appel personnel à la famille (clairement protégé). L'agenda volontairement transmis par von Steiger est <em>l'élément qui rend le tri non arbitraire</em>. (4) Cette transmission volontaire est aussi un acte de coopération de la victime qui renforce sa crédibilité au procès. (5) Sans recoupement temporel, on serait obligés d'écouter chaque fichier pour le classifier, ce qui violerait précisément le scellement.",
+          "legal": "Art. 248a CPP + ATF 144 IV 74 — Méthodologie de tri éclairée par contexte.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Le tri par locuteur — c'est lui qui distinguera les conversations professionnelles du Maire (politiques) des conversations privées avec sa famille ou ses patients.",
+          "ok": false,
+          "pts": 5,
+          "fb": "Réponse partielle. Le tri par locuteur identifie <em>qui</em> parle (Maire, conseillers, employés, tiers), pas <em>de quoi</em> il est question. Un appel d'un conseiller administratif peut être politique (sujet de la commune) ou personnel (anniversaire d'un proche). L'élément <strong>décisif</strong> est le contexte temporel via l'agenda, qui donne le <em>thème prévu</em> au moment de l'enregistrement. Le tri par locuteur est utile en complément, pas en élément central. Ne le minimisez pas non plus : combiné à l'agenda, il permet d'écarter rapidement les fichiers où aucune voix connue n'apparaît (probable enregistrement parasite VOX déclenché par bruit ambiant non humain).",
+          "legal": "Art. 248a CPP — Méthodologie hiérarchisée.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Le tri par GPS — il prouve que tous les enregistrements ont bien été faits depuis le bureau du Maire, ce qui est l'élément constitutif essentiel du délit d'écoute.",
+          "ok": false,
+          "pts": 0,
+          "fb": "Vrai mais hors sujet. Le tri par GPS confirme la <strong>localisation</strong> (élément déjà connu : le dispositif n'a pas bougé), pas la <strong>nature</strong> des conversations enregistrées. Or la question du tri art. 264 CPP concerne précisément la nature (politique vs médicale vs personnelle privée). Le GPS est de l'<em>environnement</em> de l'enregistrement, pas de son <em>contenu</em>. C'est utile pour le fond du dossier (prouver l'élément constitutif géographique du délit) mais pas pour la procédure de tri elle-même. Vous confondez deux questions distinctes : <em>où</em> a-t-on enregistré (constitutif du délit) vs <em>quoi</em> a-t-on enregistré (tri art. 264).",
+          "legal": "Art. 248a CPP — Confusion entre éléments du délit et procédure de tri.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🌐 16h30 — Analyse de l'exfiltration C2",
+      "situation": "Sutter a démarré le tri sur image_travail. Pendant ce temps, Genoud a analysé en parallèle le fichier de configuration (licite car techniquement infrastructure du dispositif, pas contenu conversationnel) et identifié l'IP C2 <code>185.220.101.42:8443</code>. Premier réflexe BCFI : vérification dans le registre interne et chez le NCSC (centre fédéral). Le NCSC répond en 1h17 : <strong>IP signalée le 17 janvier 2026 dans le cadre d'une campagne d'espionnage économique attribuée provisoirement (confiance moyenne) au groupe APT-29 (Cozy Bear, services russes SVR)</strong>. La même IP a été identifiée comme C2 d'un implant détecté chez une PME genevoise du secteur biotech.<br>Cette information change tout. Vous appelez Cottier et lui transmettez. Cottier vous demande : « Pasche, si APT-29 est confirmé, on bascule sur 272 CP, c'est compétence MPC. Mais avant de basculer, je veux votre avis : est-ce qu'on a assez d'éléments pour le transfert ? »",
+      "law": "<strong>Art. 272 CP</strong> — Service de renseignements politiques (intérêt étranger + service organisé contre la Suisse).<br><strong>Art. 24 CPP</strong> — For en matière de compétence fédérale.<br><strong>Art. 26 CPP</strong> — Compétences concurrentes — règles de coordination.<br><strong>Art. 27 CPP</strong> — Détermination du for en cas de doute.",
+      "question": "<strong>Que répondez-vous à Cottier sur le transfert au MPC ?</strong>",
+      "choices": [
+        {
+          "text": "« Pas encore. L'attribution NCSC est en confiance <em>moyenne</em>, ce qui est insuffisant pour 272 CP au sens probatoire. Je propose : <strong>(a)</strong> demande d'entraide UE urgente à Allemagne pour identification du locataire de l'IP, <strong>(b)</strong> demande au NCSC d'élever sa confiance d'attribution (analyse complémentaire), <strong>(c)</strong> entre-temps, contact informel avec Me Reto Flach (MPC) pour le pré-informer sans transmettre formellement. Si confiance haute confirmée + entraide DE confirme un C&C de l'APT-29, on transmet. »",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ ANALYSE NUANCÉE ET PROCÉDURALEMENT EXEMPLAIRE. (1) <strong>Pas de transfert prématuré</strong> = le standard probatoire de 272 CP est exigeant (le MPC refusera s'il manque la dimension étrangère démontrée). (2) <strong>Demandes parallèles UE + NCSC</strong> = vous renforcez la base avant de basculer. (3) <strong>Pré-information informelle Me Flach</strong> = pratique éprouvée : Flach peut conseiller sur le seuil probatoire qu'il accepterait, vous gagnez du temps quand le transfert se fera. (4) Cottier garde la maîtrise opérationnelle tant que la compétence n'est pas formellement transférée. (5) Cette approche minimise les risques procéduraux : si vous transmettez trop tôt et que le MPC refuse, vous perdez du temps. Si vous transmettez trop tard et que la défense découvre que vous saviez, vous risquez la nullité.",
+          "legal": "Art. 24 + 27 CPP + Pratique MPC — Transfert sur seuil probatoire suffisant.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« Oui, transmission immédiate. Une IP attribuée à APT-29 + une cible politique (Maire élu) = 272 CP de toute évidence, le MPC est compétent. »",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Précipitation procédurale. (1) « Confiance moyenne » NCSC = pas une certitude, et le MPC fonctionne avec des standards probatoires exigeants. (2) Un Maire de commune (5'500 habitants) <em>n'est pas</em> automatiquement une cible d'espionnage politique d'État étranger — il faudrait démontrer un lien avec des intérêts stratégiques nationaux. Cologny abrite des résidents fortunés et l'École Internationale, mais le Maire en tant qu'élu communal n'a pas un accès direct à des dossiers fédéraux. (3) Si le MPC refuse le transfert au motif « éléments constitutifs 272 insuffisants », vous perdez 3-6 semaines et la défense plaide la confusion procédurale. (4) <strong>Le MPC apprécie qu'on lui transmette des dossiers solides, pas des hypothèses</strong>. Mieux vaut un transfert tardif et certain qu'un transfert précoce et fragile.",
+          "legal": "Art. 24 CPP + Pratique MPC — Seuil probatoire insuffisant pour transfert formel.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« Je propose de mener nous-mêmes l'entraide avec l'Allemagne et de garder le dossier en cantonal. Si on identifie le commanditaire et que c'est un Suisse, 272 ne sera pas applicable et on évite la complexité MPC. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Rétention de compétence problématique. (1) L'art. 24 CPP impose le transfert dès que les éléments constitutifs sont réunis — vous ne pouvez pas <em>garder</em> un dossier pour des raisons opérationnelles. Si l'attribution APT-29 se confirme, le transfert est obligatoire, pas optionnel. (2) Mener l'entraide Allemagne en autonomie cantonale est légalement possible mais risqué : le MPC découvrira l'enquête plus tard et pourrait contester les actes effectués sans coordination fédérale. (3) La défense, en cas de procès, plaidera que les autorités cantonales ont volontairement retardé la transmission pour échapper à la procédure fédérale — vice procédural sérieux. (4) Le bon réflexe est <strong>transparence avec le MPC dès qu'un soupçon de compétence fédérale apparaît</strong>, quitte à coordonner les actes ensemble.",
+          "legal": "Art. 24 + 26 CPP — Obligation de transfert.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📞 17h30 — Premier appel à Me Reto Flach (MPC)",
+      "situation": "Cottier valide votre approche. Vous appelez Me Reto Flach (MPC, division secret professionnel et confidentialité — il a déjà coordonné avec la BCFI dans le passé). Vous lui exposez en 15 minutes : (1) découverte du dispositif, (2) qualification 179bis + 179ter, (3) acquisition forensique conforme, (4) début de tri par expert indépendant, (5) découverte IP C2 attribuée APT-29 par NCSC confiance moyenne. Flach écoute attentivement et conclut : « Pasche, je vous remercie de l'information. Trois choses : <strong>(a)</strong> envoyez-moi par voie sécurisée le rapport NCSC et l'analyse de la config, je le fais analyser par notre cellule SVR/APT, <strong>(b)</strong> je vous mets en contact avec mon collègue Stephan Walder qui coordonne l'entraide DE, il connait IPHM, <strong>(c)</strong> tant que la confiance d'attribution reste à 'moyenne', le dossier reste à Cottier — mais préparez le transfert administratif : noms des actes pris, mandats, scellés, pour qu'on puisse basculer en 48h si nécessaire. » Vous notez tout.",
+      "law": "<strong>Art. 26 al. 2 CPP</strong> — Compétences concurrentes — coordination avec MPC.<br><strong>Art. 64-90 EIMP</strong> — Entraide judiciaire internationale.<br><strong>Convention de Budapest sur la cybercriminalité (CETS 185)</strong> — Coopération internationale en cyber.",
+      "question": "<strong>Pour transmettre par voie sécurisée le rapport NCSC à Me Flach (MPC), quel canal utilisez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Le système IncaMail (Poste suisse, certifié pour la correspondance authentifiée des autorités fédérales et cantonales) ou, alternativement, la messagerie sécurisée justice-suisse.ch (sj-net) avec chiffrement bout-à-bout. Confirmation de réception manuelle par téléphone.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ CANAUX OFFICIELS APPROPRIÉS. (1) <strong>IncaMail</strong> = standard de la Confédération pour la correspondance entre autorités, valeur juridique d'envoi recommandé électronique, certificat fédéral. (2) <strong>sj-net (Justizia-Net)</strong> = réseau privé MPC/MP cantonaux, chiffrement bout-à-bout par certificats, recommandé pour les pièces de procédure. (3) <strong>Confirmation manuelle par téléphone</strong> = ceinture-bretelle : on confirme que la transmission est arrivée et que c'est le bon document, élimine le risque de phishing par redirection. (4) Ces canaux sont conformes aux exigences de la Loi sur la protection des données (LPD révisée) et aux directives MPC sur la communication procédurale.",
+          "legal": "LPD + Directives MPC/CCDJP — Canaux officiels respectés.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Email standard avec un fichier ZIP protégé par mot de passe communiqué séparément par SMS.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Niveau de sécurité insuffisant. (1) Email standard = transmission en clair entre serveurs, lisible par les administrateurs des fournisseurs intermédiaires. (2) ZIP protégé par mot de passe = chiffrement faible (AES-128 best case, mais bruteforce par dictionnaire en quelques heures). (3) SMS pour le mot de passe = canal non chiffré, interceptable par opérateur. (4) Ce schéma était acceptable en 2005, plus en 2026. Pour un rapport NCSC contenant des éléments d'attribution APT (informations classifiées partagées), c'est une violation des directives de classification. (5) Les canaux officiels (IncaMail, sj-net) sont précisément conçus pour éviter ces compromis.",
+          "legal": "LPD + Directives MPC — Niveau insuffisant pour pièces sensibles.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Transmission physique : graver le rapport sur un DVD, mettre sous scellé, envoyer par courrier interne MPC avec accusé de réception.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Démarche méticuleuse mais inadaptée à la situation. (1) Transmission physique = 1 à 3 jours selon les services postaux internes, alors que la situation demande une réactivité en heures. (2) Si Flach veut analyser le rapport avant le week-end (nous sommes mardi), un DVD par courrier risque d'arriver vendredi ou lundi. (3) Pour un rapport <em>classifié</em> ou <em>top secret</em>, la transmission physique se justifierait, mais un rapport NCSC d'attribution APT-29 est <em>diffusion restreinte</em> (TLP:AMBER probablement), parfaitement transmissible via IncaMail/sj-net. (4) Vous compliquez inutilement la coordination MPC, ce qui à terme nuit à la fluidité du dossier.",
+          "legal": "Directives MPC — Sur-classification non justifiée.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

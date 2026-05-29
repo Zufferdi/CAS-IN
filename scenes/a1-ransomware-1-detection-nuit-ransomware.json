@@ -1,0 +1,146 @@
+{
+  "id": "a1-ransomware-1-detection-nuit-ransomware",
+  "title": "Ransomware HRHP #1 — La nuit du 21 août",
+  "icon": "🚨",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Morard pilote la détection initiale avec méthode, contient la propagation, et active la cellule de crise dans les délais critiques.",
+    "degraded": "Détection correcte mais Morard tarde sur une étape technique qui permet une propagation supplémentaire pendant ~45 minutes."
+  },
+  "tags": [
+    "HRHP",
+    "CISO",
+    "RANSOMWARE",
+    "DÉTECTION",
+    "ISOLATION",
+    "PCA",
+    "CELLULE DE CRISE",
+    "PLAN DE CONTINUITÉ"
+  ],
+  "legalRefs": [
+    {"label": "LSki + Plan SKI niveau 3 santé", "title": "Obligations opérateur infrastructure critique santé"},
+    {"label": "Art. 24-25 LPMéd", "title": "Continuité des soins et responsabilité"},
+    {"label": "LDEP (Loi sur le dossier électronique du patient)", "title": "Protection des données patient"},
+    {"label": "Art. 24 LPD (révisée 2023)", "title": "Annonce des violations de sécurité des données"},
+    {"label": "IEC 80001-1 + ISO 27001", "title": "Gestion des risques réseaux médicaux"},
+    {"label": "NCSC-CH Notification obligatoire (LCyS)", "title": "Loi cybersécurité fédérale + obligation de signalement"},
+    {"label": "Pratique H+ Suisse — PCA hospitalier", "title": "Standards de continuité d'activité"}
+  ],
+  "intro": "<p>Vendredi 21 août 2026, 02h47. Vous êtes <strong>Mme Laetitia Morard</strong>, 44 ans, CISO de l'<strong>Hôpital Régional du Haut-Plateau (HRHP)</strong> — opérateur fictif de soins de proximité créé en 2014 par fusion de 3 établissements VS (Sierre, Crans-Montana, Loèche). ~340 lits, 1'100 employés, ~270'000 patients/an, opérateur SKI niveau 3 santé. Vous habitez Sierre, à 12 minutes en voiture du site principal.</p><p>Votre téléphone vibre. C'est <strong>Bruno Schmid</strong>, ingénieur d'astreinte SOC niveau 2 (jour de garde du 21-23 août) : <em>« Laetitia, on a des alertes IDS sévères en cascade depuis 02h40. Mouvements latéraux suspects, exfiltration commencée vers une IP externe russe, et il y a 3 minutes le service imagerie a perdu l'accès aux IRM. J'ai du mal à respirer — je crois qu'on est sous ransomware. Tu peux venir au siège ? »</em></p><p>Vous êtes au siège HRHP (Sierre, Rte de la Plaine) à 03h08. SOC déjà mobilisé : Schmid + <strong>Diego Müller</strong> (ingénieur SOC niveau 3, arrivé en urgence). Tableau de bord SIEM : 47 alertes IDS rouges en 18 minutes, escalation immédiate. Vous prenez l'analyse :</p><p><strong>(1) Vecteur d'entrée probable</strong> : email phishing 19 août adressé à un médecin radiologue (Dr Karen Vergères, service imagerie), pièce jointe Excel malveillante avec macros (lookalike facture Swissmedic). Activation discrète, persistance 48h dormant. Activation effective 02h36 le 21 août.</p><p><strong>(2) Propagation latérale</strong> : depuis le poste Vergères (réseau imagerie connexe au SIH — Système d'Information Hospitalier), utilisation de credentials d'administrateur récupérés via dumping LSASS. Mouvement vers serveur Active Directory à 02h44. Compromise AD à 02h51. Diffusion via GPO et tâches planifiées dès 02h53.</p><p><strong>(3) Chiffrement actif</strong> : signature compatible avec famille <strong>Akira variant 2026-Q2</strong> (RaaS active en Europe, plusieurs cibles santé NL/DE/CH 2025-2026). Extension .akira sur fichiers chiffrés. Note de rançon déposée dans ~/Desktop des postes touchés : <em>« HRHP, you are encrypted. 4.7 TB exfiltrated. Pay 8.5 BTC within 96 hours or data published on our leak site + further damage. »</em>.</p><p><strong>(4) Services affectés au 03h08</strong> : (a) <em>Imagerie</em> — IRM, scanner CT, radiologie : ENTIÈREMENT CHIFFRÉS, équipements non opérationnels, (b) <em>Dossier patient électronique (DPE)</em> : INACCESSIBLE — chiffrement actif sur cluster de fichiers principal, (c) <em>Laboratoire</em> : ralenti, possiblement partiellement chiffré, (d) <em>Bloc opératoire</em> : monitoring patient encore opérationnel (réseau isolé OT), mais planification interventions inaccessible, (e) <em>Pharmacie</em> : système prescription chiffré, (f) <em>Système de paie + administratif</em> : chiffrés.</p>",
+  "alertLevel": "🚨 RANSOMWARE AKIRA · DPE INACCESSIBLE · IMAGERIE CHIFFRÉE · 4.7TB EXFILTRÉS · 8.5 BTC DEMANDÉS · DÉLAI 96H",
+  "objectives": [
+    "Isoler le réseau pour stopper la propagation latérale active",
+    "Activer la cellule de crise et le Plan de Continuité d'Activité (PCA)",
+    "Notifier OFCS + NCSC + autorités cantonales VS dans les délais légaux",
+    "Initier l'investigation forensique préliminaire en préservant les preuves"
+  ],
+  "debrief": "<p><strong>Akira — profil RaaS 2025-2026</strong> : Akira est apparu en mars 2023, opéré par un groupe russophone (vraisemblablement lié à des opérateurs ex-Conti après le démantèlement de ce dernier). Ciblage privilégié : santé, éducation, industrie de taille moyenne. Modèle économique double extorsion (chiffrement + exfiltration). En 2025-2026, Akira est devenu l'un des 3-4 RaaS les plus actifs en Europe avec ~340-400 victimes confirmées par an. Demandes typiques : 2-15 BTC pour les cibles moyennes (santé incluse). Site de fuite sur Tor : <em>« Akira leaks »</em>. Communication via négociateur dédié sur Tor.</p><p><strong>Étapes critiques première heure</strong> : la pratique établie (NIST SP 800-61 r2 + IRP H+ Suisse) impose 4 étapes dans la première heure : <strong>(I) Détection confirmée et qualification</strong> (~10-20 minutes — vous l'avez fait au SOC). <strong>(II) Isolation réseau immédiate</strong> pour stopper la propagation latérale — coupure des liens IT entre sous-réseaux, désactivation des comptes administrateurs compromis, déconnexion physique éventuelle de zones critiques. C'est l'action <em>la plus urgente</em>. <strong>(III) Notification cellule de crise interne</strong> — direction médicale, direction générale, communication, médecins-cadres. <strong>(IV) Notification externe légale</strong> — NCSC obligatoire (LCyS depuis avril 2025), OFCS si infrastructure critique, autorités cantonales VS, et possiblement PFPDT (art. 24 LPD si données patient exfiltrées). Délai NCSC : 24h depuis détection confirmée. Délai PFPDT : 72h art. 24 LPD.</p><p><strong>Plan de Continuité d'Activité (PCA) hospitalier — éléments clés</strong> : un PCA bien conçu prévoit : (a) <em>basculement papier</em> sur DPE — dossiers patient papier d'urgence à constituer pendant la durée de la crise, (b) <em>arbitrages médicaux</em> — interventions non urgentes reportées, urgences vitales seulement maintenues, transferts vers hôpitaux partenaires (CHUV, Hôpital du Valais Sion) pour interventions nécessitant imagerie/équipements indisponibles, (c) <em>communication transparente</em> patients/familles, (d) <em>continuité administrative</em> — paie, fournisseurs, gestion humaine. HRHP a un PCA documenté depuis 2022, testé annuellement (dernier exercice : mars 2026). Activation prévue par décision Directrice médicale + CISO conjoint.</p><p><strong>Risque vital pendant la crise</strong> : c'est le sujet le plus critique. L'imagerie inaccessible signifie : (a) pas d'IRM/CT pour les urgences neurologiques (AVC, traumatismes crâniens — fenêtre thrombolyse 4h30 critique pour AVC ischémique), (b) pas de radiologie cardiologique (urgences coronariennes), (c) pas de scanner thoracique (pneumonies sévères, embolies pulmonaires). <strong>Solution opérationnelle</strong> : transfert vers Hôpital du Valais Sion (40 km via route, ~35 min en ambulance médicalisée) pour tous les patients nécessitant imagerie. La Dr Zermatten (Directrice médicale) devra arbitrer en temps réel les transferts. <strong>Risque résiduel</strong> : pour les urgences vitales où le délai de transfert annule la fenêtre thérapeutique, l'issue peut être tragique. C'est précisément ce risque qui peut donner lieu à l'application future de l'art. 117 CP (homicide par négligence) envers les opérateurs du ransomware.</p>",
+  "steps": [
+    {
+      "phase": "🛑 03h15 — Isolation réseau immédiate",
+      "situation": "Avec Schmid et Müller au SOC, vous devez décider de l'isolation. Trois options techniques possibles : (α) Isolation logique via firewall — blocage des ports, désactivation des VLANs compromis, désactivation des comptes AD compromis. Préserve la connectivité IT pour le PCA. (β) Coupure physique de l'infrastructure réseau — débranchement physique des câbles aux switches principaux. Coupe tout, ralentit énormément la propagation. (γ) Approche segmentée — isolation logique des zones IT/administratives + coupure physique des zones cliniques critiques (imagerie, bloc, soins intensifs) qui sont déjà partiellement chiffrées.",
+      "law": "<strong>IEC 80001-1 + ISO 27001 + Pratique IRP H+ Suisse</strong>.<br><strong>LSki + Plan SKI niveau 3 santé</strong>.",
+      "question": "<strong>Quelle approche d'isolation retenez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(γ) Approche segmentée immédiate</strong>. (1) Coupure physique immédiate des liens entre zones cliniques critiques (imagerie, bloc opératoire, soins intensifs) et reste du réseau — Schmid et Müller passent physiquement aux salles techniques pour débrancher 4 liens fibre majeurs. Délai d'exécution : 8-12 minutes. (2) Isolation logique des zones administratives via firewall — blocage des ports inter-VLAN, désactivation des comptes administrateurs compromis (4 comptes identifiés via logs LSASS dump). (3) Maintien actif des réseaux OT médicaux isolés (monitoring patient en réanimation, alarmes biomédicales) qui sont déjà segmentés architecturalement et non touchés par le ransomware. (4) Investigation parallèle pour identifier l'étendue exacte de la compromission AD. Cette approche segmentée arrête la propagation tout en maintenant fonctionnels les systèmes vitaux non-affectés.",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ DÉCISION TECHNIQUE OPTIMALE. (1) <strong>« Coupure physique zones cliniques »</strong> = vous appliquez la règle d'or des incident responses ransomware en santé : <em>coupure physique des zones les plus critiques</em>, où chaque minute de propagation supplémentaire = risque vital. (2) <strong>« Isolation logique zones administratives »</strong> = vous différenciez par criticité. Les zones administratives peuvent attendre quelques minutes une isolation logique (qui préserve la capacité de gestion). (3) <strong>« Maintien réseaux OT isolés »</strong> = essentiel. Le monitoring patient en réa (capteurs cardiologie, ventilation, alarmes) doit rester opérationnel. La segmentation architecturale du réseau OT médical (selon IEC 80001-1) est précisément faite pour ces situations. (4) <strong>« Investigation parallèle AD »</strong> = vous ne perdez pas de temps à identifier la compromission complète. Vous savez l'AD est touché ; la question est l'étendue. À résoudre dans les heures qui viennent. (5) Schmid et Müller exécutent immédiatement la coupure physique. À 03h27, la propagation est stoppée.",
+          "legal": "IEC 80001-1 + Pratique IRP — Décision optimale.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>(α) Isolation logique seule</strong> via firewall, sans coupure physique. Préserve la connectivité IT, plus rapide à mettre en œuvre, plus simple à réverser.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Sous-isolation à un moment critique. (1) <strong>« Sans coupure physique »</strong> = vous comptez sur l'isolation logique seule. Or l'attaquant Akira contrôle déjà l'AD et plusieurs comptes administrateurs — il peut <em>contourner</em> les règles firewall via des vecteurs de persistance non identifiés. La coupure physique des zones cliniques est <em>la</em> garantie d'arrêt de la propagation. (2) <strong>« Plus rapide »</strong> = faux. L'isolation logique sur un AD compromis prend autant de temps que la coupure physique des câbles fibre principaux (8-12 minutes dans les deux cas). (3) <strong>Risque concret</strong> : pendant les 30-45 minutes où vous identifiez quelle isolation logique a fonctionné, la propagation peut atteindre les serveurs de pharmacie (déjà partiellement chiffrés selon le SOC) — plus de prescriptions possibles, vies en jeu. (4) <strong>« Plus simple à réverser »</strong> = considération secondaire. En crise ransomware mortelle, la <em>vitesse d'arrêt</em> prime sur la facilité de retour. La rébranchement physique prendra 2-3h après stabilisation — acceptable. (5) Schmid objecterait.",
+          "legal": "Pratique IRP — Sous-isolation.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>(β) Coupure physique totale</strong> de toute l'infrastructure réseau — débranchement de tous les liens majeurs, retour à un environnement papier complet pour toutes les activités hospitalières.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Sur-isolation paralysante. (1) <strong>« Coupure physique totale »</strong> = vous coupez aussi le monitoring patient en réanimation (réseau OT médical, déjà isolé architecturalement et non touché). Conséquence : alarmes biomédicales coupées, monitoring cardiaque interrompu, ventilation contrôlée à distance perdue. Vies en jeu IMMÉDIATEMENT pour les ~25 patients en soins intensifs/réa. (2) <strong>« Retour environnement papier »</strong> = noble en principe, mais : (a) il faudra 4-6h pour reconstituer le minimum de fonctionnement papier (impression manuelle de la liste des patients, des prescriptions en cours, etc.), (b) certaines activités sont <em>impossibles</em> en papier (IRM, dialyse contrôlée par PC, ventilation mécanique paramétrée), (c) le personnel n'est plus formé au flux papier complet (compétences perdues). (3) <strong>Risque vital</strong> : la sur-coupure peut causer plus de décès que le ransomware en cours. (4) Dr Zermatten refuserait fermement cette coupure totale.",
+          "legal": "IEC 80001-1 — Sur-isolation dangereuse.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📞 03h35 — Activation cellule de crise",
+      "situation": "La propagation est stoppée. Vous activez la cellule de crise. Vous appelez : <strong>Dr Sophie Zermatten</strong> (Directrice médicale et présidente du Comité de direction HRHP). Elle décroche à la première sonnerie — elle dort très peu. Vous lui exposez la situation en 3 minutes. Elle ordonne mobilisation cellule de crise complète. À 03h45, mobilisation : Zermatten (DirMed), vous (CISO), <strong>M. Patrick Antille</strong> (Directeur administratif et financier), <strong>Dr méd. Klaus Beyeler</strong> (Médecin-chef Urgences), <strong>Mme Eveline Salzmann</strong> (Cheffe Communication), Schmid et Müller du SOC, et — par appel d'urgence — <strong>M. Bertrand Métrailler</strong> (Secrétaire communal Sierre et coordinateur cyber régional VS, connu).",
+      "law": "<strong>LCyS art. 9-13 (notification NCSC obligatoire)</strong>.<br><strong>LPD art. 24 (notification PFPDT 72h)</strong>.<br><strong>LSki + Plan SKI niveau 3</strong>.<br><strong>Pratique cellule de crise hospitalière</strong>.",
+      "question": "<strong>Quelles sont vos 3 priorités d'action pour les 4 prochaines heures (03h45-07h45) ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>3 priorités structurées</strong>. <strong>(1) PCA imagerie + transferts patients vers Hôpital du Valais Sion</strong> : Beyeler et Zermatten organisent l'évaluation des ~12 patients en cours d'imagerie ou en attente, les transferts urgents par ambulance médicalisée commencent à 04h30 selon priorité clinique. Coordination avec direction Hôpital du Valais Sion (appel par Zermatten à 04h00). <strong>(2) Notifications légales</strong> : Antille pilote les notifications NCSC (avant 06h00 — formulaire NCSC en ligne signature CEO et CISO), OFCS infrastructure critique (avant 08h00 — appel Métrailler qui coordonne avec OFCS Berne), MPC/Police cantonale VS (Crittin procureur cantonal cyber notifié à 04h30 par appel direct, parallèlement au SOC). <strong>(3) PCA dossier patient + soins ambulants</strong> : Salzmann pilote la communication interne (envoi WhatsApp à tous les médecins-chefs et infirmiers-chefs des consignes de basculement papier d'urgence à 04h15), prêt à 06h00 pour information publique (communiqué presse + site web + appel patients ambulants pour reports rendez-vous non urgents).",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ TROIS PRIORITÉS PARFAITEMENT HIÉRARCHISÉES. (1) <strong>« PCA imagerie + transferts »</strong> en priorité 1 = vous identifiez correctement le risque vital. L'imagerie chiffrée + AVC/urgences vitales = risque de décès dans les heures qui viennent. Transferts vers Sion (40 km, 35 min ambulance) sont la solution opérationnelle. (2) <strong>« Notifications légales »</strong> en priorité 2 = vous respectez les délais légaux (NCSC 24h, PFPDT 72h, art. 24 LPD) tout en commençant immédiatement (pas d'attente). Notification dans les premières 12h démontre la rigueur HRHP en cas de procédure pénale ou administrative ultérieure. (3) <strong>« PCA dossier patient + communication »</strong> = vous gérez la dimension non-urgente mais critique pour la suite (basculement papier, communication publique). (4) <strong>Répartition des rôles</strong> : Zermatten (médical), Antille (administratif/légal), Beyeler (urgences cliniques), Salzmann (communication) — chacun pilote son volet. C'est exactement la structure d'une cellule de crise mature. (5) <strong>Délais réalistes</strong> : 04h00, 04h15, 04h30, 06h00, 08h00 — calendrier opérationnel précis qui structure les 4h. (6) Zermatten valide en moins de 30 secondes.",
+          "legal": "LCyS + LPD art. 24 + LSki + Pratique IRP — Priorisation optimale.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "<strong>Priorité unique : restaurer les systèmes</strong>. Mobilisation maximale technique pour déchiffrer les fichiers, restaurer les sauvegardes, remettre l'imagerie en ligne avant midi. Les notifications légales et la communication peuvent attendre la stabilisation technique.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ ERREUR DE PRIORISATION GRAVE. (1) <strong>« Restaurer les systèmes »</strong> en priorité = vous concentrez les ressources sur la restauration technique <em>au lieu</em> de la protection des patients <em>maintenant</em>. Or restaurer les systèmes prend typiquement 24-96h dans un ransomware bien fait, et certaines fonctions ne reviennent qu'après plusieurs semaines. Pendant ce temps, les patients vitaux nécessitant imagerie meurent. (2) <strong>« Notifications légales peuvent attendre »</strong> = violation des obligations LCyS (24h NCSC), LPD (72h PFPDT). Une fois ces délais dépassés, HRHP s'expose à : (a) sanctions administratives (amendes LCyS), (b) circonstance aggravante en cas d'enquête pénale ultérieure, (c) crise réputationnelle si la presse découvre le non-respect des délais. (3) <strong>« Restaurer avant midi »</strong> = irréaliste. Une restauration complète après ransomware Akira nécessite : analyse forensique complète (24-48h), évaluation backups (12-24h), restauration par lots avec validation (3-7 jours). « Avant midi » est de la pensée magique. (4) <strong>Conséquence prévisible</strong> : décès patient(s) pendant les heures où l'imagerie est inaccessible et où les transferts n'ont pas été organisés. Art. 117 CP envers HRHP elle-même pour défaut de PCA — pas seulement envers les attaquants. (5) Zermatten refuserait fermement.",
+          "legal": "LCyS + LPD + Art. 117 CP + Pratique IRP — Erreur grave.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "<strong>Priorité : payer la rançon immédiatement</strong>. 8,5 BTC = ~485'000 CHF au taux actuel. C'est cher mais c'est le seul moyen de récupérer rapidement l'imagerie. HRHP a une couverture cyber-assurance qui couvrira en partie. Négocier baisse à 5-6 BTC.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ DÉCISION PRÉCIPITÉE ET DÉCONSEILLÉE. (1) <strong>« Payer immédiatement »</strong> = position contraire à la doctrine internationale en santé. NCSC-CH, ENISA, FBI, et la quasi-totalité des autorités cyber recommandent de <em>ne pas payer</em> ou de retarder maximalement la décision. Raisons : (a) financement direct du crime organisé, (b) aucune garantie de déchiffrement (~30-40% des paiements aboutissent à un déchiffrement incomplet ou corrompu), (c) ciblage récurrent de la même victime (<em>victim re-targeting</em>) — payer = devenir cible récurrente, (d) <em>OFAC</em> US a posé que payer un ransomware lié à une entité sanctionnée russophone <em>est</em> une violation, ce qui expose HRHP à des sanctions US indirectes. (2) <strong>« Cyber-assurance couvrira »</strong> = en 2025-2026, plusieurs assureurs cyber (notamment Munich Re, Swiss Re) <em>excluent</em> le paiement de rançon de la couverture. À vérifier précisément, mais ne pas présumer. (3) <strong>« Seul moyen de récupérer l'imagerie »</strong> = faux. Le PCA + transferts patients vers Sion + restauration backup (HRHP a des sauvegardes immutables hors site selon votre dernier audit) = solution alternative. (4) <strong>Décision sans accord cellule de crise</strong> = vous court-circuitez Antille, Zermatten, et le board HRHP. Aucun CISO ne décide seul du paiement d'une rançon. (5) Antille refuserait absolument à 03h45 — la décision rançon vient après évaluation alternative.",
+          "legal": "Doctrine internationale NCSC + Pratique gouvernance — Décision précipitée.",
+          "critical": true,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🩺 05h30 — Première remontée terrain critique",
+      "situation": "Vous êtes en cellule de crise depuis 04h00. PCA imagerie activé (option 1), premiers transferts vers Sion organisés. Beyeler (médecin-chef Urgences) arrive en cellule de crise à 05h28, visiblement tendu. Il prend la parole : <em>« Laetitia, Sophie — je dois vous remonter une situation. Mme Renée Salamin, 68 ans, est arrivée aux urgences à 04h12 par ambulance, transportée par son mari. Tableau clinique compatible avec AVC ischémique aigu — hémiplégie gauche, troubles de la parole, NIHSS score initial 14. Symptômes apparus probablement vers 03h45-04h00. </em>Fenêtre thrombolyse 4h30 critique<em>. On a besoin de l'IRM </em>maintenant<em> pour confirmer l'AVC ischémique, exclure une hémorragie, et décider thrombolyse vs thrombectomie. L'IRM ici est chiffrée. Transfert vers Sion en ambulance = 35 minutes + admission + IRM Sion = on perd 50-70 minutes. La fenêtre thrombolyse expire vers 08h15 maximum. C'est très serré. »</em>",
+      "law": "<strong>Art. 117 CP</strong> — Homicide par négligence.<br><strong>Devoir de soin médical</strong>.<br><strong>Art. 24 LPMéd</strong>.",
+      "question": "<strong>Quelle est votre réaction immédiate face à ce cas ?</strong>",
+      "choices": [
+        {
+          "text": "« Klaus, Sophie — c'est exactement le type de cas qu'on redoutait. <strong>Décision conjointe immédiate</strong> : (1) Transfert ambulance médicalisée vers Sion IRM PRIORITÉ ABSOLUE — départ dans les 5 minutes max, équipe SMUR mobilisée. Sophie appelle directement le médecin-chef Sion pour préparation IRM dès l'arrivée. (2) <strong>Je tente en parallèle</strong> de récupérer un accès limité à <em>UN</em> IRM du site Sierre, par tentative de déchiffrement local du système de commande (pas du DPE complet) — Müller et moi y allons immédiatement, on a peut-être 30 minutes avant l'arrivée à Sion. (3) <strong>Tu documentes au PV médical interne</strong> Klaus : heure d'arrivée Salamin, score NIHSS, décision de transfert, motif (système imagerie chiffré, indisponibilité). Cette documentation médicale est essentielle pour la suite si l'issue est défavorable. (4) <strong>Communication transparente avec la famille</strong> Salamin par Sophie — situation expliquée sans masquer le rôle du ransomware. C'est tragique mais on protège la confiance institutionnelle. »",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ RÉACTION SOUS PRESSION EXEMPLAIRE. (1) <strong>« Décision conjointe immédiate »</strong> = vous décidez en 30 secondes. Le temps est l'enjeu absolu. (2) <strong>« Transfert PRIORITÉ ABSOLUE »</strong> = vous appliquez le protocole standard : si l'imagerie locale est inaccessible, le patient va vers l'imagerie disponible. Pas d'hésitation. Sophie appelle Sion directement pour préparation = gain de 15-20 min sur l'admission. (3) <strong>« Je tente en parallèle un accès limité IRM »</strong> = tentative parallèle qui ne ralentit pas le transfert mais qui peut offrir une alternative <em>si</em> elle réussit dans les 30 min. C'est une approche multi-track raisonnable. Vous reconnaissez que c'est <em>très</em> improbable de réussir (système chiffré), mais c'est essayé. (4) <strong>« Documentation PV médical »</strong> = ANTICIPATION JURIDIQUE. Si Salamin décède, l'enquête art. 117 CP envers les attaquants du ransomware aura besoin de la chronologie médicale précise documentée en temps réel. Beyeler le note. (5) <strong>« Communication transparente famille »</strong> = essentiel. Vous évitez de cacher le rôle du ransomware. La famille apprendra de toute façon — mieux vaut qu'elle l'apprenne avec respect et institutionnellement maintenant. (6) Sophie et Klaus exécutent immédiatement. Salamin part à 05h37 en ambulance.",
+          "legal": "Art. 117 CP + Art. 24 LPMéd + Pratique cellule de crise — Réaction optimale.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "« Klaus, on n'a pas le choix — transfert à Sion. C'est tragique mais on ne peut rien faire de plus. Documente comme tu veux. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Réaction correcte mais minimaliste. (1) <strong>« On ne peut rien faire de plus »</strong> = vous abandonnez la tentative parallèle. C'est probablement la bonne lecture statistique (très faible probabilité de récupérer un IRM en 30 min), mais <em>tenter</em> sans ralentir le transfert principal ne coûte rien. Pour un cas individuel à enjeu vital, chaque possibilité doit être explorée. (2) <strong>« Documente comme tu veux »</strong> = sous-estimation de l'importance documentaire. La chronologie médicale précise sera essentielle pour : (a) l'enquête pénale future contre les attaquants (art. 117 CP), (b) la possible procédure administrative interne HRHP, (c) la défense HRHP en cas de mise en cause par la famille Salamin. La documentation doit être <em>structurée</em>, pas laissée à l'appréciation de Beyeler. (3) <strong>Pas de mention famille</strong> = vous laissez le sujet de la communication famille à Sophie sans coordination. Elle gérera, mais une mention rapide aurait protégé la cohérence institutionnelle. (4) <strong>L'option 1 ajoute ces 3 dimensions</strong> sans ralentir le transfert. C'est purement positif.",
+          "legal": "Pratique cellule de crise — Réaction minimaliste.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "« Klaus, on tente l'IRM ici. Mobilisation Müller + 2 ingénieurs pour <strong>tentative de déchiffrement immédiat</strong> du système IRM — on peut peut-être y arriver en 30-45 minutes, ça vaut le coup. On retarde le transfert Sion d'autant. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ ERREUR CRITIQUE — TENTATIVE PRIORITAIRE AU DÉTRIMENT DU TRANSFERT. (1) <strong>« On tente l'IRM ici en priorité »</strong> = vous misez l'enjeu vital de Salamin sur une tentative <em>technique improbable</em> (déchiffrement d'un ransomware Akira en 30-45 min = ~0,1% de chances de réussite sans clé attaquant). Pendant ce temps, le transfert vers Sion n'est pas organisé. (2) <strong>« On retarde le transfert d'autant »</strong> = si la tentative échoue (cas le plus probable), vous avez perdu 30-45 minutes de la fenêtre thrombolyse. Salamin arrive à Sion à 06h30 au lieu de 05h55, fenêtre encore plus serrée, risque d'échec thrombolyse augmenté. (3) <strong>Responsabilité personnelle</strong> : en cas de décès, votre décision sera examinée. <em>« Pourquoi avez-vous retardé le transfert pour une tentative improbable ? »</em>. La doctrine cyber en santé est claire : <em>quand l'imagerie est inaccessible, on transfère immédiatement</em>, sans attendre une tentative de récupération. (4) <strong>Beyeler refuserait</strong> et alerterait Zermatten qui imposerait le transfert immédiat. (5) Si Salamin décède suite à ce retard, vous portez une responsabilité directe (art. 117 CP indirectement, et faute professionnelle CISO certaine).",
+          "legal": "Art. 117 CP + Pratique cellule de crise — Erreur critique.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "id": "eau-source-trouble-2-forensique-hydrocontrol",
+  "title": "Source trouble #2 — HydroControl en pleine nuit",
+  "icon": "🔬",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Voutaz cadre le mandat forensique avec rigueur, préserve la chaîne de possession, identifie le vecteur (télémaintenance laissée ouverte par un prestataire) et cartographie honnêtement l'étendue. L'analyse révèle une attaque ciblée mais sans extraction de données clients massives.",
+    "degraded": "Mandat flou, acquisition tardive, le vecteur reste partiellement incertain. L'étendue de l'attaque est sous-estimée, ce qui compliquera la décision sanitaire de l'acte 5."
+  },
+  "tags": [
+    "EAU CHABLAIS", "HYDROCONTROL", "FORENSIQUE OT", "ISO 27037",
+    "ALLEN-BRADLEY", "MODBUS", "HMI EXPOSÉE", "TÉLÉMAINTENANCE",
+    "IOC", "COMPTEURS INTELLIGENTS", "FDIA", "SCADA"
+  ],
+  "legalRefs": [
+    { "label": "ISO/IEC 27037:2012", "title": "Identification, collecte, acquisition et préservation de preuves numériques" },
+    { "label": "Art. 192 CPP", "title": "Preuves obtenues de manière conforme au droit" },
+    { "label": "Art. 184 CPP", "title": "Expertise privée" },
+    { "label": "Art. 234 CP", "title": "Mise en danger par contamination de l'eau potable" },
+    { "label": "OFCS — Charte CSC / échange d'IoC", "title": "Conditions de partage d'indicateurs de compromission" }
+  ],
+  "intro": "<p>Mercredi 9 septembre 2026, 06h00. Vous n'avez pas dormi. La station tourne en mode manuel depuis 22h30, chlore stabilisé à 0,17 mg/L, Diego relayé par un collègue à 02h00. <strong>Jean-Marc Délèze</strong> (exploitant SCADA externe, société HydroControl Sàrl à Martigny, votre prestataire depuis 2019) arrive à la station d'Aigle avec une mallette d'acquisition forensique et une jeune analyste, Lucie Bonvin (ex-CYD Campus EPFL).</p><p>Délèze pose le cadre : « <em>Sandrine, première chose : on fige tout proprement avant de toucher. La session de télémaintenance que Diego a vue cette nuit, c'est notre piste numéro un. Deuxième chose : faut décider qui voit nos analyses — toi seule, l'OFCS, le canton, la police ? Et qui fait l'acquisition : nous, HydroControl, ou on appelle GovCERT pour qu'ils soient dans la boucle dès le début ?</em> »</p><p>Vous savez déjà que la liaison de télémaintenance était une connexion VPN posée en 2024 par <strong>SmartFlow Systems</strong> — l'intégrateur qui a modernisé vos automates Allen-Bradley il y a 18 mois — pour pouvoir intervenir à distance. Une connexion censée être fermée après chaque intervention, et qui était restée ouverte. C'est l'équivalent eau de la config MetroFiber d'Étoile noire : un prestataire, une porte laissée entrebâillée.</p><p>Beat Hofmann (OFCS) vous a envoyé un mail à 05h40 : il a bien reçu votre notification de précaution, salue la réactivité, et propose un point téléphonique à 11h00. Il glisse une phrase qui vous marque : « <em>Le schéma que vous décrivez — télémaintenance exposée, FDIA sur automate — ressemble à ce que nous avons vu cet été sur les stations-service. Je vous mettrai en lien avec ce dossier.</em> » (référence à l'affaire Étoile noire / ATG).</p>",
+  "alertLevel": "🔬 FORENSIQUE OT EN COURS · VECTEUR PROBABLE : VPN TÉLÉMAINTENANCE SMARTFLOW 2024 · AUTOMATES ALLEN-BRADLEY · OFCS FAIT LE LIEN AVEC ATG-CH",
+  "objectives": [
+    "Cadrer le mandat forensique HydroControl (responsabilités, chaîne de possession, confidentialité)",
+    "Identifier précisément le vecteur d'intrusion (télémaintenance SmartFlow)",
+    "Évaluer si des données clients (compteurs intelligents, relevés) ont été exfiltrées",
+    "Cartographier l'étendue : un seul automate ou toute l'infrastructure ?"
+  ],
+  "debrief": "<p><strong>Le vecteur de la télémaintenance tierce — un classique de l'OT</strong> : La grande majorité des incidents OT documentés (CISA, ENISA, ANSSI) impliquent un accès distant de prestataire mal sécurisé : VPN permanent au lieu de just-in-time, mot de passe partagé, absence de MFA, connexion laissée ouverte après intervention. L'intégrateur qui modernise les automates a besoin d'accéder à distance ; cet accès devient la porte d'entrée. La recommandation ANSSI 2024 pour le secteur de l'eau est explicite : <em>les interfaces des équipements et SCADA ne doivent pas être exposées sur Internet ; à défaut, forcer l'accès via une passerelle dédiée (pare-feu industriel), mots de passe robustes, MFA, et tunnels chiffrés pour les accès nomades</em>. SmartFlow a violé toutes ces règles. La responsabilité de l'intégrateur (contrat d'entreprise, CO art. 368) sera un enjeu de l'acte 6.</p><p><strong>La chaîne de possession ISO 27037 en milieu OT</strong> : Acquérir des preuves sur des automates industriels est plus délicat que sur un PC. Les automates (PLC) ont une mémoire volatile (configuration runtime, programme en cours) et non-volatile (firmware, programme stocké). L'acquisition doit capturer : (1) la configuration runtime avant tout redémarrage ; (2) le programme automate (ladder logic) pour comparer avec la version de référence et détecter la modification malveillante ; (3) les logs réseau (captures Modbus TCP) ; (4) les journaux de la HMI. Tout est horodaté, hashé (SHA-256), signé. En milieu OT, l'acquisition se fait souvent <em>en production</em> (on ne peut pas arrêter l'eau), ce qui exige une méthodologie rigoureuse pour ne pas perturber le процédé.</p><p><strong>Données clients dans une infrastructure d'eau — les compteurs intelligents</strong> : Les réseaux d'eau modernes déploient des compteurs intelligents (télérelevé) qui remontent la consommation des abonnés. Ces données (identifiant compteur, consommation horaire, parfois nom/adresse) sont des données personnelles au sens de la LPD. Si l'attaquant a eu accès au middleware reliant les compteurs au système central, une exfiltration est possible. Dans Source trouble, l'enjeu LPD est <em>secondaire</em> par rapport à l'enjeu sanitaire (contrairement à Étoile noire où les données ExpressCard étaient centrales), mais il doit être évalué.</p><p><strong>Le partage d'IoC inter-sectoriel</strong> : Le fait que le vecteur (télémaintenance exposée + FDIA sur automate) ressemble à l'affaire des stations-service (Étoile noire / ATG-CH) est précieux. L'OFCS, qui coordonne les deux dossiers, peut établir si c'est le même mode opératoire, voire le même acteur. Le partage d'IoC via le canal OFCS (charte CSC) permet de comparer les signatures. C'est l'intérêt d'une doctrine sectorielle transversale : les leçons de l'énergie servent à l'eau.</p>",
+  "steps": [
+    {
+      "phase": "📋 06h00-08h00 — Cadrer le mandat forensique et la chaîne de possession",
+      "situation": "Délèze propose trois cadrages pour l'acquisition forensique : (1) <strong>HydroControl seul</strong> — acquisition et analyse par son équipe (Bonvin certifiée ISO 27037), rapport remis à Eau Chablais qui décide ensuite du partage ; (2) <strong>co-acquisition avec GovCERT</strong> — l'OFCS détache un analyste pour officialiser dès le départ ; (3) <strong>HydroControl + intégrateur SmartFlow</strong> — faire venir SmartFlow (qui connaît les automates) pour accélérer. Lucie Bonvin a déjà préparé le matériel d'acquisition. La station tourne en manuel, vous pouvez acquérir sans arrêter l'eau si la méthodologie est soignée.",
+      "law": "Art. 184 CPP (expertise privée admissible si ISO 27037 respectée) + art. 192 CPP (preuves conformes au droit). En cas de bascule pénale (acte 4), la qualité de la chaîne de possession déterminera la recevabilité.",
+      "question": "<strong>Quel cadrage choisissez-vous pour l'acquisition forensique ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) HydroControl seul, mandat clair, SmartFlow tenu à l'écart</strong>. Acquisition et analyse par HydroControl (Bonvin, ISO 27037), chaîne de possession horodatée et signée. SmartFlow — le prestataire dont la télémaintenance est le vecteur suspecté — est explicitement <strong>tenu à l'écart de l'acquisition</strong> (conflit d'intérêts : c'est potentiellement sa négligence qui est en cause). Rapport remis à Eau Chablais, partage décidé ensuite avec OFCS. Coût ~CHF 45k.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✓ Décision juste sur les deux plans. Tenir SmartFlow à l'écart de l'acquisition est crucial : son accès est le vecteur suspecté, le faire participer à l'enquête sur sa propre négligence créerait un conflit d'intérêts qui contaminerait la chaîne de possession et la future responsabilité contractuelle (acte 6). HydroControl, prestataire distinct et certifié, est l'acquéreur indépendant idéal. Le mandat clair sécurise la recevabilité pénale.",
+          "legal": "Conforme art. 184/192 CPP. L'exclusion du prestataire suspecté de l'acquisition est une bonne pratique essentielle pour l'intégrité de la preuve.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>(β) Co-acquisition GovCERT dès le départ</strong>. Vous demandez à Hofmann (OFCS) de détacher un analyste GovCERT pour co-acquérir avec HydroControl. Avantage : crédibilité maximale, officialisation immédiate. Inconvénient : un peu plus lourd à coordonner un mercredi matin, GovCERT peut mettre quelques heures à arriver.",
+          "ok": false,
+          "pts": 6,
+          "fb": "○ Approche solide et défendable — la co-acquisition GovCERT renforce la crédibilité. Mais à ce stade (incident contenu, pas encore de bascule pénale fédérale confirmée), elle alourdit la gouvernance et fait perdre quelques heures précieuses d'acquisition (les artefacts runtime se dégradent). Le mandat HydroControl seul, bien cadré, suffit pour l'instant ; GovCERT sera pertinent quand/si la compétence fédérale se confirme (acte 4). Hofmann ne l'exige pas à ce stade.",
+          "legal": "Aucun problème, mais proportionnalité discutable (gouvernance lourde pour acquisition initiale).",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>(γ) HydroControl + SmartFlow pour accélérer</strong>. Vous faites venir SmartFlow (l'intégrateur) en renfort : ils connaissent les automates par cœur, ça accélérera l'analyse. Délèze et Bonvin pilotent, SmartFlow assiste techniquement.",
+          "ok": false,
+          "pts": 1,
+          "fb": "⚠ Erreur sérieuse. SmartFlow est le prestataire dont la télémaintenance laissée ouverte est le vecteur suspecté de l'attaque. Le faire participer à l'acquisition forensique, c'est laisser le suspect potentiel manipuler les preuves de sa propre négligence — conflit d'intérêts majeur qui détruirait la recevabilité de l'expertise et compromettrait la future action en responsabilité contractuelle. Même de bonne foi, SmartFlow pourrait (volontairement ou non) altérer les traces de sa configuration défaillante. Délèze vous le déconseillera fermement.",
+          "legal": "Compromet l'intégrité de la chaîne de possession (art. 192 CPP) et la future responsabilité contractuelle de SmartFlow. À proscrire.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔎 08h00-10h00 — Analyse : le vecteur et le mode opératoire",
+      "situation": "Bonvin (HydroControl) présente les premiers résultats. <strong>Vecteur confirmé</strong> : la connexion VPN de télémaintenance SmartFlow (posée en avril 2024, jamais fermée), accessible depuis Internet avec un mot de passe faible et sans MFA. <strong>Mode opératoire</strong> : l'attaquant s'est connecté le 8 septembre vers 13h50, a modifié le programme ladder de l'automate de dosage du chlore (réduction de la consigne d'injection) ET implanté une routine de falsification qui renvoyait au SCADA la valeur cible théorique (0,28) au lieu de la valeur réelle (0,02) — une FDIA classique. <strong>Découverte clé</strong> : les logs montrent que l'attaquant a passé du temps à <em>comprendre</em> le процédé avant d'agir (reconnaissance), et qu'il n'a touché QUE le dosage de chlore, sans s'intéresser aux compteurs intelligents ni aux données clients. Pas d'exfiltration de données personnelles détectée. Une chaîne de caractères dans le code implanté : « <em>l'eau doit rester vivante — RK</em> ».",
+      "law": "L'analyse technique doit être factuelle et documentée. L'interprétation du mobile (le message « RK ») relève de l'enquête pénale (acte 4), pas de l'expertise technique.",
+      "question": "<strong>Comment documentez-vous le mode opératoire et le message « RK » dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) Documentation factuelle complète, interprétation laissée aux autorités</strong>. Le rapport HydroControl documente : le vecteur (VPN SmartFlow), la modification du ladder, la routine FDIA, la phase de reconnaissance, l'absence d'exfiltration de données clients, et la chaîne « l'eau doit rester vivante — RK » <em>telle quelle</em>, sans interprétation. Vous notez que le mode opératoire (cible : uniquement le dosage, message à connotation idéologique, pas de vol de données ni de rançon) <em>oriente</em> vers un acteur militant plutôt que crapuleux ou étatique, mais que l'attribution relève des autorités. Comparaison IoC avec le dossier ATG proposée à l'OFCS.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✓ Posture forensique exemplaire : factualité + prudence interprétative + signalement des éléments saillants sans surinterprétation. Le fait que l'attaquant n'ait visé que le dosage (pas de vol de données, pas de rançon) et laissé un message idéologique est un indice fort d'un mobile militant/hacktiviste — mais vous avez raison de laisser la qualification aux autorités. La comparaison IoC avec ATG-CH permettra à l'OFCS de confirmer ou d'écarter un lien. Le rapport sera versé au dossier pénal sans contestation.",
+          "legal": "Conforme aux standards d'expertise (factualité, niveau de confiance gradué). L'absence d'exfiltration documentée allègera l'enjeu LPD (acte 3 reste léger).",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "<strong>(β) Conclusion ferme : attaque hacktiviste écologiste</strong>. Le rapport conclut sans détour : « <em>il s'agit d'un acte de militantisme écologiste, le message RK et l'absence de motivation financière le prouvent</em> ». Vous orientez clairement vers la piste militante pour rassurer (« ce n'est pas une cyberguerre d'État »).",
+          "ok": false,
+          "pts": 4,
+          "fb": "⚠ Conclusion trop tranchée pour une expertise technique. Le message « RK » et l'absence de vol <em>suggèrent</em> un mobile militant, mais un faux drapeau reste possible (un acteur peut imiter un hacktiviste). Affirmer fermement le mobile dans un rapport technique outrepasse le rôle de l'expert et pourrait orienter à tort l'enquête. La prudence (option α) protège mieux le dossier. L'inspecteur Berset et le MPC (acte 4) doivent garder toutes les hypothèses ouvertes.",
+          "legal": "Aucune violation, mais surinterprétation qui empiète sur le rôle des autorités d'enquête.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "<strong>(γ) Omettre le message « RK » du rapport principal</strong>. Vous décidez de ne pas mentionner le message idéologique dans le rapport principal (pour éviter qu'il fuite et alimente la médiatisation), et de le réserver à une annexe confidentielle pour les seules autorités. Le rapport principal s'en tient au vecteur technique.",
+          "ok": false,
+          "pts": 3,
+          "fb": "⚠ Omettre un élément de preuve aussi important du rapport principal est une erreur méthodologique : le message fait partie intégrante du mode opératoire et doit être documenté avec le reste. Le scinder en annexe « confidentielle » crée une asymétrie qui pourrait être reprochée (rétention sélective d'information). La bonne pratique : tout documenter factuellement dans le rapport, et gérer la confidentialité par le classement TLP du document entier, pas par le tri sélectif des preuves.",
+          "legal": "Risque d'altération de l'intégrité du rapport d'expertise. Tout élément de preuve doit être documenté.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🗺️ 10h00-11h30 — Cartographie d'étendue et point OFCS",
+      "situation": "Bonvin finalise la cartographie. <strong>Bonne nouvelle</strong> : un seul automate compromis (le dosage chlore de la station principale), pas de propagation aux 3 réservoirs ni à la station de pompage (réseaux mieux segmentés là-bas). <strong>Mauvaise nouvelle</strong> : la même connexion SmartFlow donnait théoriquement accès à 4 autres automates non touchés — l'attaquant a choisi de ne cibler que le chlore. Pas d'exfiltration de données compteurs. À 11h00, point téléphonique avec Hofmann (OFCS). Il confirme : le mode opératoire ressemble partiellement à ATG-CH (télémaintenance exposée) mais le profil est différent (pas de signature iranienne, message idéologique, cible unique). Il propose : (1) partage d'IoC via la charte CSC pour comparer avec ATG ; (2) alerte sectorielle eau (les autres services romands ont-ils des VPN SmartFlow ouverts ?) ; (3) coordination avec la police pour l'enquête. Vous devez décider du partage.",
+      "law": "Le partage d'IoC défensif est encouragé par la charte CSC de l'OFCS. L'alerte sectorielle peut prévenir d'autres victimes (d'autres services d'eau utilisant SmartFlow).",
+      "question": "<strong>Quelle posture de partage adoptez-vous avec l'OFCS ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) Partage IoC complet + alerte sectorielle SmartFlow via OFCS</strong>. Vous acceptez le partage d'IoC via la charte CSC (comparaison avec ATG-CH) et, surtout, vous demandez à l'OFCS de pousser une <strong>alerte sectorielle ciblée</strong> : tous les services d'eau ayant fait moderniser leurs automates par SmartFlow doivent vérifier d'urgence si leur VPN de télémaintenance est ouvert. Vous appelez aussi personnellement deux confrères directeurs techniques de services voisins (réseau professionnel romand de l'eau). L'alerte est anonymisée (pas de mention Eau Chablais comme victime).",
+          "ok": true,
+          "pts": 10,
+          "fb": "✓ Posture exemplaire qui transforme votre incident en protection sectorielle. SmartFlow a probablement laissé d'autres VPN ouverts chez d'autres clients — votre alerte peut empêcher 3, 5, 10 autres FDIA. Le partage IoC avec l'OFCS permet de relier (ou non) ce dossier à ATG-CH. L'appel personnel aux confrères ajoute le canal pair-à-pair. Vous vous positionnez en acteur responsable du secteur, ce qui paiera à l'audition (acte 7).",
+          "legal": "Conforme à la charte CSC de l'OFCS. L'alerte anonymisée protège Eau Chablais tout en protégeant le secteur.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "<strong>(β) Partage IoC OFCS uniquement, pas d'alerte sectorielle nominative SmartFlow</strong>. Vous partagez les IoC avec l'OFCS pour la comparaison ATG, mais vous ne demandez pas d'alerte sectorielle ciblant SmartFlow, par prudence juridique (« <em>on ne va pas accuser SmartFlow publiquement avant le rapport final</em> »). L'OFCS décidera seul de toute diffusion.",
+          "ok": false,
+          "pts": 6,
+          "fb": "○ Prudence juridique compréhensible — mais une alerte sectorielle peut être formulée sans « accuser » SmartFlow nommément : « vérifiez vos accès de télémaintenance, en particulier les VPN d'intégrateurs laissés ouverts ». Ne pas alerter, c'est laisser d'autres services d'eau potentiellement vulnérables alors que vous savez le vecteur. Le risque sanitaire collectif prime sur la prudence réputationnelle envers SmartFlow. Hofmann tentera de vous convaincre d'élargir l'alerte.",
+          "legal": "Aucune violation. Mais une alerte sectorielle anonymisée (sans nommer SmartFlow) aurait été possible et préférable pour la sécurité collective.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "<strong>(γ) Pas de partage tant que le rapport final n'est pas prêt</strong>. Vous préférez attendre le rapport HydroControl complet (5 jours) avant tout partage, pour ne diffuser que des informations validées. L'OFCS recevra tout en bloc à ce moment-là.",
+          "ok": false,
+          "pts": 2,
+          "fb": "⚠ Attendre 5 jours pour partager des IoC sur une vulnérabilité activement exploitée (VPN SmartFlow ouverts) est dangereux : pendant ce temps, d'autres services d'eau peuvent être attaqués via le même vecteur. La valeur des IoC est dans leur fraîcheur. La charte CSC de l'OFCS existe précisément pour le partage <em>rapide</em> en cours d'incident. Hofmann le prendra mal — et si un autre service est touché entre-temps, le retard vous sera reproché.",
+          "legal": "Aucune violation. Mais contraire à l'esprit du partage défensif rapide de la charte CSC.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

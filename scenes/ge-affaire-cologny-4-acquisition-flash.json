@@ -1,0 +1,163 @@
+{
+  "id": "ge-affaire-cologny-4-acquisition-flash",
+  "title": "Affaire Cologny #4 — Acquisition forensique de la mémoire flash",
+  "icon": "💾",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'image bit-à-bit est acquise sans destruction, les hash MD5/SHA-256 sont documentés avant et après, l'image originale et la copie de travail sont séparées, la chaîne de possession est irréprochable.",
+    "degraded": "L'acquisition réussit mais avec un seul hash documenté (MD5 ou SHA-256, pas les deux), ce qui sera contestable au procès.",
+    "failure": "L'acquisition échoue ou la flash est endommagée par mauvaise manipulation (chaleur du fer à souder, ESD), perte définitive de la preuve principale."
+  },
+  "tags": [
+    "DFIR",
+    "ACQUISITION",
+    "CHIP-OFF",
+    "JTAG",
+    "HASH",
+    "CHAÎNE DE POSSESSION",
+    "GENÈVE"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 246 CPP",
+      "title": "Perquisition supports de données (mandat délivré scène 2)"
+    },
+    {
+      "label": "Art. 192 CPP",
+      "title": "Force probante des moyens de preuve matériels — l'intégrité de l'image conditionne la recevabilité"
+    },
+    {
+      "label": "Art. 184 CPP",
+      "title": "Expertise — acquisition documentée comme acte d'expertise BCFI"
+    },
+    {
+      "label": "ISO/IEC 27037:2012 §6.5",
+      "title": "Acquisition forensique (collection, acquisition, vérification)"
+    },
+    {
+      "label": "ISO/IEC 27042:2015",
+      "title": "Analyse forensique des preuves numériques (méthodes)"
+    },
+    {
+      "label": "ATF 138 IV 169",
+      "title": "Fruit de l'arbre empoisonné — toute la chaîne probatoire dépend de l'acquisition initiale"
+    }
+  ],
+  "intro": "<p>Mercredi 1<sup>er</sup> avril 2026, 08h00. Salle propre niveau 2 du labo BCFI. Vous êtes en tenue forensique avec Genoud, et un troisième opérateur a rejoint l'équipe : <strong>Dr Stephan Sutter</strong> de Compass Security AG, désigné par Mme Vaucher (TMC) comme expert indépendant pour le scellement (audience d'hier après-midi, cf. scène 2). Sutter sera présent pendant toute l'acquisition pour cosigner le PV — sa présence garantit que le scellement post-acquisition se fera sur une image dont il certifie personnellement l'intégrité.</p><p>Le PCB du dispositif est sur le banc de test, batterie déconnectée et étiquetée, mémoire flash <strong>Winbond W25N01GVZEIG (128 MB SPI NAND)</strong> identifiée. Trois méthodes d'acquisition sont théoriquement possibles : <strong>(1) Chip-off</strong> = dessouder la puce flash et la lire dans un programmeur dédié, méthode destructive partiellement (la puce ne pourra plus être remontée sur le PCB original sans rework) ; <strong>(2) JTAG</strong> = accès via le port de debug du SoC pour lire la flash <em>via</em> le SoC, non destructif ; <strong>(3) In-circuit SPI</strong> = clip de test posé directement sur les pins de la puce flash sans dessoudage, lecture directe par programmeur SPI universel, non destructif.</p><p>Genoud a déjà préparé hier soir l'option (3) : un clip Pomona 5252 8-pin SOIC est positionné sur la puce flash, relié à un programmeur SPI Flashrom + RaspberryPi 5. La méthode est non destructive — la flash reste sur le PCB, donc le boîtier pourra être reconstitué tel quel pour audience. Sutter approuve : « C'est la méthode de référence pour une SPI NAND de cette gamme, à condition que vous documentiez parfaitement le PV. »</p>",
+  "alertLevel": "💾 ACQUISITION FORENSIQUE · MÉTHODE IN-CIRCUIT SPI · NON DESTRUCTIVE · COSIGNATURE EXPERT INDÉPENDANT · Hash MD5+SHA-256 obligatoires",
+  "objectives": [
+    "Acquérir une image bit-à-bit de la mémoire flash sans modification",
+    "Calculer et documenter MD5 + SHA-256 de l'image avant et après tout traitement ultérieur",
+    "Produire un PV d'expertise irréprochable cosigné par l'opérateur et l'expert indépendant",
+    "Mettre l'image originale sous scellés selon procédure TMC, créer une image de travail pour analyse"
+  ],
+  "debrief": "<p><strong>Acquisition forensique non destructive d'une SPI NAND</strong> : la méthode in-circuit avec clip de test est devenue la référence depuis 2020 pour les dispositifs avec flash accessible. Avantages : (a) non destructive, (b) rapide (lecture complète d'une 128 MB SPI NAND en 3-8 minutes selon vitesse SPI), (c) le PCB reste fonctionnel pour reconstitution éventuelle, (d) reproductibilité (un second opérateur peut refaire l'opération avec le même résultat — propriété essentielle pour la défense au procès). Inconvénients : (a) nécessite que les pins de la flash soient accessibles (pas en BGA caché par exemple), (b) parasites possibles si SoC reste alimenté pendant la lecture — d'où la déconnexion batterie obligatoire.</p><p><strong>Outils standards BCFI</strong> : <code>flashrom</code> (open-source, supporté par toutes les SPI NOR et la plupart des SPI NAND), avec script wrapper pour calcul automatique de hash. Alternative commerciale : Cellebrite Premium, Magnet GrayKey pour mobiles (non applicable ici). Pour le post-traitement : <code>dcfldd</code> (variante de dd avec hash en streaming), <code>guymager</code> (GUI avec rapport automatique).</p><p><strong>Hash MD5 + SHA-256</strong> : <strong>les deux sont obligatoires</strong> dans la pratique BCFI/MPC. MD5 reste utilisé pour la rapidité et la compatibilité historique. SHA-256 est le standard cryptographique actuel. Si l'un des deux montre une collision théorique (MD5 a des vulnérabilités connues depuis 2004), l'autre reste valable. Le PV mentionne les deux. Outils : <code>md5sum</code>, <code>sha256sum</code> sous Linux, intégrés dans la chaîne d'acquisition.</p><p><strong>Chaîne de possession et image originale vs image de travail</strong> : pratique standard depuis ATF 138 IV 169. L'image originale (et sa copie de sauvegarde) est mise sous scellé physique (DVD-R gravé, ou disque dédié signé numériquement). Tout travail d'analyse se fait sur une <em>copie de travail</em> dont le hash est identique à l'original (vérification à chaque réutilisation). Si la copie de travail est altérée par un outil bugué ou une erreur d'analyste, on repart de l'original. Ce principe garantit qu'aucune analyse ne peut jamais altérer la preuve.</p>",
+  "steps": [
+    {
+      "phase": "📐 08h15 — Configuration de l'acquisition",
+      "situation": "Genoud configure le programmeur. La SPI NAND Winbond W25N01GVZEIG est en mode 1.8V (datasheet confirmé). Le RaspberryPi 5 utilisé pour piloter Flashrom est isolé du réseau (pas d'Ethernet, pas de WiFi activé). Genoud lance la commande de détection : <code>flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=4000 --probe</code>. Réponse : « Found Winbond flash chip W25N01GV, size 128 MB ». Avant de lancer la lecture, Sutter demande à voir la procédure complète écrite. Genoud lui montre le script : (1) probe → (2) read → image1.bin → (3) md5/sha256 → (4) read → image2.bin → (5) md5/sha256 → (6) comparaison image1 vs image2 (cmp octet par octet) → (7) si identiques, archivage image1 comme image_originale.bin + hash dans PV.",
+      "law": "<strong>Art. 184 CPP</strong> — Expertise reproductible exige procédure écrite préalable.<br><strong>ISO/IEC 27037 §6.5</strong> — Procédure documentée avant acquisition.<br><strong>ISO/IEC 27041 §7</strong> — Choix des outils justifiable.",
+      "question": "<strong>Pourquoi Genoud lit-il la flash DEUX FOIS (image1 + image2) avant d'archiver ?</strong>",
+      "choices": [
+        {
+          "text": "Pour vérifier que les deux lectures donnent un résultat strictement identique (octet par octet), démontrant ainsi que l'opération de lecture est <strong>déterministe et reproductible</strong>, et que ni le programmeur ni le clip n'introduisent d'erreur de bit aléatoire. C'est la double-lecture standard ISO 27037 pour les acquisitions critiques.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ EXACTE COMPRÉHENSION. (1) Une lecture unique peut contenir des erreurs de bit dues à des parasites électriques, des contacts imparfaits du clip, ou des bugs du programmeur. (2) Deux lectures avec hash identiques + comparaison binaire = preuve que l'opération est <strong>déterministe</strong>, et donc reproductible par un tiers. (3) Si les deux lectures diffèrent, on en fait une troisième : un défaut de matériel a alors été identifié, on documente l'incident et on change de méthode (passage en chip-off par exemple). (4) Si les deux lectures sont identiques, on a une certitude technique forte : l'image acquise reflète bit-à-bit l'état de la flash au moment de la saisie. (5) Sans cette double-lecture, la défense peut plaider que l'image ne reflète pas fidèlement l'état réel — argument qui a déjà permis l'exclusion de preuves au TF (cf. ATF 138 IV 169 sur la chaîne probatoire).",
+          "legal": "ISO 27037 §6.5 — Standard de double-lecture pour acquisitions critiques.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Pour avoir deux copies de sauvegarde au cas où l'une serait corrompue lors du stockage à long terme.",
+          "ok": false,
+          "pts": 0,
+          "fb": "Réponse partiellement juste mais incomplète. Avoir deux copies = bonne pratique, certes, mais ce n'est pas la <strong>raison primaire</strong> de la double-lecture. La raison primaire est de <strong>vérifier le déterminisme</strong> de l'opération. Pour des copies de sauvegarde, on ne fait <em>pas</em> deux acquisitions indépendantes — on fait une acquisition puis une copie binaire du fichier image (beaucoup plus rapide). Si vous écrivez dans le PV « deux acquisitions pour sauvegarde », la défense plaidera que vous ne comprenez pas la procédure ISO 27037 et pourrait obtenir une expertise contradictoire. Le PV correct mentionne explicitement : « double-lecture pour vérification déterminisme conformément à ISO 27037 §6.5 ».",
+          "legal": "ISO 27037 §6.5 — Compréhension imprécise.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Pour calculer un hash composite plus robuste (concat des deux puis hash) qui résisterait mieux aux collisions cryptographiques.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Confusion technique sérieuse. (1) Un « hash composite » de deux images identiques n'apporte aucune résistance supplémentaire aux collisions — c'est mathématiquement équivalent à hasher une seule image. (2) La résistance aux collisions est une propriété de l'algorithme (MD5 vulnérable, SHA-256 robuste), pas du protocole d'acquisition. (3) On utilise MD5 + SHA-256 (deux algorithmes différents) précisément pour cette redondance, pas une double application du même algorithme. (4) Si vous écrivez cette justification dans le PV, vous perdez toute crédibilité technique au procès — un expert contradictoire de la défense démontera l'argument en 30 secondes. <strong>Comprendre pourquoi on fait ce qu'on fait est plus important que faire les bons gestes.</strong>",
+          "legal": "ISO 27037 + Cryptographie — Justification technique erronée.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "⚙️ 08h45 — Lancement de l'acquisition",
+      "situation": "Genoud lance la première lecture. La commande s'exécute : <code>flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=4000 -r /mnt/preuve/image1.bin</code>. Le processus affiche progressivement la progression — 4 minutes 47 secondes pour les 128 MB. Pas d'erreur. Hash immédiat : <br><code>md5sum  : 7d8e3a4f2c1b9e6a5d4c3b2a1f8e7d6c</code><br><code>sha256 : 3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b</code><br>Deuxième lecture lancée. Idem 4 minutes 51 secondes. Hash : <strong>identiques aux précédents</strong>. Comparaison binaire <code>cmp image1.bin image2.bin</code> → silence (= identiques, sortie 0). Sutter coche les cases du PV qu'il prépare. Tout va bien. Genoud archive image1.bin comme <strong>image_originale.bin</strong>, image2.bin est conservée comme première copie de vérification.",
+      "law": "<strong>Art. 192 CPP</strong> — Image bit-à-bit avec hash documentés = preuve matérielle de force probante maximale.<br><strong>Art. 184 CPP</strong> — Procédure d'expertise terminée avec cosignature.<br><strong>ISO/IEC 27037 §6.5.4</strong> — Vérification post-acquisition par comparaison de hash.",
+      "question": "<strong>Maintenant que vous avez l'image originale, comment organisez-vous la suite ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Graver image_originale.bin + hash sur un DVD-R en double exemplaire (DVD-R = écriture une fois, infalsifiable). (2) Mettre les deux DVD-R sous scellé physique numéroté SC-2026-GE-04127-FLASH-01 et 02, l'un au coffre BCFI, l'autre déposé chez Sutter (expert indépendant) pour redondance. (3) Créer une <em>image_travail.bin</em> en local pour Genoud, dont le hash sera vérifié à chaque réutilisation. (4) Toute analyse forensique se fera sur image_travail.bin, jamais sur image_originale.bin.",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ PROCÉDURE PARFAITE. (1) <strong>DVD-R</strong> = support write-once, ne peut pas être modifié après gravure. Standard archivage forensique BCFI depuis 2015. (2) <strong>Double scellement (BCFI + expert)</strong> = redondance physique + redondance institutionnelle. Si un scellé est cassé ou perdu, l'autre fait foi. (3) <strong>Image_travail</strong> = principe fondamental : on ne touche jamais à l'original. Si Genoud fait une erreur d'analyse (suppression accidentelle, écrasement), on régénère image_travail depuis l'original. (4) Cette procédure résistera à n'importe quelle contestation de la défense au procès — vous avez démontré que (a) l'acquisition était déterministe, (b) l'image originale est physiquement inaltérable, (c) chaque accès à l'image est tracé via vérification de hash. (5) Sutter pourra témoigner indépendamment à charge.",
+          "legal": "ISO 27037 §6.5 + ATF 138 IV 169 + Procédure BCFI.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Garder l'image originale sur le disque dur du laboratoire dans un répertoire protégé, et travailler directement dessus avec précautions (chmod 444 pour la passer en lecture seule).",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Procédure inadéquate. (1) Un disque dur de laboratoire est <strong>réinscriptible</strong> — un attaquant ou une erreur peut altérer le fichier. <code>chmod 444</code> peut être contourné par root en 2 secondes. (2) Pas de redondance physique = un crash disque = perte définitive de la preuve principale. (3) Pas de scellement = pas de garantie temporelle (« le fichier était-il intact entre le 1<sup>er</sup> avril et l'audience de l'année suivante ? »). (4) <strong>Travailler directement sur l'original</strong> viole la règle fondamentale : un outil bugué, un script qui ouvre le fichier en mode rw par erreur, et la preuve est perdue. La gravure DVD-R + image_travail est la procédure éprouvée pour ces raisons précises.",
+          "legal": "ATF 138 IV 169 + ISO 27037 — Chaîne probatoire compromise.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Chiffrer image_originale.bin avec une clé partagée Pasche/Genoud, et conserver le fichier chiffré sur les serveurs BCFI pour accès à distance pendant l'analyse.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Mauvaise idée procédurale. (1) Le chiffrement protège la confidentialité mais ne garantit pas l'intégrité contre l'opérateur lui-même. Si Pasche ou Genoud sont mis en cause plus tard (peu probable mais cas théorique), la clé partagée prouve que l'un d'eux pouvait modifier le contenu. (2) Le serveur BCFI = surface d'attaque (admin sys, mises à jour, sauvegardes). Une preuve principale doit être physiquement isolée. (3) L'accès à distance multiplie les copies non contrôlées dans les caches OS, swap, etc. (4) Le bon réflexe est <strong>déconnexion réseau, support write-once, double scellement physique</strong>. Le chiffrement est utile pour les copies de transport (transmission inter-services), pas pour l'original.",
+          "legal": "ATF 138 IV 169 — Intégrité physique de l'original prioritaire.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🔐 09h30 — Scellement post-acquisition",
+      "situation": "Les deux DVD-R sont gravés (image_originale.bin + hash_md5.txt + hash_sha256.txt + PV_acquisition.pdf signé électroniquement par Pasche, Genoud et Sutter). Le scellement est physique : pochette en aluminium soudée à chaud, étiquette anti-arrachement avec QR code lié au registre BCFI, signature manuscrite de Sutter en travers de la fermeture (toute ouverture casse la signature). Vous appelez Me Beretta (défenseur de von Steiger) et lui notifiez officiellement : <strong>(a)</strong> l'acquisition est terminée, <strong>(b)</strong> l'image originale est sous scellé conformément à l'audience TMC, <strong>(c)</strong> Sutter est désigné pour le tri médical/familial/politique, <strong>(d)</strong> le scellement court pour 20 jours selon art. 248 CPP révisé.<br>Reste un point pratique : la BCFI veut commencer dès demain l'analyse <strong>structurelle</strong> de l'image (cartographie du système de fichiers, identification des partitions, des formats audio, des logs) — analyse qui ne touche pas au <em>contenu</em> des conversations enregistrées mais en révèle la structure.",
+      "law": "<strong>Art. 248 CPP révisé</strong> — Délai 20 jours.<br><strong>Art. 248a CPP</strong> — Procédure de levée des scellés.<br><strong>Art. 246 CPP</strong> — Distinction analyse structurelle (métadonnées) vs analyse de contenu (conversations).",
+      "question": "<strong>Comment procédez-vous pour l'analyse structurelle sans violer le scellement ?</strong>",
+      "choices": [
+        {
+          "text": "Proposer à Beretta et Sutter un <strong>protocole de pré-analyse structurelle</strong> : Genoud, sous supervision visuelle de Sutter, extrait sur image_travail uniquement les <em>métadonnées</em> (noms de fichiers, tailles, timestamps, formats, hash individuels) sans ouvrir aucun fichier audio. Liste produite dans un PV cosigné, transmise à Beretta. Si Beretta consent, l'analyse de contenu pourra démarrer plus tôt. Sinon, on attend l'audience de levée à 20 jours.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ PROTOCOLE COLLABORATIF. (1) L'analyse <strong>structurelle</strong> (métadonnées) ne touche pas au contenu protégé par 264 CPP — c'est l'équivalent forensique de lister les enveloppes sans les ouvrir. (2) <strong>Supervision Sutter</strong> = garantie indépendante que rien d'autre n'est extrait. (3) <strong>Cosignature</strong> = traçabilité totale. (4) <strong>Transmission Beretta</strong> = transparence procédurale, Beretta peut consentir au pré-traitement (gain de temps pour l'enquête, garde-fous pour la défense). (5) Si Beretta refuse, vous attendez les 20 jours — pas de tentative de passage en force. (6) Cette approche construit la confiance avec la défense, qui se traduira par une instruction plus fluide. (7) Beretta acceptera très probablement : son client est victime, il veut que l'enquête avance vite, et le protocole protège ses intérêts.",
+          "legal": "Art. 246 + 248 + 264 CPP + ATF 144 IV 74 — Protocole conforme.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Considérer que les métadonnées (noms de fichiers, tailles, dates) ne sont pas du contenu et que vous pouvez les extraire librement sans accord préalable.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Interprétation contestable. (1) Bien que techniquement les métadonnées ne soient pas le contenu, le scellement art. 248 CPP couvre <strong>l'ensemble du support</strong> pas seulement le contenu sensible. La pratique TMC à Genève est restrictive : sans accord express ou levée, on ne touche à rien. (2) Si vous procédez unilatéralement, Beretta plaidera la violation du scellement, et vous risquez l'annulation de l'analyse. (3) Même si techniquement vous avez raison sur la distinction métadonnées/contenu, le risque procédural est trop élevé. La règle conservatrice est : <strong>en cas de doute, demander accord ou attendre la levée formelle</strong>. (4) Cela coûte 1-3 semaines mais protège tout le reste du dossier.",
+          "legal": "Art. 248 CPP — Interprétation restrictive en pratique TMC.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Attendre les 20 jours complets sans rien faire et démarrer l'analyse complète seulement après la levée formelle des scellés.",
+          "ok": false,
+          "pts": 0,
+          "fb": "Approche conservatrice mais inefficace. (1) 20 jours de stand-by = perte de temps pour une enquête où d'autres pistes (revendeur, ADN, accès au bureau) peuvent avancer en parallèle. (2) Surtout, l'audience de levée des scellés sera <em>plus difficile</em> sans pré-tri : Beretta argumentera que sa demande de scellement est globale, vous demanderez une levée globale, et le TMC pourrait demander un protocole de tri… que vous auriez pu déjà négocier à l'amiable. (3) Le protocole collaboratif (option 1) est précisément conçu pour éviter ce stand-by inutile : vous proposez la solution avant que le problème ne soit posé en audience. (4) Attendre passivement = sous-utilisation des ressources et risque de perte de momentum dans l'enquête.",
+          "legal": "Art. 248 CPP — Inefficacité procédurale.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

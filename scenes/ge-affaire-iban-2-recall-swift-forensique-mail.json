@@ -1,0 +1,148 @@
+{
+  "id": "ge-affaire-iban-2-recall-swift-forensique-mail",
+  "title": "IBAN spoofing #2 — Recall SWIFT et chasse au domaine",
+  "icon": "📡",
+  "difficulty": "medium",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Pasche obtient une réponse SWIFT en moins de 18h, valide l'analyse forensique des mails et identifie un pattern d'attaque multi-victimes.",
+    "degraded": "Pasche gère bien le recall mais ne pousse pas assez le partage de pattern avec FedPol/SwissReporting — d'autres PME pourraient tomber.",
+    "failure": "Pasche se laisse rassurer par une réponse SWIFT partielle et néglige les actes complémentaires — fonds restants partent en crypto avant tracage."
+  },
+  "tags": [
+    "POLGE",
+    "BCFI",
+    "GENÈVE",
+    "RECALL SWIFT",
+    "FORENSIQUE MAIL",
+    "SWITCH",
+    "TYPOSQUATTING",
+    "BEC",
+    "MROS"
+  ],
+  "legalRefs": [
+    {"label": "Art. 146 CP", "title": "Escroquerie — instruction confirmée"},
+    {"label": "Art. 9 LBA", "title": "Communication MROS — UBS partie en parallèle"},
+    {"label": "Art. 305 CPP", "title": "Renseignements à fournir par tiers (banque, registry)"},
+    {"label": "Art. 18 + 32 Convention de Budapest", "title": "Préservation rapide et accès transfrontalier aux données stockées"},
+    {"label": "RFC 7208 (SPF) / RFC 6376 (DKIM) / RFC 7489 (DMARC)", "title": "Standards techniques d'authentification email"},
+    {"label": "SWITCH Domain Suspension Request", "title": "Procédure administrative de blocage de domaine .ch frauduleux"},
+    {"label": "Pratique fedpol NEDIK + EC3 Europol", "title": "Partage de pattern BEC entre forces de l'ordre"}
+  ],
+  "intro": "<p>Mardi 17 février 2026, 06h45. Vous êtes de retour au bureau, peu de sommeil. Le recall SWIFT a tourné toute la nuit — Standard Chartered HK est dans un fuseau favorable (UTC+8, journée de travail mardi). À 03h20 nuit suisse, vous aviez reçu une <strong>première réponse opérationnelle</strong> de Standard Chartered via UBS : ils confirment la réception du recall, ont gelé administrativement le compte Hartford Mecatronics Ltd à H+50h depuis le virement, mais les fonds sur le compte n'étaient déjà plus que de <strong>387'200 USD</strong> (~351'000 CHF au taux du jour). Les 1'075'000 CHF restants étaient déjà partis par 3 transferts internes consécutifs entre dimanche soir et lundi matin (heure HK), vers <strong>(a)</strong> deux comptes business chez Standard Chartered HK (« Wright Asia Capital Ltd » et « Pacific Tradelink Co Ltd »), <strong>(b)</strong> un compte personnel à OCBC Bank Singapour au nom de <strong>Mme Jiang Yuxin</strong> (citoyenne hongkongaise, peut-être prête-nom).</p><p>Standard Chartered demande à UBS une <strong>confirmation écrite formelle</strong> de la procédure pénale ouverte en Suisse pour étendre le gel aux deux comptes secondaires HK. C'est à vous et Cottier de produire cette confirmation dans les heures qui viennent (déjà préparée par Cottier hier soir, sera envoyée à 08h00). Pour OCBC Singapour, c'est plus délicat : pas de procédure SWIFT gpi recall standard avec compte personnel à l'étranger, il faudra l'EIMP CH-SG (plus lent).</p><p>En parallèle, <strong>SWITCH</strong> a confirmé hier soir à 19h47 le <strong>blocage administratif du domaine helvetia-mecanique.ch</strong> (procédure Domain Suspension Request validée en 4h — délai record). Le détenteur enregistré est un certain « Andrei Volkov », adresse à Vladivostok, e-mail Protonmail — prête-nom évident. SWITCH a en outre transmis les <strong>logs de queries DNS</strong> des 13 derniers jours : 47 requêtes seulement, dont 38 provenant d'IPs corrélables à des serveurs de messagerie (probablement le serveur d'envoi des mails frauduleux), 5 du système d'Helvetia (les vérifications post-fraude), 4 d'IP genevoises non identifiées (clic possible des CFO de la cible). Le pattern est précis et ciblé.</p>",
+  "alertLevel": "📡 RECALL PARTIEL · 387K USD GELÉS / 1'075K DÉJÀ REVENTILÉS · 2 COMPTES HK + 1 SG IDENTIFIÉS · SWITCH BLOQUE DOMAINE · OPS À DÉMULTIPLIER",
+  "objectives": [
+    "Étendre le gel administratif HK aux deux comptes secondaires (Wright Asia + Pacific Tradelink)",
+    "Préparer la voie EIMP Singapour pour le compte personnel Jiang Yuxin",
+    "Lancer une analyse forensique complète des mails (en-têtes, métadonnées, corrélations)",
+    "Partager le pattern d'attaque avec FedPol NEDIK + Europol EC3 pour protéger d'autres victimes potentielles"
+  ],
+  "debrief": "<p><strong>Stratégie de reventilation post-BEC</strong> : les groupes BEC organisés opèrent presque toujours avec des <em>chaînes de comptes</em> structurées. Le compte initial (Hartford Mecatronics ici) ne conserve les fonds que quelques heures — il sert de point d'entrée juridique (le donneur d'ordre voit ce compte, la banque émettrice voit ce compte). Dans les 12-48h, les fonds sont ventilés vers : (a) <strong>comptes secondaires dans la même juridiction</strong> (HK ici — Wright Asia, Pacific Tradelink) pour brouiller le traçage interne, (b) <strong>comptes dans une autre juridiction</strong> (Singapour pour Jiang Yuxin — une autre voie EIMP, complication), (c) <strong>exchanges crypto</strong> (Binance HK, OKX, Huobi) pour la conversion finale en USDT-Tron ou autre stablecoin. Chaque ventilation perdue dans le temps = chaque ventilation difficilement récupérable.</p><p><strong>SPF / DKIM / DMARC en BEC</strong> : ces trois standards techniques visent à authentifier l'expéditeur d'un mail. <strong>SPF (RFC 7208)</strong> : le domaine déclare quelles IP peuvent envoyer du mail en son nom. <strong>DKIM (RFC 6376)</strong> : chaque mail est signé cryptographiquement avec une clé privée du domaine émetteur. <strong>DMARC (RFC 7489)</strong> : politique combinée — si SPF ou DKIM échoue, le destinataire applique l'action (reject / quarantine / none). Les BEC modernes contournent ces protections en utilisant un <strong>domaine valide (typosquatté)</strong> dont les fraudeurs configurent eux-mêmes SPF/DKIM correctement — le destinataire voit donc une authentification SPF/DKIM passe, mais sur le mauvais domaine. La vigilance doit être <em>humaine</em> : vérifier visuellement le domaine, ne pas se fier aveuglément aux indicateurs verts.</p><p><strong>SWITCH Domain Suspension Request</strong> : SWITCH (registry .ch) accepte des demandes de suspension administrative pour les domaines impliqués dans des activités frauduleuses, sur la base d'une demande motivée par une autorité de poursuite suisse. Procédure rapide (24-72h typique), restitue le domaine en cas d'erreur (mécanisme contradictoire). Très utilisée par BCFI pour les domaines de phishing, BEC et fraude. SWITCH partage aussi des données DNS et historique d'enregistrement avec les autorités sans EIMP (canal interne suisse).</p><p><strong>Partage de pattern avec NEDIK / Europol EC3</strong> : un dossier BEC isolé est moins exploitable qu'un dossier BEC <em>connecté</em> à un pattern multi-victimes. NEDIK (Netzwerk Ermittlungsunterstützung Digitale Kriminalität, hébergé chez fedpol) centralise les indicateurs cyber suisses ; Europol EC3 fait de même au niveau européen. Si le typosquatting de helvetia-mecanique.ch fait partie d'une campagne plus large — par exemple, 7 autres domaines de type « entreprise-suisse.ch » enregistrés simultanément le 3 février — alors la détection précoce d'autres victimes potentielles peut sauver des millions ailleurs. <strong>Réflexe à acquérir</strong> : signaler immédiatement chaque BEC à NEDIK et EC3.</p>",
+  "steps": [
+    {
+      "phase": "🏦 07h30 — Extension du gel HK",
+      "situation": "Vous appelez UBS cellule fraude pour préparer la suite. Cottier sera disponible à 08h00 pour signer la confirmation écrite de procédure pénale ouverte (art. 309 CPP) destinée à Standard Chartered HK, qui est l'élément déclencheur pour étendre le gel aux deux comptes secondaires identifiés. UBS vous indique : Standard Chartered HK demande non seulement la confirmation de la procédure pénale en Suisse mais aussi <em>une description précise des sommes recherchées dans chaque compte secondaire</em>. Or vous n'avez pas encore le détail comptable. UBS propose deux approches : <strong>(α)</strong> attendre que Standard Chartered HK fournisse via SWIFT (canal banque-banque) les relevés des deux comptes secondaires — délai estimé 24-48h — puis demander gel ciblé ; <strong>(β)</strong> demander à Standard Chartered HK <strong>un gel temporaire intégral des deux comptes</strong> en attendant la production des relevés, sur la base du soupçon que les fonds Helvetia y transitent — plus agressif, peut être contesté par les titulaires (Wright Asia, Pacific Tradelink), mais immédiatement effectif.",
+      "law": "<strong>Art. 263 CPP</strong> — Séquestre conservatoire (homologue suisse).<br><strong>EIMP art. 18a</strong> — Mesures provisoires urgentes.<br><strong>SWIFT gpi + Compliance HK</strong> — Procédures interbancaires de gel.",
+      "question": "<strong>Quelle approche recommandez-vous à Cottier ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Approche β — gel temporaire intégral</strong>, durée limitée à 7 jours, avec engagement écrit de produire les relevés et la documentation Helvetia dans ce délai. Si Wright Asia ou Pacific Tradelink contestent et démontrent activités légitimes parallèles, le gel sera ajusté ou levé. La fenêtre temporelle ne nous permet pas l'option α : 24-48h de plus, les fonds peuvent partir des deux comptes secondaires vers d'autres comptes ou crypto exchanges.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ARBITRAGE CORRECT. (1) <strong>Le temps prime sur la précision</strong> dans la phase post-BEC à H+50-100h. Un gel intégral temporaire est l'instrument disponible pour suspendre les flux pendant qu'on documente — c'est exactement ce que prévoit l'EIMP art. 18a pour les mesures provisoires urgentes. (2) <strong>Durée limitée à 7 jours</strong> = vous vous engagez vous-même à produire la documentation rapidement, ce qui rassure Standard Chartered HK sur la non-arbitrariness de la mesure. (3) <strong>Mécanisme contradictoire</strong> (si les titulaires contestent, ajustement) = vous respectez les principes de proportionnalité et de droits des tiers. Standard Chartered ne refusera pas cette structure. (4) <strong>Risque accepté</strong> : si Wright Asia et Pacific Tradelink ont effectivement des activités légitimes, vous aurez créé un préjudice temporaire de 7 jours pour eux. C'est un risque mineur face à la perte définitive de 1+ million CHF.",
+          "legal": "Art. 263 CPP + EIMP art. 18a + Pratique gel international — Mesure proportionnée.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>Approche α — attendre les relevés</strong> puis gel ciblé. Plus rigoureuse procéduralement, évite de léser des tiers potentiellement légitimes.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Rigorisme contre-productif. (1) <strong>24-48h de plus</strong> = les fonds peuvent quitter Wright Asia et Pacific Tradelink. Vous vous retrouverez avec des relevés montrant des transferts post-BEC vers des destinations encore plus difficiles à atteindre (crypto exchanges, OCBC Singapour, autres juridictions). (2) <strong>« Préjudice pour tiers légitimes »</strong> = argument théorique faible ici : les deux comptes ont reçu en 24-36h des fonds correspondant exactement au montant manquant du recall, ce qui justifie un soupçon raisonnable. La présomption d'innocence des entités-coquilles ne peut bloquer un gel temporaire de 7 jours dans une enquête pénale fondée. (3) <strong>Pratique BCFI éprouvée</strong> : <em>geler d'abord, ajuster ensuite</em> sur les chaînes de reventilation post-BEC. (4) Cottier vous redirigera : « Pasche, on n'attend pas, on demande le gel intégral. »",
+          "legal": "Art. 263 CPP + SWIFT gpi — Tempo inversé.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Demander à Standard Chartered HK directement, par voie d'EIMP Hong Kong, le gel ciblé immédiat <strong>après production complète</strong> par UBS d'un dossier juridique formel.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Sur-judiciarisation prématurée. (1) <strong>L'EIMP HK pour un gel ciblé</strong> prend 6-18 mois typique — bien plus que la fenêtre de 7-21 jours pendant laquelle les fonds peuvent encore être atteints. (2) <strong>La voie SWIFT gpi + confirmation banque-banque</strong> est précisément conçue pour <em>contourner</em> la lenteur EIMP dans les premières semaines. Vous abandonneriez l'autoroute pour la route de campagne. (3) <strong>« Dossier juridique formel »</strong> avant le gel = vous demandez à UBS de monter en quelques heures un dossier qui prendrait normalement des semaines de préparation. UBS dira non, et vous aurez perdu encore plus de temps. (4) <strong>La pratique correcte</strong> : SWIFT gpi pour les premiers jours, EIMP pour le moyen-long terme (consolider en formel ce qui a été obtenu en informel). Ce n'est pas un choix entre les deux.",
+          "legal": "EIMP + SWIFT gpi — Voies confondues.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 09h45 — Briefing forensique avec Genoud",
+      "situation": "Vous demandez à <strong>Inspecteur Genoud</strong> (brigade criminalité informatique GE) de prendre en charge l'analyse forensique complète des 6 mails frauduleux + analyse du domaine helvetia-mecanique.ch + corrélations avec d'autres cas BCFI récents. Genoud arrive avec son ordinateur portable. Vous lui briefez en 12 minutes. Vous discutez ensuite des priorités. <strong>Quatre angles forensiques possibles</strong> : <strong>(I)</strong> Analyse fine des en-têtes Received des 6 mails — extraire toutes les IP intermédiaires, croiser avec bases AbuseIPDB + Spamhaus, identifier le serveur d'envoi probable et les fournisseurs hosting impliqués. <strong>(II)</strong> Reconstitution de l'infrastructure : domaine .ch + IP de service mail (Postfix, Exchange ?) + certificats TLS éventuels + serveurs DNS configurés — pour cartographier l'écosystème technique de l'attaquant. <strong>(III)</strong> Recherche de mails similaires reçus par d'autres entreprises suisses ces dernières semaines — via la coordination avec d'autres services cyber cantonaux et CERT-CH. <strong>(IV)</strong> Analyse du <em>style</em> et de la <em>nomenclature</em> des mails (signature, formules, références internes Helvetia) pour évaluer si les fraudeurs disposaient d'informations internes (compromission préalable, OSINT ciblé, ou ancien employé).",
+      "law": "<strong>Art. 184 CPP</strong> — Expertise interne PolGE.<br><strong>Art. 32 Convention de Budapest</strong> — Accès transfrontalier aux données stockées.<br><strong>Pratique CERT-CH + NEDIK</strong> — Partage entre cantons.",
+      "question": "<strong>Comment priorisez-vous les 4 angles forensiques avec Genoud ?</strong>",
+      "choices": [
+        {
+          "text": "III + IV en parallèle d'abord (cette semaine), puis II (semaine prochaine), I en filigrane sur la durée. <strong>Raisonnement</strong> : (a) angle III protège les autres PME suisses potentiellement visées par la même campagne — utilité collective majeure ; (b) angle IV peut révéler une compromission interne préalable d'Helvetia, ce qui ouvrirait des pistes d'enquête sur leur SI ou sur un complice ; (c) angle II est intéressant techniquement mais les fraudeurs ont déjà désactivé l'infrastructure (domaine bloqué SWITCH) — moins urgent ; (d) angle I est utile pour le dossier mais l'IP source est probablement un VPS jetable.",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ PRIORISATION INTELLIGENTE. (1) <strong>Angle III en priorité</strong> = vous pensez immédiatement à la <em>dimension collective</em> de votre enquête : un BEC est presque toujours connecté à une campagne, et alerter les autres victimes potentielles est <em>l'effet le plus utile</em> que votre enquête peut produire à court terme. CERT-CH + NEDIK + autres cantons doivent être prévenus dans les 24h. (2) <strong>Angle IV pertinent</strong> = vous vérifiez si les fraudeurs sont « informés » d'Helvetia (compromission préalable de mailbox, ancien employé, OSINT poussé) — si oui, votre enquête s'étend à un volet « accès illicite préalable » potentiellement art. 143 ou 143bis CP. (3) <strong>Angle II en second plan</strong> = vous avez compris que la chasse à l'infrastructure désactivée est moins productive que la chasse au pattern actif. (4) <strong>Angle I en filigrane</strong> = vous le faites mais sans en attendre de gros résultats, c'est la réalité opérationnelle de la cyber-enquête.",
+          "legal": "Pratique BCFI + NEDIK + CERT-CH — Priorisation collective.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "I + II d'abord (cette semaine), puis III + IV (semaine prochaine). <strong>Raisonnement</strong> : la reconstruction technique précise est la base de toute la suite, on ne peut pas partager un pattern sans avoir d'abord cartographié l'attaque.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Approche techniquement valide mais utilitairement sous-optimale. (1) <strong>« On ne peut pas partager un pattern sans cartographier »</strong> = faux dans la pratique. Vous avez <em>déjà</em> les éléments minimaux pour un partage NEDIK : domaine typosquatté helvetia-mecanique.ch, modus operandi BEC PDG-CFO, montant 1,46M, banques HK+SG. C'est largement suffisant pour qu'un autre canton détecte une attaque parallèle. (2) <strong>Retarder le partage</strong> de 5-7 jours = vous prenez le risque qu'une autre PME suisse tombe entre-temps, alors que vous auriez pu prévenir. C'est moralement et opérationnellement défavorable. (3) <strong>La cartographie technique fine</strong> (angles I + II) est intéressante pour le dossier de procès et la compréhension académique, mais elle ne <em>récupère pas d'argent</em> et ne <em>protège pas d'autres victimes</em>. (4) Réflexe à acquérir : <em>dans la fenêtre H+48-168h, les gains opérationnels priment sur la perfection forensique</em>.",
+          "legal": "Pratique BCFI + Utilité collective — Priorisation à revoir.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Concentrer Genoud sur l'angle I (analyse IP/hosting) qui est techniquement la pièce maîtresse permettant d'identifier les opérateurs réels — les autres angles découleront naturellement.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Mono-angle problématique. (1) <strong>L'identification des opérateurs réels via IP/hosting</strong> est l'angle qui a historiquement <em>le moins payé</em> en BEC. Les fraudeurs utilisent systématiquement des VPS jetables, des proxies, des connexions Tor pour le command-and-control, et leurs IPs sont brûlées après chaque campagne. Vous mettrez Genoud sur 40-80h de travail technique pour aboutir typiquement à un VPS allemand effacé et une IP source en Russie ou Asie. (2) <strong>Pratique CERT-CH</strong> : dans les statistiques 2024, 4% des dossiers BEC suisses identifient l'opérateur réel par analyse IP. Les 96% restants sont résolus par <em>l'argent</em> (suivre les flux financiers) et par <em>le partage de pattern</em> (autres victimes qui complètent le puzzle). (3) Vous gâchez l'efficacité de Genoud sur l'angle le moins productif. (4) Apprentissage : <em>en cyber-enquête économique, suivre l'argent > suivre l'IP</em>.",
+          "legal": "Pratique BCFI — Mono-angle inefficace.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📨 11h30 — Notification NEDIK et CERT-CH",
+      "situation": "Genoud commence sur l'angle III. Vous décidez de pousser en parallèle vous-même la notification NEDIK + CERT-CH. Vous préparez une fiche pattern de 1,5 page : <strong>(a)</strong> modus operandi (BEC PDG-CFO, 6 mails escalants sur 18h, prétexte acquisition italienne, urgence et confidentialité), <strong>(b)</strong> indicateurs techniques (domaine typosquatté .ch, registrar REG.RU, prête-nom Andrei Volkov à Vladivostok), <strong>(c)</strong> indicateurs financiers (compte initial HK chez Standard Chartered au nom « Hartford Mecatronics Ltd », reventilation rapide vers 2 comptes secondaires HK + 1 compte personnel Singapour OCBC), <strong>(d)</strong> chronologie attaque (domaine enregistré 3 février, premiers mails 12 février, virement 14 février, recall 17 février). Cette fiche pattern va être transmise à NEDIK (qui la relaiera à fedpol et aux services cyber cantonaux) et à CERT-CH (qui la relaiera aux entreprises suisses via leurs canaux d'alerte).",
+      "law": "<strong>Pratique NEDIK</strong> — Partage interne forces de l'ordre suisses.<br><strong>CERT-CH</strong> — Alerte aux entreprises via canaux sectoriels.<br><strong>Europol EC3</strong> — Si pattern international, transmission Eurojust.",
+      "question": "<strong>Sur quoi insistez-vous particulièrement dans la fiche pattern ?</strong>",
+      "choices": [
+        {
+          "text": "L'<strong>indicateur le plus exploitable pour la détection précoce</strong> : <em>domaines typosquattés enregistrés via REG.RU avec prête-nom russophone (mois précédant), envoi de mails BEC PDG-CFO à des PME suisses industrielles/aéronautiques/horlogères dans les 7-15 jours suivants</em>. Je demande à NEDIK et CERT-CH de pousser une alerte <strong>aux services cyber cantonaux pour qu'ils vérifient les enregistrements .ch de janvier-février 2026 ayant ces caractéristiques</strong> — il peut y avoir 5, 10, 20 domaines préparatoires en attente d'activation pour d'autres victimes.",
+          "ok": true,
+          "pts": 35,
+          "fb": "✅ ANALYSE PRÉDICTIVE. (1) <strong>Vous transformez votre dossier individuel en outil de protection collective</strong>. Le partage de pattern n'est utile que si l'indicateur est <em>actionnable</em> — vous fournissez un critère de recherche concret (REG.RU + prête-nom russe + secteur industriel) que les services cyber peuvent appliquer immédiatement. (2) <strong>« Domaines préparatoires en attente d'activation »</strong> = vous anticipez la suite logique : si les fraudeurs ont préparé 1 domaine pour Helvetia, ils en ont sans doute préparé 5-20 autres en parallèle. SWITCH a la capacité technique de chercher (registrar REG.RU + dates janvier-février 2026 + patterns de nommage similaires) et peut produire la liste en 24-48h. (3) <strong>Vous activez l'effet réseau</strong> de NEDIK : un canton détecte un domaine suspect, prévient SWITCH, qui bloque préventivement — la prochaine PME suisse est sauvée. (4) NEDIK appréciera particulièrement la maturité opérationnelle de cette fiche.",
+          "legal": "Pratique NEDIK + CERT-CH — Effet réseau optimisé.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Le <strong>montant volé</strong> (1,46M CHF) et le <strong>retrait crypto attendu</strong> — pour sensibiliser les acteurs MROS/Chainalysis qu'un gros mouvement USDT-Tron est imminent.",
+          "ok": false,
+          "pts": 5,
+          "fb": "Utile mais sous-optimal. (1) <strong>Mme Stalder (MROS) et Chainalysis sont déjà saisies via la déclaration LBA UBS</strong> — elles ont l'information sur le montant et l'attendue conversion crypto. La fiche NEDIK n'apporte rien de neuf en répétant ces éléments. (2) <strong>La valeur ajoutée d'une fiche pattern</strong> est de <em>permettre à d'autres acteurs de détecter d'autres victimes en temps réel</em> — pas de communiquer ce qui est déjà communiqué via les canaux LBA. (3) Pas une erreur, mais un manque d'effet réseau : votre fiche est correcte mais elle ne déclenchera pas d'action préventive chez les services cyber cantonaux ni chez SWITCH. (4) NEDIK la classera comme « bonne fiche mais redondante avec MROS ».",
+          "legal": "Pratique NEDIK — Effet réseau sous-exploité.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Le <strong>nom du prête-nom</strong> (Andrei Volkov, Vladivostok) — peut être identifié et arrêté avec une coopération adéquate avec les autorités russes.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Cible illusoire. (1) <strong>« Andrei Volkov » à Vladivostok</strong> est presque certainement (a) une identité usurpée (les fraudeurs ont utilisé l'identité d'un vrai citoyen russe à son insu), ou (b) une identité totalement fictive. Le registrar REG.RU ne vérifie pas l'identité des déposants au-delà d'un email Protonmail. (2) <strong>Coopération avec les autorités russes</strong> sur un cas BEC en 2026 : Convention de Budapest signée mais peu opérante en pratique, contexte géopolitique défavorable, EIMP CH-RU presque inopérante. Vous proposez un objectif inatteignable. (3) <strong>L'effet réseau zéro</strong> : aucun autre acteur ne peut faire quoi que ce soit avec « Andrei Volkov ». Ni SWITCH, ni les cantons, ni les PME suisses. (4) Réflexe à acquérir : <em>se concentrer sur les indicateurs actionnables, pas sur les noms de prête-nom</em>. Le pattern (REG.RU + secteur industriel + délai 7-15 jours) est actionnable. Le nom du prête-nom ne l'est pas.",
+          "legal": "Convention de Budapest + EIMP CH-RU — Cible non-actionnable.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

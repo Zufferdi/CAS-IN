@@ -1,0 +1,139 @@
+{
+  "id": "eau-source-trouble-1-ecran-ment",
+  "title": "Source trouble #1 — L'écran ment",
+  "icon": "💧",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Voutaz fait confiance à son instinct d'ingénieure, prélève et mesure manuellement avant de croire l'écran, bascule la station en mode manuel sans interrompre la distribution, et notifie l'OFCS dans les délais. La chaîne de possession forensique démarre proprement et l'eau reste sûre.",
+    "degraded": "Voutaz hésite plusieurs heures entre croire le SCADA et croire les sondes, tarde à basculer en manuel, et notifie l'OFCS tardivement. Aucun dommage sanitaire, mais 38 000 habitants ont bu une eau dont la conformité n'était pas maîtrisée pendant la nuit."
+  },
+  "tags": [
+    "EAU CHABLAIS", "EAU POTABLE", "CISO", "SCADA", "FDIA",
+    "FAUSSES DONNÉES", "CHLORE", "DOSAGE", "INFRASTRUCTURE CRITIQUE",
+    "LCYS", "ART. 74E LSI", "TURBIDITÉ", "DÉTECTION"
+  ],
+  "legalRefs": [
+    { "label": "Art. 74e LSI", "title": "Obligation de signaler les cyberattaques contre les infrastructures critiques (24h)" },
+    { "label": "Art. 234 CP", "title": "Propagation d'une substance dangereuse / mise en danger par contamination de l'eau potable" },
+    { "label": "OAP (Ordonnance approvisionnement eau potable lors de pénurie grave)", "title": "Garantie de l'approvisionnement en eau potable" },
+    { "label": "ODAlOUs / OPBD", "title": "Exigences de qualité microbiologique et chimique de l'eau de boisson" },
+    { "label": "OFCS — Directives sectorielles SKI", "title": "Recommandations aux exploitants d'infrastructures critiques" }
+  ],
+  "intro": "<p>Mardi 8 septembre 2026, 20h15. Vous êtes <strong>Sandrine Voutaz</strong>, 44 ans, directrice technique d'<strong>Eau Chablais SA</strong> (intercommunale fictive, copropriété de 6 communes VD/VS — Aigle, Bex, Ollon, Monthey, Collombey-Muraz, Vouvry — desservant ~38 000 habitants). Ingénieure EPFL en génie de l'environnement, vous avez décroché un CAS en cybersécurité industrielle l'an dernier, sur le tard, parce qu'aucun CISO n'a jamais été budgété : c'est vous, de facto, la responsable cyber.</p><p>Vous finissiez votre soupe à Aigle quand une alarme de niveau bas s'affiche sur votre téléphone de garde : <strong>écart de turbidité mineur</strong> à la station de traitement principale (eau de nappe + lac). Rien de grave en apparence. Mais l'ingénieure en vous tique : la turbidité a bougé sans que la pluie ni le débit ne l'expliquent. Vous vous connectez au SCADA depuis chez vous.</p><p>L'écran de supervision affiche des valeurs <strong>parfaitement normales</strong> : dosage de chlore à 0,28 mg/L (cible 0,1-0,3), turbidité 0,2 NTU, pH 7,4. Tout est vert. Trop vert. Vous appelez l'opérateur de permanence, Diego Fernandes, à la station : « <em>Diego, va me lire physiquement la sonde de chlore libre du bassin 2, celle sur le panneau, pas l'écran.</em> » Trois minutes plus tard, Diego rappelle, la voix tendue : « <em>Sandrine… le panneau affiche 0,28. Mais la sonde portable que je viens de plonger me donne 0,02. Et l'odeur de chlore est presque nulle. C'est pas possible que les deux soient justes.</em> »</p><p>0,02 mg/L de chlore libre, c'est en dessous du seuil de désinfection résiduelle. Si c'est la vraie valeur, l'eau distribuée depuis un temps indéterminé n'est plus correctement désinfectée. Et si l'écran affiche 0,28 alors que la réalité est 0,02, alors <strong>quelqu'un a falsifié les données remontées au SCADA</strong>. Vous êtes seule chez vous, il est 20h30, et 38 000 personnes ont des robinets ouverts.</p>",
+  "alertLevel": "🚨 DIVERGENCE SONDES/SCADA · CHLORE RÉEL 0,02 vs AFFICHÉ 0,28 · FALSIFICATION PROBABLE DES DONNÉES · 38 000 HABITANTS · COMPTEUR LCYS NON DÉMARRÉ",
+  "objectives": [
+    "Déterminer la vraie valeur de chlore (mesure physique indépendante) avant de croire l'écran",
+    "Évaluer si l'eau distribuée présente un risque sanitaire immédiat",
+    "Contenir l'incident (mode manuel) sans interrompre brutalement la distribution",
+    "Identifier le point de bascule LCyS art. 74e (incident avéré vs simple anomalie)"
+  ],
+  "debrief": "<p><strong>La False Data Injection Attack (FDIA) — l'écran qui ment</strong> : La FDIA est l'attaque la plus pernicieuse contre les systèmes SCADA/ICS. Plutôt que de saboter ouvertement un процédé, l'attaquant manipule les <em>valeurs de capteurs remontées aux opérateurs</em>, qui prennent alors des décisions sur la base d'une réalité falsifiée. Caractéristiques : (1) furtivité — l'attaque passe sous les radars des systèmes de détection d'intrusion classiques ; (2) le découplage affichage/réalité — l'opérateur voit du vert pendant que le процédé dérive ; (3) le danger différé — les conséquences physiques (ici, une eau sous-désinfectée) peuvent précéder la détection de plusieurs heures ou jours. La parade fondamentale enseignée par la littérature (Urbina et al., Aslam et al.) : la <strong>mesure physique indépendante</strong> du canal numérique. L'instinct de Voutaz — faire lire la sonde à la main — est exactement la bonne réaction.</p><p><strong>Chlore résiduel et sécurité microbiologique</strong> : Le chlore libre résiduel (0,1-0,3 mg/L en réseau suisse) garantit la désinfection continue de l'eau dans les conduites. En dessous de ~0,05 mg/L, la protection contre la recontamination bactérienne (E. coli, coliformes, légionelles dans certains cas) chute. Une eau à 0,02 mg/L pendant quelques heures n'est pas immédiatement dangereuse si la qualité amont était bonne et le réseau propre, mais le risque monte avec la durée et l'absence de barrière. La décision sanitaire (avis d'ébullition / non-consommation) relève du chimiste cantonal, pas de l'exploitant seul (voir acte 5).</p><p><strong>Art. 74e LSI — quand démarre le compteur des 24h ?</strong> : Depuis le 1er avril 2025, les fournisseurs d'eau potable sont explicitement assujettis à l'obligation de signaler les cyberattaques à l'OFCS sous 24h après détection. La doctrine OFCS distingue : une <em>anomalie technique</em> (panne de sonde, dérive de capteur) ne déclenche pas le compteur ; une <em>manipulation avérée</em> (falsification de données, intrusion) le déclenche. Dans Source trouble, la divergence sonde/SCADA, une fois confirmée comme falsification (et non panne matérielle), constitue une cyberattaque au sens de l'art. 74e. La notification de précaution est néanmoins encouragée dès le doute sérieux.</p><p><strong>Le containement en milieu OT vital — basculer en manuel</strong> : Couper une station d'eau n'est pas une option (38 000 personnes). La bonne pratique : basculer les automates compromis en <strong>mode manuel / local</strong>, où les opérateurs pilotent le dosage sur la base de mesures physiques directes, déconnectées du SCADA falsifié. Cela maintient la distribution tout en neutralisant l'effet de la FDIA, et préserve les automates pour le forensique (acte 2). C'est l'équivalent eau de l'isolation logique sélective d'Étoile noire.</p>",
+  "steps": [
+    {
+      "phase": "🔬 20h30-21h30 — Vérité du terrain : croire la sonde ou l'écran ?",
+      "situation": "Diego est à la station avec sa sonde portable. Vous avez deux réalités contradictoires : le SCADA dit 0,28 mg/L (tout va bien), la mesure manuelle dit 0,02 mg/L (sous-désinfection). Trois hypothèses : (1) panne de la sonde fixe (matériel défaillant remontant une valeur figée) ; (2) panne de la sonde portable de Diego (peu probable, calibrée la semaine dernière) ; (3) falsification des données SCADA (FDIA). Vous devez trancher vite : si c'est (3), l'eau est réellement sous-désinfectée et l'incident est une cyberattaque. Diego attend vos instructions. Le réseau continue de distribuer.",
+      "law": "Aucune obligation immédiate tant que la cause n'est pas qualifiée. Mais l'art. 234 CP (mise en danger par contamination d'eau potable) et le devoir de diligence de l'exploitant imposent d'agir sans délai dès qu'un risque sanitaire est plausible.",
+      "question": "<strong>Quelle est votre première action de vérification ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) Triangulation immédiate par mesure physique multiple</strong>. Vous demandez à Diego : (1) une 2e mesure avec une 3e sonde portable de secours (lever le doute matériel) ; (2) un prélèvement d'échantillon en bouteille stérile horodaté en 3 points du réseau (station, réservoir, robinet abonné test) pour analyse ; (3) une lecture comparée sur un automate <em>amont</em> indépendant du SCADA principal. En parallèle, vous notez l'heure et figez l'état du SCADA (capture d'écran horodatée). Si la triangulation confirme 0,02, c'est une falsification — pas une panne.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✓ Réflexe d'ingénieure exemplaire : triangulation physique indépendante du canal numérique, exactement la parade à une FDIA. Les prélèvements horodatés en 3 points démarrent la traçabilité (utile pour la décision sanitaire de l'acte 5 et le forensique de l'acte 2). La capture SCADA horodatée préserve la preuve de la falsification. En 30 minutes, vous saurez si c'est une panne ou une attaque.",
+          "legal": "Conforme au devoir de diligence de l'exploitant + bonne pratique forensique (préservation de l'état avant intervention). Les prélèvements horodatés seront recevables pour l'analyse cantonale.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "<strong>(β) Redémarrage du SCADA pour « rafraîchir » les valeurs</strong>. Vous demandez à Diego de redémarrer le serveur SCADA et les automates de dosage, en supposant un bug d'affichage. « <em>Si ça revient à 0,02 après reboot, c'est qu'on a un vrai problème de chlore ; si ça reste à 0,28, c'était un bug.</em> » Vous attendez le redémarrage avant toute autre action.",
+          "ok": false,
+          "pts": 2,
+          "fb": "⚠ Réaction compréhensible mais doublement risquée. Un redémarrage détruit les artefacts forensiques en mémoire (configuration runtime, processus de falsification actif, connexions C2) — exactement ce qu'un attaquant souhaite. Et il ne résout rien : si c'est une FDIA persistante, l'automate compromis réaffichera 0,28 après reboot. Vous perdez du temps et des preuves. Pittet/HydroControl (acte 2) regretteront la perte de matériel.",
+          "legal": "Aucune violation. Mais perte d'opportunité forensique majeure et retard sur la qualification de l'incident.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "<strong>(γ) Augmentation immédiate du dosage de chlore par sécurité</strong>. Vous demandez à Diego d'augmenter manuellement l'injection de chlore pour remonter le résiduel, « <em>par précaution, on verra après d'où vient le problème</em> ». Logique : sécuriser l'eau d'abord, diagnostiquer ensuite.",
+          "ok": false,
+          "pts": 4,
+          "fb": "⚠ Bonne intention (sécuriser l'eau) mais geste prématuré et risqué. Si vous ne savez pas encore quelle est la vraie valeur ni si l'automate de dosage est lui-même manipulé, augmenter à l'aveugle peut conduire à un surdosage (eau à goût de javel, voire dépassement des limites — l'inverse d'Oldsmar). Il faut d'abord <em>mesurer</em> de façon fiable, puis corriger sur la base d'une valeur connue. La précipitation sur le dosage est précisément le piège des attaques sur l'eau.",
+          "legal": "Aucune violation, mais un surdosage involontaire pourrait lui-même tomber sous l'art. 234 CP (mise en danger). Mesurer avant de corriger.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🛡️ 21h30-22h30 — Containement : basculer en manuel sans couper l'eau",
+      "situation": "La triangulation est sans appel : 3 mesures physiques convergent vers 0,02-0,03 mg/L, l'automate de dosage du chlore a réduit l'injection depuis environ 14h cet après-midi (6 heures) tout en affichant 0,28 au SCADA. C'est une <strong>FDIA confirmée</strong> : quelqu'un a manipulé à la fois la consigne de dosage ET l'affichage remonté. Diego a relevé qu'une session de télémaintenance était active sur l'automate — une connexion entrante qu'il n'a pas initiée. Vous devez contenir sans couper l'eau de 38 000 personnes la nuit (impossible logistiquement). Le réseau a un volant de réservoirs de quelques heures.",
+      "law": "Devoir de diligence + art. 74e LSI (l'incident est désormais une cyberattaque avérée : le compteur 24h démarre). La continuité d'approvisionnement (tâche communale) doit être préservée dans la mesure du possible.",
+      "question": "<strong>Comment contenez-vous l'attaque ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) Bascule en mode manuel local + coupure de la télémaintenance + dosage piloté sur mesure physique</strong>. Vous faites couper par Diego la liaison de télémaintenance entrante (au niveau du pare-feu/routeur amont, pas en débranchant l'automate), basculez les automates de dosage en mode manuel/local, et faites piloter le chlore par Diego sur la base de mesures physiques directes (objectif 0,15-0,20 mg/L, remontée progressive). Le SCADA falsifié est isolé mais conservé sous tension pour le forensique. La distribution continue. Notification OFCS de précaution déclenchée à 22h30.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✓ Containement parfait, équivalent eau de l'isolation logique sélective : on neutralise l'attaquant (coupure télémaintenance) + on rétablit le contrôle réel (mode manuel sur mesure physique) + on préserve les preuves (SCADA sous tension) + on maintient l'eau (pas de coupure). La remontée <em>progressive</em> du chlore évite le surdosage. L'OFCS appréciera la notification synchrone du containement.",
+          "legal": "Conforme art. 74e LSI + doctrine OT (NIST SP 800-86, ENISA). La coupure ciblée de la télémaintenance préserve la chaîne de possession.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "<strong>(β) Coupure totale de la distribution jusqu'au matin</strong>. Vous décidez de fermer les vannes de sortie de la station et de mettre le réseau sous les seuls réservoirs tampons, le temps de tout reprendre à zéro demain matin avec l'équipe complète. Logique : zéro risque sanitaire, on arrête tout.",
+          "ok": false,
+          "pts": 3,
+          "fb": "⚠ Surréaction qui crée un problème là où il n'y en avait pas besoin. Couper la distribution la nuit prive potentiellement 38 000 personnes d'eau (et pas seulement de boisson : sanitaires, sécurité incendie, hôpital, EMS). Les réservoirs tampons ne tiendront que quelques heures. Vous transformez un incident de qualité gérable en mode manuel en une crise d'approvisionnement. Le mode manuel local permet de maintenir l'eau en sécurité sans cette extrémité.",
+          "legal": "Aucune violation, mais disproportion. Une coupure d'eau pour 38 000 personnes a ses propres conséquences (sécurité incendie notamment) qui peuvent engager la responsabilité de l'exploitant.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "<strong>(γ) Maintien du SCADA actif + surveillance renforcée sans couper la télémaintenance</strong>. Vous laissez tout en l'état (SCADA et télémaintenance actifs) mais demandez à Diego de surveiller en continu et de noter toute nouvelle action de l'attaquant, pour « comprendre ce qu'il veut » avant d'agir. Le dosage est corrigé manuellement mais l'attaquant garde son accès.",
+          "ok": false,
+          "pts": 3,
+          "fb": "⚠ Le « piège forensique » est ici inapproprié : tant que la télémaintenance reste ouverte, l'attaquant peut re-falsifier le dosage en temps réel et compromettre votre correction manuelle — sur une infrastructure d'eau potable, le risque sanitaire prime sur l'observation. La doctrine OFCS pour les infrastructures vitales est claire : on contient d'abord, on observe ensuite via le forensique sur copie. Laisser l'accès ouvert sur un réseau d'eau est un risque que ni l'OFCS ni le chimiste cantonal ne valideraient.",
+          "legal": "Aucune violation directe, mais incompatible avec le devoir de diligence sur une infrastructure sanitaire vitale.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📞 22h30-23h30 — Notification et premières alertes",
+      "situation": "Le containement tient : mode manuel, chlore remonté à 0,16 mg/L, télémaintenance coupée, SCADA isolé sous tension. Diego reste sur place pour la nuit (renfort appelé). Vous devez maintenant arbitrer les notifications, un mardi à 22h30 : (1) l'OFCS (LCyS art. 74e, compteur démarré) ; (2) le président du CA Eau Chablais, Patrice Mooser (syndic d'Aigle) ; (3) le Service cantonal de la consommation (Dr Carmen Lehner) — car il y a un enjeu sanitaire potentiel sur 6 heures de sous-désinfection ; (4) HydroControl (Délèze) pour le forensique dès demain 6h. Vous ne savez pas encore qui est derrière l'attaque ni s'il y a un vrai impact sanitaire.",
+      "law": "Art. 74e LSI (OFCS, 24h) ; l'alerte au chimiste cantonal relève du devoir de diligence sanitaire (la qualité de l'eau est sous haute surveillance cantonale) ; l'information du CA relève de la gouvernance interne.",
+      "question": "<strong>Quelle séquence de notification adoptez-vous ce soir ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>(α) Notification OFCS de précaution + alerte chimiste cantonal de garde + président CA + HydroControl pour 6h</strong>. (1) Notification OFCS via le portail (incident avéré, FDIA, télémaintenance, containement effectué, périmètre en cours d'évaluation). (2) Appel au chimiste cantonal de garde (Service consommation) : signalement de la sous-désinfection de 6h, demande de cadrage sanitaire pour demain matin (faut-il un avis ?). (3) SMS puis appel à Mooser (président CA) : incident contenu, point demain 8h. (4) Délèze (HydroControl) mobilisé pour acquisition forensique à 6h00. Vous rédigez une note de timeline horodatée.",
+          "ok": true,
+          "pts": 9,
+          "fb": "✓ Séquence complète et bien ordonnée : autorité cyber (OFCS), autorité sanitaire (chimiste cantonal — crucial vu l'enjeu eau potable), gouvernance (président CA), forensique (HydroControl). L'alerte au chimiste cantonal dès ce soir est le bon réflexe : la décision sanitaire lui appartient et il a besoin de temps. La note de timeline horodatée structurera toute la suite. Hofmann (OFCS) appréciera la notification de précaution.",
+          "legal": "Conforme art. 74e LSI + devoir de diligence sanitaire. L'alerte précoce au chimiste cantonal est conforme à la répartition des compétences (qualité de l'eau = haute surveillance cantonale).",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "<strong>(β) Notification OFCS seulement, le reste demain matin</strong>. Vous notifiez l'OFCS ce soir (obligation légale) mais réservez l'alerte au chimiste cantonal, au président et à HydroControl pour demain 7h00, « <em>quand on aura les idées plus claires et qu'on pourra présenter quelque chose de structuré</em> ». Logique : ne pas réveiller tout le monde sur un incident contenu.",
+          "ok": false,
+          "pts": 4,
+          "fb": "⚠ L'OFCS est notifié, c'est l'essentiel légalement — mais retarder l'alerte au chimiste cantonal est risqué. Il y a eu 6 heures de sous-désinfection : si un problème microbiologique émergeait (improbable mais pas impossible), le retard d'alerte sanitaire vous serait reproché. Le chimiste cantonal a besoin de temps pour décider d'un éventuel avis et organiser les analyses. La règle sur une infrastructure sanitaire : on alerte l'autorité sanitaire dès qu'un risque est plausible, pas quand c'est confortable.",
+          "legal": "Conforme art. 74e LSI au minimum. Mais le retard d'alerte sanitaire pourrait engager la responsabilité de l'exploitant si un préjudice survenait.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "<strong>(γ) Alerte large immédiate incluant les 6 syndics + communiqué préventif population</strong>. Vous notifiez l'OFCS, le chimiste cantonal, mais aussi les 6 syndics des communes copropriétaires et préparez un communiqué public préventif (« incident technique en cours, eau sous surveillance ») à diffuser cette nuit. Logique : transparence maximale immédiate.",
+          "ok": false,
+          "pts": 5,
+          "fb": "○ La transparence est une vertu, mais un communiqué public à 23h sur un incident <em>contenu</em>, <em>sans impact sanitaire avéré</em> et <em>dont on ignore encore la nature</em>, est prématuré et contre-productif : il déclenchera une panique nocturne (ruée sur l'eau en bouteille, appels paniqués) sans bénéfice sanitaire. La décision d'un avis à la population appartient au chimiste cantonal sur la base des analyses (acte 5), pas à l'exploitant dans la précipitation. Alerter les 6 syndics tous ensemble cette nuit garantit aussi une fuite immédiate.",
+          "legal": "Aucune violation. Mais la communication publique prématurée sur l'eau potable peut créer un trouble disproportionné. La doctrine : l'avis sanitaire est cantonal et fondé sur des données, pas anticipé.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}
