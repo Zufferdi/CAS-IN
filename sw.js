@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v509';
+const CACHE_VERSION = 'cas-in-v130';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1689,6 +1689,42 @@ const STATIC_ASSETS = [
   './case-study-detail.html',
   './carriere.html',
   './sagas.html',
+  // v124 — Cluster Tutoriels DFIR
+  './tutoriels.html',
+  './tutoriels/autopsy.html',
+  './tutoriels/iped.html',
+  './tutoriels/mvt.html',
+  './tutoriels/plaso.html',
+  './tutoriels/volatility3.html',
+  // v125 — Extension cluster Tutoriels DFIR (network + triage + endpoint)
+  './tutoriels/wireshark.html',
+  './tutoriels/kape.html',
+  './tutoriels/velociraptor.html',
+  // v126 — Extension cluster Tutoriels DFIR (acquisition + EZ Tools + mobile lecture)
+  './tutoriels/ftkimager.html',
+  './tutoriels/eztools.html',
+  './tutoriels/cellebrite_reader.html',
+  // v127 — Extension : cassage de hash + socle CLI
+  './tutoriels/hashcat.html',
+  './tutoriels/bases_cli.html',
+  // v128 — Extension : CLI 3 niveaux + OSINT pseudonymes
+  './tutoriels/cli_intermediaire.html',
+  './tutoriels/cli_expert.html',
+  './tutoriels/sherlock.html',
+  './tutoriels/maigret.html',
+  // v129 — Extension : John Ripper + Autopsy 2 niveaux + Holehe
+  './tutoriels/john_ripper.html',
+  './tutoriels/autopsy_debutant.html',
+  './tutoriels/autopsy_avance.html',
+  './tutoriels/holehe.html',
+  // v130 — Extension : IPED 2 niveaux + X-Ways + GHunt 2 niveaux + RegRipper + PhoneInfoga
+  './tutoriels/iped_debutant.html',
+  './tutoriels/iped_avance.html',
+  './tutoriels/xways_debutant.html',
+  './tutoriels/ghunt_debutant.html',
+  './tutoriels/ghunt_moyen.html',
+  './tutoriels/regripper.html',
+  './tutoriels/phoneinfoga.html',
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
   './artifacts.html',
   './glossary.html',
@@ -1740,6 +1776,8 @@ const STATIC_ASSETS = [
   './style/glossary.css',
   // v2.59 — Style partagé pages de référence
   './style/refs.css',
+  // v124 — Style cluster Tutoriels DFIR
+  './style/tutoriels.css',
 
   // ─── Scripts core (js/core/*) ───
   './js/core/cas-in-profile.js',
@@ -1934,6 +1972,8 @@ const STATIC_ASSETS = [
   './data/i18n/de.json',
   './data/i18n/it.json',
   './data/i18n/en.json',
+  // v124 — Cluster Tutoriels DFIR (logique progression + quiz)
+  './js/pages/tutoriels-app.js',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
