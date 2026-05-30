@@ -81,6 +81,8 @@
     'Doctrine · Choix narratifs (secrets)',
     // v121e — 1 catégorie supplémentaire (compétences techniques)
     'Doctrine · Compétences techniques',
+    // v124 — Cluster Tutoriels DFIR (apprendre en faisant)
+    'Tutoriels DFIR',
   ];
 
   // ─────────────────────────────────────────────────────────────
@@ -468,6 +470,17 @@
   function doctrineSceneResults() {
     try { return JSON.parse(localStorage.getItem('scene_results') || '{}') || {}; }
     catch (_) { return {}; }
+  }
+
+  // v124 — Helper Tutoriels DFIR (lecture localStorage casIn_tutoriels)
+  function tutoCompleted(tutoId) {
+    try {
+      const all = JSON.parse(localStorage.getItem('casIn_tutoriels') || '{}') || {};
+      const st = all[tutoId];
+      if (!st) return false;
+      // Critère : toutes les sections complétées + quiz ≥ 80%
+      return !!(st.completed && st.quizScore !== null && st.quizScore >= 80);
+    } catch (_) { return false; }
   }
 
   // IDs des scènes par saga (référence centralisée)
@@ -1355,6 +1368,195 @@
         const pcts = SAGA_SCENES.supply.map(id => (r[id] && r[id].pct) || 0);
         const avg = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
         return { current: avg, target: 85 };
+      } },
+
+    // ─────────────────────────────────────────────────────────────
+    // v124 — TUTORIELS DFIR (6 trophées : 5 bronze outils + 1 or toolkit)
+    // Évaluation contre localStorage casIn_tutoriels (cf. js/pages/tutoriels-app.js)
+    // Critère bronze : tutoriel complété (toutes sections ✓ + quizScore ≥ 80%)
+    // Critère or : les 5 tutoriels complétés
+    // ─────────────────────────────────────────────────────────────
+    { id: 'tuto_autopsy', emoji: '🔬', name: 'Autopsy maîtrisé',
+      desc: 'Terminer le tutoriel Autopsy avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('autopsy'),
+      progress: () => ({ current: tutoCompleted('autopsy') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_iped', emoji: '⚡', name: 'IPED maîtrisé',
+      desc: 'Terminer le tutoriel IPED avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('iped'),
+      progress: () => ({ current: tutoCompleted('iped') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_mvt', emoji: '📱', name: 'MVT maîtrisé',
+      desc: 'Terminer le tutoriel MVT avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('mvt'),
+      progress: () => ({ current: tutoCompleted('mvt') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_plaso', emoji: '⏳', name: 'Plaso maîtrisé',
+      desc: 'Terminer le tutoriel Plaso avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('plaso'),
+      progress: () => ({ current: tutoCompleted('plaso') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_volatility3', emoji: '🧠', name: 'Volatility 3 maîtrisé',
+      desc: 'Terminer le tutoriel Volatility 3 avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('volatility3'),
+      progress: () => ({ current: tutoCompleted('volatility3') ? 1 : 0, target: 1 }) },
+
+    // v125 — Extension : 3 nouveaux outils DFIR (network + triage + endpoint)
+    { id: 'tuto_wireshark', emoji: '🦈', name: 'Wireshark maîtrisé',
+      desc: 'Terminer le tutoriel Wireshark avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('wireshark'),
+      progress: () => ({ current: tutoCompleted('wireshark') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_kape', emoji: '🥋', name: 'KAPE maîtrisé',
+      desc: 'Terminer le tutoriel KAPE avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('kape'),
+      progress: () => ({ current: tutoCompleted('kape') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_velociraptor', emoji: '🦖', name: 'Velociraptor maîtrisé',
+      desc: 'Terminer le tutoriel Velociraptor avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('velociraptor'),
+      progress: () => ({ current: tutoCompleted('velociraptor') ? 1 : 0, target: 1 }) },
+
+    // v126 — Extension : acquisition + EZ Tools standalone + lecture mobile
+    { id: 'tuto_ftkimager', emoji: '💾', name: 'FTK Imager maîtrisé',
+      desc: 'Terminer le tutoriel FTK Imager avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('ftkimager'),
+      progress: () => ({ current: tutoCompleted('ftkimager') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_eztools', emoji: '🧰', name: 'EZ Tools maîtrisés',
+      desc: 'Terminer le tutoriel Eric Zimmerman Tools avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('eztools'),
+      progress: () => ({ current: tutoCompleted('eztools') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_cellebrite_reader', emoji: '📲', name: 'Cellebrite Reader maîtrisé',
+      desc: 'Terminer le tutoriel Cellebrite Reader avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('cellebrite_reader'),
+      progress: () => ({ current: tutoCompleted('cellebrite_reader') ? 1 : 0, target: 1 }) },
+
+    // v127 — Extension : cassage de hash + socle CLI
+    { id: 'tuto_hashcat', emoji: '🔓', name: 'Hashcat maîtrisé',
+      desc: 'Terminer le tutoriel Hashcat avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('hashcat'),
+      progress: () => ({ current: tutoCompleted('hashcat') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_bases_cli', emoji: '⌨️', name: 'Bases CLI maîtrisées',
+      desc: 'Terminer le tutoriel Bases CLI (terminal Windows + Linux) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('bases_cli'),
+      progress: () => ({ current: tutoCompleted('bases_cli') ? 1 : 0, target: 1 }) },
+
+    // v128 — Extension : CLI 3 niveaux + OSINT pseudonymes
+    { id: 'tuto_cli_intermediaire', emoji: '🔧', name: 'CLI intermédiaire maîtrisée',
+      desc: 'Terminer le tutoriel CLI intermédiaire (awk, sed, scripts) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('cli_intermediaire'),
+      progress: () => ({ current: tutoCompleted('cli_intermediaire') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_cli_expert', emoji: '🚀', name: 'CLI expert maîtrisée',
+      desc: 'Terminer le tutoriel CLI expert (jq, parallel, ssh, orchestration) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('cli_expert'),
+      progress: () => ({ current: tutoCompleted('cli_expert') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_sherlock', emoji: '🔍', name: 'Sherlock maîtrisé',
+      desc: 'Terminer le tutoriel Sherlock (OSINT pseudonymes) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('sherlock'),
+      progress: () => ({ current: tutoCompleted('sherlock') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_maigret', emoji: '🕵️', name: 'Maigret maîtrisé',
+      desc: 'Terminer le tutoriel Maigret (OSINT approfondi 3000+ sites) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('maigret'),
+      progress: () => ({ current: tutoCompleted('maigret') ? 1 : 0, target: 1 }) },
+
+    // v129 — Extension : John the Ripper + Autopsy 2 niveaux + Holehe
+    { id: 'tuto_john_ripper', emoji: '🔑', name: 'John the Ripper maîtrisé',
+      desc: 'Terminer le tutoriel John the Ripper (cassage multi-format) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('john_ripper'),
+      progress: () => ({ current: tutoCompleted('john_ripper') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_autopsy_debutant', emoji: '🌱', name: 'Autopsy débutant maîtrisé',
+      desc: 'Terminer le tutoriel Autopsy débutant (première prise en main) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('autopsy_debutant'),
+      progress: () => ({ current: tutoCompleted('autopsy_debutant') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_autopsy_avance', emoji: '🧪', name: 'Autopsy avancé maîtrisé',
+      desc: 'Terminer le tutoriel Autopsy avancé (plugins, super-timeline, multi-user) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('autopsy_avance'),
+      progress: () => ({ current: tutoCompleted('autopsy_avance') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_holehe', emoji: '✉️', name: 'Holehe maîtrisé',
+      desc: 'Terminer le tutoriel Holehe (OSINT email) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('holehe'),
+      progress: () => ({ current: tutoCompleted('holehe') ? 1 : 0, target: 1 }) },
+
+    // v130 — Extension : IPED 2 niveaux + X-Ways + GHunt 2 niveaux + RegRipper + PhoneInfoga
+    { id: 'tuto_iped_debutant', emoji: '🌿', name: 'IPED débutant maîtrisé',
+      desc: 'Terminer le tutoriel IPED débutant (première prise en main) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('iped_debutant'),
+      progress: () => ({ current: tutoCompleted('iped_debutant') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_iped_avance', emoji: '⚗️', name: 'IPED avancé maîtrisé',
+      desc: 'Terminer le tutoriel IPED avancé (profils custom, tasks Java) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('iped_avance'),
+      progress: () => ({ current: tutoCompleted('iped_avance') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_xways_debutant', emoji: '🛡️', name: 'X-Ways débutant maîtrisé',
+      desc: 'Terminer le tutoriel X-Ways débutant (Volume Snapshot, RVS) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('xways_debutant'),
+      progress: () => ({ current: tutoCompleted('xways_debutant') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_ghunt_debutant', emoji: '🪪', name: 'GHunt débutant maîtrisé',
+      desc: 'Terminer le tutoriel GHunt débutant (OSINT Google Account) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('ghunt_debutant'),
+      progress: () => ({ current: tutoCompleted('ghunt_debutant') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_ghunt_moyen', emoji: '🔭', name: 'GHunt moyen maîtrisé',
+      desc: 'Terminer le tutoriel GHunt moyen (Phone OSINT, Drive, scripting) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('ghunt_moyen'),
+      progress: () => ({ current: tutoCompleted('ghunt_moyen') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_regripper', emoji: '🗝️', name: 'RegRipper maîtrisé',
+      desc: 'Terminer le tutoriel RegRipper (analyse Registry Windows) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('regripper'),
+      progress: () => ({ current: tutoCompleted('regripper') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_phoneinfoga', emoji: '📞', name: 'PhoneInfoga maîtrisé',
+      desc: 'Terminer le tutoriel PhoneInfoga (OSINT téléphone) avec quiz ≥ 80%',
+      category: 'Tutoriels DFIR',
+      check: () => tutoCompleted('phoneinfoga'),
+      progress: () => ({ current: tutoCompleted('phoneinfoga') ? 1 : 0, target: 1 }) },
+
+    { id: 'tuto_toolkit_dfir', emoji: '🏆', name: 'Toolkit DFIR complet',
+      desc: 'Compléter les 28 tutoriels DFIR (cluster complet : forensique disque/mémoire/mobile/réseau, CLI 3 niveaux, cassage de hash, OSINT 5 outils, Registry Windows)',
+      category: 'Tutoriels DFIR',
+      check: () => ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'].every(tutoCompleted),
+      progress: () => {
+        const ids = ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'];
+        return { current: ids.filter(tutoCompleted).length, target: 28 };
       } },
 
   ];

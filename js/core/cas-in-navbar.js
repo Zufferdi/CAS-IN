@@ -24,11 +24,12 @@
 
   // ── Configuration des sections ─────────────────────────────
   const SECTIONS = [
-    { id: 'quiz',       label: 'Quiz',    icon: '💊', href: 'quiz.html',                 rootHref: '/CAS-IN/quiz.html' },
-    { id: 'scene',      label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns',      rootHref: '/CAS-IN/scene.html#campaigns' },
-    { id: 'tp',         label: 'TP',      icon: '🧪', href: 'tp.html',                   rootHref: '/CAS-IN/tp.html' },
-    { id: 'fiches',     label: 'Fiches',  icon: '📄', href: 'fiches/index.html',         rootHref: '/CAS-IN/fiches/index.html' },
-    { id: 'references', label: 'Réfs',    icon: '📚', href: 'references/index.html',    rootHref: '/CAS-IN/references/index.html' },
+    { id: 'quiz',       label: 'Quiz',     icon: '💊', href: 'quiz.html',                 rootHref: '/CAS-IN/quiz.html' },
+    { id: 'scene',      label: 'Scènes',   icon: '🔍', href: 'scene.html#campaigns',      rootHref: '/CAS-IN/scene.html#campaigns' },
+    { id: 'tp',         label: 'TP',       icon: '🧪', href: 'tp.html',                   rootHref: '/CAS-IN/tp.html' },
+    { id: 'tutoriels',  label: 'Tutos',    icon: '🛠️', href: 'tutoriels.html',            rootHref: '/CAS-IN/tutoriels.html' },
+    { id: 'fiches',     label: 'Fiches',   icon: '📄', href: 'fiches/index.html',         rootHref: '/CAS-IN/fiches/index.html' },
+    { id: 'references', label: 'Réfs',     icon: '📚', href: 'references/index.html',    rootHref: '/CAS-IN/references/index.html' },
   ];
 
   const PAGE_TITLES = {
@@ -38,6 +39,7 @@
     collections:  { icon: '📚', label: 'COLLECTIONS THÉMATIQUES' },
     succes:       { icon: '🏆', label: 'SUCCÈS' },
     tp:           { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
+    tutoriels:    { icon: '🛠️', label: 'TUTORIELS DFIR' },
     fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
     glossary:     { icon: '📚', label: 'GLOSSAIRE' },
     npcs:         { icon: '👥', label: 'PERSONNAGES' },

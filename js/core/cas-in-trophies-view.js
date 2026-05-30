@@ -22,7 +22,7 @@
   'use strict';
 
   // ─────────────────────────────────────────────────────────────
-  // 7 catégories visuelles + leur définition
+  // 10 catégories visuelles + leur définition (v124 +tutoriels)
   // ─────────────────────────────────────────────────────────────
   const VISUAL_CATEGORIES = [
     {
@@ -146,6 +146,17 @@
         'Doctrine · Choix narratifs (secrets)',
       ],
       hideLocked: true, // Cacher tant que non débloqués
+    },
+    // v124 — Cluster Tutoriels DFIR (apprendre en faisant)
+    {
+      id: 'tutoriels',
+      label: 'Tutoriels DFIR',
+      icon: '🛠️',
+      color: '#f0883e',
+      description: 'Maîtrise des outils DFIR open source : Autopsy, IPED, MVT, Plaso, Volatility 3. Apprentissage pas-à-pas validé par quiz.',
+      sourceCategories: [
+        'Tutoriels DFIR',
+      ],
     },
   ];
 
