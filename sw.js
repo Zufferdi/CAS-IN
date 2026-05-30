@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v131';
+const CACHE_VERSION = 'cas-in-v133';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1680,17 +1680,17 @@ const STATIC_ASSETS = [
   './apprendre.html',
   './quiz.html',
   './tp.html',
-  './exam.html',
-  './tools.html',
+  './pages/exam.html',
+  './pages/tools.html',
   './scene.html',
-  './profile.html',
-  './mastery.html',
-  './parcours.html',
-  './parcours-detail.html',
-  './case-studies.html',
-  './case-study-detail.html',
-  './carriere.html',
-  './sagas.html',
+  './pages/profile.html',
+  './pages/mastery.html',
+  './pages/parcours.html',
+  './pages/parcours-detail.html',
+  './pages/case-studies.html',
+  './pages/case-study-detail.html',
+  './pages/carriere.html',
+  './pages/sagas.html',
   // v124 — Cluster Tutoriels DFIR
   './tutoriels.html',
   './tutoriels/autopsy.html',
@@ -1728,9 +1728,9 @@ const STATIC_ASSETS = [
   './tutoriels/regripper.html',
   './tutoriels/phoneinfoga.html',
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
-  './artifacts.html',
-  './glossary.html',
-  './npcs.html',
+  './pages/artifacts.html',
+  './pages/glossary.html',
+  './pages/npcs.html',
   // v2.59 — Cluster pages de référence (sous-dossier references/)
   './references/index.html',
   './references/events.html',
@@ -1774,6 +1774,8 @@ const STATIC_ASSETS = [
   './style/fiche-notes.css',
   './style/gamification-toasts.css',
   './style/gamification-tiers.css',
+  // v132d — Boutons de partage trophées
+  './style/share-buttons.css',
   './style/npcs.css',
   './style/glossary.css',
   // v2.59 — Style partagé pages de référence
@@ -1962,7 +1964,7 @@ const STATIC_ASSETS = [
   './js/components/scene-notes.js',
   './js/pages/scene-exam-app.js',
   './js/profile/profile-export-csv.js',
-  './scene-exam.html',
+  './pages/scene-exam.html',
   //
   // v94 (Niveau J — Accessibilité WCAG 2.2 AA)
   './js/core/cas-in-a11y.js',
