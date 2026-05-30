@@ -4,7 +4,7 @@
 
 Tu prends une scène, tu te retrouves dans la peau d'un·e procureur·e, RSSI, juge des mineurs, doctorant·e ou grand-mère arnaquée au cousin russe. Tu dois prendre 3 à 6 décisions sous contrainte. Chaque choix est noté, commenté, et raccroché à un article du CP/CPP ou à un ATF réel. À la fin, on t'explique ce qui était bien, ce qui passait, et ce qui aurait fait basculer tout le dossier en nullité (art. 141 al. 2 CPP, c'est notre best-seller).
 
-C'est sérieux. Mais ne te trompe pas : c'est un projet qui contient **332 personnages non-joueurs nommés**, dont la moitié sont des procureures romandes, des médecins légistes du CURML et des inspecteurs cybercrime fictifs. Si tu cherches un Netflix interactif tranquille pour le dimanche soir, va voir ailleurs.
+C'est sérieux. Mais ne te trompe pas : c'est un projet qui contient **324 personnages non-joueurs nommés**, dont la moitié sont des procureures romandes, des médecins légistes du CURML et des inspecteurs cybercrime fictifs. Si tu cherches un Netflix interactif tranquille pour le dimanche soir, va voir ailleurs.
 
 ---
 
@@ -17,99 +17,84 @@ C'est sérieux. Mais ne te trompe pas : c'est un projet qui contient **332 perso
 - Préparation au CAS Investigation Numérique, à la formation continue des magistrats, ou à la prochaine soirée où on te demande « alors c'est quoi exactement la nLPD ».
 - Toute personne curieuse de comprendre *concrètement* comment une enquête cyber se déroule en Suisse — depuis le premier appel jusqu'à l'audience d'arrondissement.
 
-**Niveaux disponibles** : `stagiaire` (3 campagnes), `inspecteur` (7), `enqueteur` (7), `expert` (10). Si tu te lances direct sur la saga *L'Affaire Tom — Défi mortel TikTok* niveau Expert, c'est ton problème. Tu auras besoin de connaître le DPMin, le PPMin, l'art. 16 DSA et la jurisprudence Lanzarote sur les auditions d'enfants. Bon courage.
+**Niveaux disponibles** : `stagiaire` · `inspecteur` · `enqueteur` · `expert`. Si tu te lances direct sur la saga *L'Affaire Tom — Défi mortel TikTok* niveau Expert, c'est ton problème. Tu auras besoin de connaître le DPMin, le PPMin, l'art. 16 DSA et la jurisprudence Lanzarote sur les auditions d'enfants. Bon courage.
 
 ---
 
-## Ce qu'il y a dedans (v3.0, état au 19 mai 2026)
+## Ce qu'il y a dedans
 
 | Élément | Quantité | Commentaire |
-|---|---|---|
-| **Scènes jouables** | **250** | Chacune = 3 à 6 décisions notées, débrief intégral |
-| **Questions de quiz** | **2 202** | 8 thèmes, 3 niveaux de difficulté, mode quotidien |
+|---|---:|---|
+| **Scènes jouables** | **392** | Chacune = 3 à 6 décisions notées, débrief intégral |
+| **Questions de quiz** | **2 235** | 8 thèmes, 3 niveaux de difficulté, mode quotidien |
 | **Fiches techniques** | **120** | DFIR + droit suisse + outils + cloud + LLM forensique |
-| **Personnages (NPCs)** | **332** | Chacun avec rôle, institution, expertise, bio, citation, relations |
-| **Campagnes thématiques** | **27** | Organisées par niveau et thème |
-| **Sagas narratives** | **14** | Multi-actes avec conséquences procédurales en cascade |
-| **TP / exercices pratiques** | **31** | Carving, MFT parsing, magic bytes, NTFS internals, etc. |
-| **Cantons suisses couverts** | **19** | Plus la Confédération et l'UE pour les volets transfrontaliers |
-| **Pages de référence DFIR** | **7** | Artefacts, Event IDs, MITRE, Droit, Outils, Magic bytes, Biblio |
+| **Tutoriels d'outils DFIR** | **28** | Pas-à-pas Autopsy, Volatility, Sleuthkit, FTK, etc. |
+| **Catégories de TP** | **43** | Carving, MFT parsing, magic bytes, NTFS internals, etc. |
+| **Personnages (NPCs)** | **324** | Chacun avec rôle, institution, expertise, bio, citation, relations |
+| **Campagnes thématiques** | **46** | Organisées par niveau et thème |
+| **Sagas narratives** | **35** | Multi-actes avec conséquences procédurales en cascade |
+| **Trophées (achievements)** | **317** | Lecture, scoring, custody, multi-canton, multi-rôle, etc. |
+| **Cantons suisses couverts** | **19+** | Plus la Confédération et l'UE pour les volets transfrontaliers |
+| **Pages de référence DFIR** | **6** | Artefacts, Event IDs, MITRE, Droit, Outils, Magic bytes, Biblio |
 | **Bibliographie** | **71 ressources** | Livres, standards, rapports, blogs, podcasts — filtrable |
-| **Service worker offline** | ✓ | Tout le contenu accessible hors-ligne après première visite (PWA) |
+| **Service Worker offline** | ✓ | Tout le contenu accessible hors-ligne après première visite (PWA) |
 
-La date du jeu est calée sur le présent (mai 2026 au moment où tu lis cette ligne). Certaines sagas se projettent sur 12-24 mois dans le futur proche — *L'Affaire du Modèle* va jusqu'à une audience en septembre 2027, *L'Affaire Steve* jusqu'à une cérémonie commémorative en novembre 2028.
-
----
-
-## Les 14 sagas narratives
-
-Une saga = un fil rouge qui traverse plusieurs scènes liées (mêmes personnages, même affaire, progression chronologique). Tu peux les jouer en standalone, mais l'intérêt est de suivre la trajectoire.
-
-| Saga | Cantons | Actes | Niveau | Thème |
-|---|---|---|---|---|
-| 🎓 **Initiation DFIR** | CH | 7 | stagiaire | Premiers gestes : custody, premier appel, clé USB trouvée, USB de mémé |
-| 🏔 **L'Affaire de la Viège** | VS | 7 | inspecteur | SaaS compromis → SCADA Mattmark → audience à Brigue |
-| 🇫🇷 **L'Affaire Sarine** | FR | 5 | inspecteur | EIMP avec Stuttgart, coordination cantons |
-| 🏛️ **L'Affaire Aar-Frutigen** | BE | 5 | inspecteur | KantonNet, 47 communes, ex-développeur |
-| 🧀 **L'Affaire de la Singine** | FR/BE | 5 | inspecteur | Akira, MROS, audience à Berne |
-| ⌚ **L'Affaire du Noirmont** | JU | 7 | inspecteur | Cambriolage horloger, VPS Saint-Imier, audience Porrentruy |
-| 🔬 **Le Calibre Volé — Affaire CSEM** | NE | 7 | inspecteur | Monero, ANPR Saignelégier, rogatoire Besançon |
-| 🪲 **L'Affaire de la Prévôté** | BE → JU | 7 | expert | Rootkit eBPF + bascule Moutier (BE→JU) 1.1.2026 |
-| 🧬 **L'Affaire du Modèle** | VD | 7 | expert | IA médicale CHUV/EPFL compromise, jurisprudence ML médicale |
-| 🩹 **L'Affaire Steve Crett** | VS | 5 | expert | Sextortion mineur, suicide, opération cellule mineurs Sion |
-| 🚂 **Le Tunnel Numérique du Gothard** | UR/TI | 5 | expert | Compromission SBB Cargo, ETCS, RBC, coordination DE/IT |
-| 🌨 **Engadine 2027** | GR | 5 | expert | Espionnage géopolitique, WEF satellite, Tirich Mir |
-| 🚁 **L'Affaire du Drone d'Aletsch** | VS | 5 | inspecteur | Drone illégal Konkordia, micro-SD, art. 90 LA |
-| 🎰 **L'Affaire Casino di Lugano** | TI | 5 | enqueteur | Skimmer caissier interne, MROS, art. 305bis CP |
-| 📱 **L'Affaire Tom — Défi mortel TikTok** | VD | 6 | expert | Blackout Challenge, DPMin, art. 16 DSA, audition Lanzarote |
-
-Chaque saga est conçue pour que les choix d'un acte aient des conséquences procédurales aux actes suivants. Si tu rates la levée du secret médical à l'acte 3, tes preuves seront inexploitables à l'acte 7. C'est le but.
+La date du jeu est calée sur le présent (mai 2026 au moment où tu lis cette ligne). Certaines sagas se projettent sur 12-24 mois dans le futur proche.
 
 ---
 
-## Les 27 campagnes (mode dossier)
+## L'architecture en 4 pôles (v3.0)
 
-En plus des sagas (narratives, fil rouge), CAS-IN organise les scènes en **27 campagnes thématiques** consultables depuis l'écran « Dossiers » de la page Scènes. Quelques exemples :
+Depuis la refonte v3.0-jolification (mai 2026), l'app est organisée en **4 pôles** d'apprentissage, chacun avec son hub dédié :
 
-- 🌱 **Les Fondamentaux** (3 scènes, stagiaire) — 7 réflexes qui te sauvent : custody, phishing, métadonnées, premier ransomware
-- 💀 **Ransomwares réels** (inspecteur) — LockBit, Akira, ALPHV, scénarios reconstruits d'attaques documentées
-- 🪟 **Forensique Windows & Mobile** (enqueteur) — Registre, Amcache, Prefetch, iOS, Android
-- 🔐 **Attaques crypto** (enqueteur) — Mixers, tumbling, Monero, jurisprudence FINMA
-- 🌐 **Attribution réseau** (enqueteur) — NetFlow, BGP, tor exit nodes, attribution APT
-- 🌍 **Coopération internationale** (expert) — EIMP, Budapest art. 32, MLAT avec UE/US
-- ⚖️ **Droit suisse approfondi** (expert) — Tous les recoins du CPP, du CP et de la LSCPT
-- 🤖 **IA & Deepfakes** (expert) — Keller-Sutter, modèles médicaux, prompt injection
-- 🔫 **Cybercrime → crimes graves** (expert) — Sextortion mortelle, défi viral mortel
-- 🕵️ **Espionnage d'État** (expert) — APT nation-state, geopol, sat-ground stations
-- 🚔 **Quotidien d'enquête** (enqueteur) — Comparutions immédiates, perquis, gardes à vue
+| Pôle | Hub | Sous-types | Pour |
+|---|---|---|---|
+| 📚 **Apprendre** | `apprendre.html` | Fiches · Tutoriels · Références | Acquérir la théorie |
+| 🧪 **Pratiquer** | `pratiquer.html` | TP interactifs · Outils calculateurs | Ancrer le geste |
+| 🔍 **Enquêter** | `enqueter.html` | Scènes · Sagas · Examen scènes · Études de cas | Réflexe d'enquêteur |
+| 💊 **Se tester** | `tester.html` | Quiz · Examen blanc · Mastery · Succès | Calibrer la progression |
 
-Filtres par niveau, canton, thème, durée, et progression personnelle.
+Chaque hub propose :
+- Tableau de bord de progression personnalisé (jauges)
+- Cartes vers les sous-types disponibles
+- Recommandations adaptatives selon ton profil (« Tu deviens à l'aise, essaie un examen blanc »)
+- Liens transverses vers les 3 autres hubs
+
+Les 4 pilules colorées de l'accueil (Bleu/Vert/Orange/Rouge) pointent vers ces hubs. Raccourcis clavier : `B` `V` `O` `R`.
 
 ---
 
-## Le quiz (2202 questions)
+## Le quiz (2 235 questions)
 
 Mode dédié pour réviser sans le contexte narratif. 8 thèmes :
 
 | Thème | Questions |
-|---|---|
-| Système de fichiers | 365 |
-| Acquisition et analyse | 344 |
-| Droit | 299 |
-| Spécificité des OS | 280 |
-| Informatique de base | 230 |
-| Cryptologie | 221 |
-| Forensique | 194 |
-| OSINT | 167 |
-| **Saga-spécifique** (Aletsch / Lugano / Tom) | 102 |
+|---|---:|
+| Système de fichiers | 372 |
+| Acquisition et analyse | 347 |
+| Droit | 307 |
+| Spécificité des OS | 292 |
+| Informatique de base | 253 |
+| Forensique | 252 |
+| Cryptologie | 231 |
+| OSINT | 181 |
+| **Total** | **2 235** |
 
-3 niveaux de difficulté (763 easy / 718 medium / 519 hard), 1 798 questions à choix unique, 202 à choix multiples. **Mode Daily Challenge** : 20 questions tirées du même seed pour tout le monde aujourd'hui — bonne occasion de comparer ton score avec un·e collègue.
+3 niveaux de difficulté (easy/medium/hard), question à choix unique ou multiple. **Mode Daily Challenge** : 20 questions tirées du même seed pour tout le monde aujourd'hui — bonne occasion de comparer ton score avec un·e collègue.
 
 Toutes les questions ont une explication détaillée (`expl_ok` si tu as juste, `expl_ko` si tu te plantes) et une référence (article CP, fiche DFIR, ATF, lien web). Schéma validé : 0 erreur.
 
+**Modes disponibles** :
+- **Libre** : choisis tes thèmes/niveaux, va à ton rythme
+- **Daily** : 20 questions du jour, même seed mondial
+- **Survival** : 3 vies, jusqu'à la dernière question
+- **Marathon** : enchaîne jusqu'à fatigue
+- **Examen blanc** (`pages/exam.html`) : conditions réelles, durée limitée, note finale
+- **Mastery** (`pages/mastery.html`) : révision intelligente par fiche, priorise ce que tu maîtrises le moins
+
 ---
 
-## Les TP (31 exercices pratiques)
+## Les TP (43 catégories)
 
 Pour quand tu en as marre des QCM. Mini-laboratoires interactifs dans le navigateur :
 
@@ -119,22 +104,38 @@ Pour quand tu en as marre des QCM. Mini-laboratoires interactifs dans le navigat
 - **Data carving** — récupérer des fichiers depuis du non-alloué
 - **Disk forensics** — partitions, MBR, GPT, secteurs cachés
 - **NTFS internals** — VBR, $MFT, $LogFile, journaux
-- **Glossaire FR/EN** — 39 termes à apprendre à traduire dans les deux sens
+- **Glossaire FR/EN** — termes à apprendre à traduire dans les deux sens
 - **Windows artefacts** — Prefetch, ShellBags, JumpLists, Amcache
 
-8 moteurs JS dédiés (`tp-engine-btree.js`, `tp-engine-carving.js`, etc.) construits par-dessus une couche de données partagée (`tp-data.js`). Tout tourne dans le navigateur, zéro backend.
+Et 35 autres catégories. 8 moteurs JS dédiés construits par-dessus une couche de données partagée (`tp-data.js`). Tout tourne dans le navigateur, zéro backend.
 
 ---
 
-## L'Index Références DFIR (7 onglets)
+## Les tutoriels (28 outils DFIR)
 
-Plutôt que de cliquer dans 120 fiches pour retrouver « le format des Event IDs Windows », un hub d'aides-mémoire filtrables :
+Section nouvellement structurée en v3.0 (`tutoriels.html`). Pas-à-pas pour les outils incontournables du DFIR :
+
+- **Acquisition** : FTK Imager, Guymager, dc3dd, dd
+- **Analyse disques** : Autopsy, Sleuthkit, X-Ways
+- **Mémoire** : Volatility, Rekall
+- **Réseau** : Wireshark, NetworkMiner, Zeek, Suricata
+- **Mobile** : Cellebrite, MOBILedit, Andriller, ALEAPP
+- **Cloud/SaaS** : Hindsight, CloudTrail, M365
+- **Triage** : KAPE, Velociraptor, GRR
+
+Filtres par niveau (débutant/intermédiaire/expert), par phase (acquisition/analyse/restitution). Parcours pédagogique numéroté pour ne pas se perdre.
+
+---
+
+## L'Index Références DFIR
+
+Hub d'aides-mémoire filtrables (`references/index.html`) :
 
 | Onglet | Contenu |
 |---|---|
 | 🗂 **Artefacts forensiques** | Par OS, par catégorie, avec chemins et outils de parsing |
 | 🪵 **Event IDs Windows** | Tous les IDs critiques (Security, Sysmon, PowerShell, Defender) |
-| 🎯 **MITRE ATT&CK** | Toutes les techniques (14 tactiques, ~200 techniques, mises à jour 2024+) |
+| 🎯 **MITRE ATT&CK** | Toutes les techniques (14 tactiques, ~200 techniques) |
 | ⚖️ **Articles juridiques** | CP, CPP, nLPD, LSCPT, LSI, EIMP, RGPD, NIS2, DSA, AI Act, Budapest |
 | 🧰 **Outils DFIR** | Open source et commercial, par OS et par phase |
 | 🔮 **Magic bytes** | Signatures de fichiers (headers, footers, polyglots) |
@@ -148,79 +149,103 @@ Tous filtrables par recherche libre + facettes (domaine, format, langue, niveau)
 
 ```
 CAS-IN/
-├── index.html              # Hub principal (mode débutant + mode DFIR)
+├── index.html              # Hub principal (4 pilules + mini-bar identité)
+├── apprendre.html          # Hub Apprendre (Fiches + Tutoriels + Références)
+├── pratiquer.html          # Hub Pratiquer (TP + Outils)
+├── enqueter.html           # Hub Enquêter (Scènes + Sagas + Examen + Études)
+├── tester.html             # Hub Se tester (Quiz + Examen + Mastery + Succès)
 ├── scene.html              # Lobby scènes + moteur de jeu
-├── quiz.html               # Mode quiz (2202 questions, daily, exam)
-├── tp.html                 # 31 TP forensiques interactifs
-├── tools.html              # Calculateurs (timestamps, conversions, magic bytes)
-├── profile.html            # Dossier joueur : XP, achievements, stats
-├── npcs.html               # Trombinoscope des 332 NPCs
-├── glossary.html           # 446 termes DFIR francophones
-├── exam.html               # Mode examen blanc
-├── offline.html            # Page hors ligne (PWA)
+├── quiz.html               # App quiz (2235 questions, daily, survival, marathon)
+├── tp.html                 # 43 catégories de TP forensiques
+├── tutoriels.html          # 28 tutoriels d'outils DFIR (filtres + parcours)
+├── 404.html                # Page d'erreur custom
+├── offline.html            # Page hors-ligne (PWA)
 │
-├── references/             # 7 pages d'aide-mémoire filtrables
-│   ├── index.html
-│   ├── events.html
-│   ├── mitre.html
-│   ├── legal.html
-│   ├── dfir-tools.html
-│   ├── signatures.html
-│   └── bibliography.html
+├── pages/                  # Sous-pages (depuis la réorg v131c)
+│   ├── profile.html        # Dossier joueur : XP, achievements, stats, carrière
+│   ├── carriere.html       # 4 tracks : Enquêteur · Forensicien · Magistrat · Renseignement
+│   ├── succes.html         # Galerie des 317 trophées
+│   ├── exam.html           # Examen blanc quiz (conditions réelles)
+│   ├── scene-exam.html     # Examen blanc scènes
+│   ├── mastery.html        # Révision intelligente par fiche
+│   ├── collections.html    # Collections thématiques
+│   ├── sagas.html          # (redirection vers scene.html?view=sagas)
+│   ├── case-studies.html   # Études de cas approfondies
+│   ├── case-study-detail.html
+│   ├── tools.html          # Calculateurs (timestamps, conversions, magic bytes)
+│   ├── glossary.html       # 446 termes DFIR francophones
+│   ├── npcs.html           # Trombinoscope des 324 NPCs
+│   ├── parcours.html       # Parcours pédagogiques curatés
+│   ├── parcours-detail.html
+│   └── dictionnaire.html   # Lexique
+│
+├── references/             # 6 pages d'aide-mémoire filtrables
+│   └── …
 │
 ├── fiches/                 # 120 fiches DFIR + droit (HTML statique)
-│   ├── index.html          # Hub fiches (12 catégories)
-│   └── *.html              # Une fiche par sujet
+│   └── *.html
 │
-├── scenes/                 # 250 scènes au format JSON
+├── tutoriels/              # 28 tutoriels au format HTML
+│   └── *.html
+│
+├── scenes/                 # 392 scènes au format JSON
 │   ├── index.json          # Index agrégé (généré)
 │   └── *.json              # Une scène = un fichier
 │
 ├── data/                   # Données pivots
 │   ├── manifest.json       # 120 fiches catégorisées
-│   ├── questions.json      # 2202 questions (3.1 MB)
-│   ├── npcs.json           # 332 NPCs
-│   ├── campaigns.json      # 27 campagnes
-│   ├── scenes-chronology.json  # 14 sagas, 250 scènes ordonnées
-│   ├── search-index.json   # Index plein-texte (681 KB)
+│   ├── questions-index.json    # Méta : 8 thèmes, totaux (1.6 KB)
+│   ├── questions-search.json   # Index minimaliste pour search globale (425 KB)
+│   ├── questions/              # 8 chunks par thème (~500 KB chacun)
+│   │   └── quiz-{theme-slug}.json
+│   ├── i18n/               # 4 langues : fr, en, de, it
+│   ├── npcs.json           # 324 NPCs
+│   ├── campaigns.json      # 46 campagnes, 35 sagas
+│   ├── scenes-chronology.json
+│   ├── search-index.json   # Index plein-texte
 │   ├── cross-links.json    # Liens fiches ↔ scènes
 │   ├── counts.json         # Compteurs auto-générés
-│   └── glossary.json       # Pointeur (vraies données dans scene-app.js)
+│   └── glossary.json
 │
 ├── js/                     # Code applicatif
-│   ├── core/               # Profile, navbar, search, theme, achievements
-│   ├── pages/              # Une app par page (quiz, scene, tp, tools…)
+│   ├── core/               # Profile, navbar, search, theme, achievements, storage, a11y
+│   │   ├── cas-in-storage.js      # NEW v132n — validation localStorage + versioning
+│   │   ├── cas-in-a11y.js         # Module a11y (skip-link, landmark, announces)
+│   │   ├── cas-in-utils.js        # Helpers (lsGet/lsSet/lsDel, dataUrl, etc.)
+│   │   ├── cas-in-search.js       # Recherche globale (index minimaliste v132k)
+│   │   └── …
+│   ├── pages/              # Une app par page (quiz, scene, tp, tools, exam…)
 │   ├── components/         # Réutilisables : modals, badges, watchers
 │   ├── bridges/            # Profile bridges (quiz→profile, tp→profile, …)
-│   └── profile/            # Heatmap, relations, dashboard
+│   ├── profile/            # Heatmap, relations, dashboard, onboarding-ui
+│   └── tp/                 # 8 moteurs (btree, carving, disk, fat, meta, ntfs, windows)
 │
 ├── style/                  # CSS (~14 feuilles, design system unifié)
 │   ├── fiche_style.css     # Design tokens (vars couleurs, fonts)
 │   ├── style.css           # Styles globaux
-│   ├── scene.css           # Scène + lobby
-│   ├── quiz.css            # Quiz
-│   ├── tp.css              # TP
-│   ├── refs.css            # Pages référence
-│   └── ...
+│   ├── scene.css, quiz.css, tp.css, refs.css, …
+│   └── share-buttons.css   # NEW v132d — partage social trophées
 │
 ├── scripts/                # Outils Python de validation / régénération
-│   ├── check_scenes.py     # 250 scènes vérifiées : structure, cantons, npcs
-│   ├── check_questions.py  # 2202 questions vérifiées : schema, answers idx
+│   ├── check_scenes.py
+│   ├── check_questions.py
 │   ├── build_scenes_index.py
 │   ├── build_search_index.py
 │   ├── build_cross_links.py
 │   ├── generate_counts.py
-│   └── sync_fiches_index.py
+│   ├── sync_fiches_index.py
+│   ├── split_questions.py          # NEW v132f — découpe questions.json en chunks
+│   ├── generate_sitemap.py         # NEW v132a — auto-génération sitemap.xml
+│   └── cleanup-questions-legacy.sh # NEW v132j — cleanup optionnel
 │
-├── tp/                     # TP : moteurs JS spécialisés
-│   ├── tp-data.js          # MAGIC_DB, MISMATCH_DB, GLOSSAIRE
-│   └── tp-engine-*.js      # 8 moteurs (btree, carving, disk, fat, meta, ntfs, windows)
+├── docs/                   # Documentation (CHANGELOG, PDFs sources, deltas)
 │
-├── docs/                   # PDFs sources (CP, CPP, EIMP, Budapest, LSI, Interpol)
+├── tests/                  # Tests Playwright
 │
-├── tests/                  # Tests Playwright (6 spec files)
-│
-└── sw.js                   # Service Worker (PWA, ~2000 lignes, cache v420)
+├── sitemap.xml             # NEW v132a — sitemap auto-généré (178 URLs)
+├── robots.txt              # NEW v132a
+├── og-image*.svg           # NEW v132e — og-images dédiées par hub
+└── sw.js                   # Service Worker (slim 21 KB depuis v132p, cache v144)
 ```
 
 ### Système de scoring
@@ -237,15 +262,39 @@ Timer activable dans les paramètres. Tu as 90 secondes pour lire l'énoncé et 
 
 ### Profil & gamification
 
-- **XP** par scène réussie (≥ 5/6), par fiche lue, par TP résolu, par question correcte
-- **Achievements** : ~80 badges (lecture, scoring, custody, multi-canton, etc.)
-- **Heatmap** d'activité (style GitHub)
+- **XP** par scène réussie (≥ 5/6), par fiche lue, par TP résolu, par question correcte, par tutoriel validé
+- **317 trophées** : 7 catégories (lecture, scoring, custody, multi-canton, multi-rôle, toolkit, méta)
+- **Heatmap d'activité** (style GitHub) dans le profil
 - **Streak quotidien** : enchaîne les jours d'activité, freezes disponibles si tu sautes
 - **Leaderboards** hebdo (locaux à ton appareil, pas de serveur)
 - **Quêtes** journalières/hebdo
-- **4 tracks** de progression carrière : Enquêteur · Forensicien · Magistrat · Renseignement
+- **4 tracks de carrière** : Enquêteur · Forensicien · Magistrat · Renseignement (voir `pages/carriere.html`)
+- **Partage social** des trophées débloqués (Web Share API mobile, clipboard desktop)
 
 Tout est local au navigateur. Si tu vides ton localStorage, ça redémarre à zéro.
+
+### Robustesse localStorage (v132n)
+
+Module `cas-in-storage.js` qui détecte au boot si une clé critique du localStorage est corrompue (JSON malformé). Dans ce cas :
+1. Backup automatique sous `casIn_corrupt_backup_<clé>` (TTL 7 jours)
+2. Purge propre de la clé corrompue
+3. L'app continue de fonctionner (chaque consommateur a son fallback)
+
+Infrastructure de versioning du schema (`SCHEMA_VERSION`) prête pour les migrations futures.
+
+### Accessibilité (WCAG 2.2 AA)
+
+- 100 % des pages avec `<html lang="fr">`
+- 100 % des pages avec un `<h1>` (sr-only si pas de titre visible nécessaire)
+- Contrastes principaux validés AA (couleur `--dim` passée de 4.12 à 5.07/5.35 en v132i)
+- Module `cas-in-a11y.js` sur les pages principales : skip-link, landmark `<main>`, API `CASa11y.announce()`, gestion focus modale
+- ARIA-labels sur les boutons icônes (notamment le bouton 💡 hint du quiz)
+
+### Sécurité (v132l)
+
+- **Content-Security-Policy** sur les 183 pages : default-src 'self', restrictions sur scripts/styles/fonts/images
+- `frame-ancestors 'none'` (anti-clickjacking)
+- `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`
 
 ---
 
@@ -253,10 +302,19 @@ Tout est local au navigateur. Si tu vides ton localStorage, ça redémarre à z�
 
 CAS-IN est une **Progressive Web App** complète :
 - Installable sur desktop et mobile (Chrome, Edge, Safari)
-- Tout le contenu (250 scènes + 120 fiches + 2202 questions + 332 NPCs + 71 références biblio + 31 TP) est cacheable
-- Service Worker `sw.js` v420 : précache de 161 fichiers + cache dynamique pour les fiches via `manifest.json`
-- Stratégies : `cacheFirst` pour les assets statiques, `networkFirst` pour les données potentiellement mises à jour
+- Tout le contenu (392 scènes + 120 fiches + 2 235 questions + 324 NPCs + 28 tutoriels + 43 TP + 71 références biblio) est cacheable
+- Service Worker `sw.js` slim (21 KB depuis v132p) — cache `cas-in-v144`
+- Stratégies : `cacheFirst` pour les statiques, `networkFirst` pour les données critiques, runtime cache pour les chunks de questions
 - Fonctionne intégralement offline après la première visite
+
+### Performance v3.0
+
+| Optimisation | Économie |
+|---|---|
+| Lazy load des questions par thème (8 chunks) | -4.2 MB au boot PWA |
+| Index search minimaliste | -3.8 MB par recherche initiale |
+| SW trim historique | -89 KB sur le SW lui-même |
+| **Total** | **~8 MB économisés** |
 
 Aucun backend. Aucun cookie. Aucun tracking. Aucune télémétrie. Pas même Google Analytics. Si tu cliques quelque part, personne ne le saura — y compris moi.
 
@@ -264,16 +322,20 @@ Aucun backend. Aucun cookie. Aucun tracking. Aucune télémétrie. Pas même Goo
 
 ## Comment jouer
 
-Va sur **[zufferdi.github.io/CAS-IN](https://zufferdi.github.io/CAS-IN)** et choisis :
+Va sur **[zufferdi.github.io/CAS-IN](https://zufferdi.github.io/CAS-IN)** et choisis l'un des 4 hubs :
 
-1. **Mode débutant** (par défaut) — 4 pilules (Fiches, TP, Scènes, Quiz) façon Matrix. Tu cliques, tu joues.
-2. **Mode DFIR avancé** — Hub orienté dossiers, accès direct à l'Index Références, dernières activités, prochaines quêtes, leaderboard.
+1. **Apprendre** (📚) — théorie d'abord : fiches, tutoriels, références
+2. **Pratiquer** (🧪) — main à la pâte : TP interactifs, calculateurs
+3. **Enquêter** (🔍) — scénarios immersifs : scènes, sagas, études de cas
+4. **Se tester** (💊) — évaluation : quiz, examen blanc, mastery, succès
 
-Depuis là :
+À la première visite, un **onboarding 3 écrans** te présente les 4 pôles et te suggère 3 parcours d'entrée selon ton profil (curieux / pressé / évaluation).
+
+Tu peux aussi y aller direct :
 - Une scène standalone depuis le lobby (filtres par canton, niveau, thème, durée)
-- Une saga narrative (14 disponibles)
-- Une campagne thématique (27 disponibles)
-- Un mode quiz (libre, par thème, daily, smart adaptatif, examen blanc)
+- Une saga narrative
+- Une campagne thématique
+- Un mode quiz (libre, daily, examen blanc, mastery)
 - Un TP au pif depuis `tp.html`
 
 Aucun compte, aucune inscription. Ta progression est dans ton navigateur. Si tu vides ton localStorage, elle disparaît — et c'est très bien comme ça.
@@ -305,7 +367,7 @@ Pour chaque scène et fiche, vérification systématique des sources :
 - **MITRE ATT&CK** : référencement direct depuis attack.mitre.org
 - **Bibliographie** : 71 ressources curatées, URLs vérifiées 100% HTTPS, descriptions et notes d'usage rédigées spécifiquement
 
-Quand un fait change (ex. SMS Blaster Lausanne supposé devient SMS Blaster Muttenz/BL après vérification OFCS), la fiche est mise à jour avec changelog explicite dans le delta. La rigueur factuelle, c'est non négociable, parce que sans ça tout le reste s'écroule.
+Quand un fait change, la fiche est mise à jour avec changelog explicite dans le delta. La rigueur factuelle, c'est non négociable, parce que sans ça tout le reste s'écroule.
 
 ---
 
@@ -334,11 +396,22 @@ npx playwright test
 Pour la validation de cohérence data :
 
 ```bash
-python3 scripts/check_scenes.py        # 250 scènes : 0 erreur attendu
-python3 scripts/check_questions.py     # 2202 questions : 0 erreur attendu
-python3 scripts/build_search_index.py  # Régénère l'index plein-texte (681 KB)
+python3 scripts/check_scenes.py        # 392 scènes : 0 erreur attendu
+python3 scripts/check_questions.py     # 2 235 questions : 0 erreur attendu
+python3 scripts/build_search_index.py  # Régénère l'index plein-texte
 python3 scripts/generate_counts.py     # Régénère data/counts.json
+python3 scripts/split_questions.py     # Régénère les 8 chunks + questions-search.json
+python3 scripts/generate_sitemap.py    # Régénère sitemap.xml
 ```
+
+---
+
+## Versions
+
+- **v3.0 — 19 mai 2026** : Release initiale (250 scènes, 2202 questions, 332 NPCs)
+- **v3.0-jolification — 30 mai 2026** : Refonte UX + perf + sécurité + a11y (20 deltas en cascade). Voir [`docs/CHANGELOG.md`](docs/CHANGELOG.md) pour le détail.
+
+Cache SW actuel : **`cas-in-v144`**.
 
 ---
 
@@ -356,12 +429,12 @@ python3 scripts/generate_counts.py     # Régénère data/counts.json
 
 ## Disclaimer obligatoire
 
-Aucune patiente fictive n'a été lésée pendant le développement. Aucun doctorant chinois n'a été stéréotypé sans contexte clinique (Zhang Yi est le seul de la base, et il est officiellement le méchant de *L'Affaire du Modèle* — la base en compte par ailleurs 331 autres dont des héros, des victimes, des collègues, des juges, plusieurs procureures romandes qu'on aime bien, deux liaisons TikTok à Dublin et un médecin légiste du CURML spécialisé en pédiatrie).
+Aucune patiente fictive n'a été lésée pendant le développement. Aucun doctorant chinois n'a été stéréotypé sans contexte clinique (Zhang Yi est le seul de la base, et il est officiellement le méchant de *L'Affaire du Modèle* — la base en compte par ailleurs 323 autres dont des héros, des victimes, des collègues, des juges, plusieurs procureures romandes qu'on aime bien, deux liaisons TikTok à Dublin et un médecin légiste du CURML spécialisé en pédiatrie).
 
 Toute ressemblance avec une affaire en cours est purement gênante. Toute ressemblance avec le calendrier judiciaire vaudois est purement aspirationnelle. Toute ressemblance avec ton dernier examen du CAS Investigation Numérique est le but recherché.
 
 ---
 
-*Dernière mise à jour de ce README : 19 mai 2026, version 3.0 (delta v43), 250 scènes, 332 NPCs, 27 campagnes, 14 sagas, 120 fiches, 2202 questions, 71 références biblio, 0 trace de tracking.*
+*Dernière mise à jour de ce README : 30 mai 2026, version 3.0-jolification (cache SW v144) — 392 scènes, 324 NPCs, 46 campagnes, 35 sagas, 120 fiches, 28 tutoriels, 43 TP, 2 235 questions, 71 références biblio, 317 trophées, 0 trace de tracking.*
 
 *Si tu lis cette ligne, c'est que tu cherches vraiment des excuses pour ne pas commencer la saga d'initiation.*
