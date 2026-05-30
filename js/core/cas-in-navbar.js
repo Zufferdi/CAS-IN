@@ -43,6 +43,10 @@
     fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
     // v131a — Hub Apprendre (chapeaute fiches/tutoriels/références)
     apprendre:    { icon: '📚', label: 'APPRENDRE' },
+    // v132h — Hubs symétriques pour les 3 autres pilules
+    pratiquer:    { icon: '🧪', label: 'PRATIQUER' },
+    enqueter:     { icon: '🔍', label: 'ENQUÊTER' },
+    tester:       { icon: '💊', label: 'SE TESTER' },
     glossary:     { icon: '📚', label: 'GLOSSAIRE' },
     npcs:         { icon: '👥', label: 'PERSONNAGES' },
     tools:        { icon: '🛠', label: 'OUTILS FORENSIQUES' },
@@ -256,8 +260,18 @@
 
     const trackIcon = TRACK_ICONS[d.track] || '🕵';
 
+    // v131c — Calcul du chemin vers profile.html selon l'arborescence
+    // - depuis pages/ (même dossier) : profile.html
+    // - depuis fiches/, tutoriels/, references/ : ../pages/profile.html
+    // - depuis racine : pages/profile.html
+    let profileHref;
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
+    if (path.indexOf('/pages/') !== -1) profileHref = 'profile.html';
+    else if (path.match(/\/(fiches|tutoriels|references)\//)) profileHref = '../pages/profile.html';
+    else profileHref = 'pages/profile.html';
+
     _topEl.innerHTML = `
-      <a href="${_currentPage === 'fiches' ? '../profile.html' : 'profile.html'}"
+      <a href="${profileHref}"
          class="cas-navbar__identity" title="Voir mon dossier complet">
         <span class="cas-navbar__track-icon">${trackIcon}</span>
         <span class="cas-navbar__agent">${escapeHtml(d.name)}</span>
