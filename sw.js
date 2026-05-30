@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v134';
+const CACHE_VERSION = 'cas-in-v135';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1746,7 +1746,11 @@ const STATIC_ASSETS = [
   './pwa.manifest.json',
   './data/manifest.json',
   './data/counts.json',
-  './data/questions.json',
+  // v132f — Questions découpées par thème (lazy loading)
+  // L'index est précachée (1.6 KB) ; les 8 chunks (4.2 MB total) sont chargés à la demande
+  // et cachés en cache opportuniste par la stratégie fetch handler.
+  // questions.json (legacy 4.2 MB) reste accessible mais n'est plus précachée.
+  './data/questions-index.json',
   './data/search-index.json',
   './data/fiches-titles.json',
   './data/parcours.json',
