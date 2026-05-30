@@ -702,7 +702,88 @@
     }
 
     card.appendChild(body);
+
+    // v132d — Bouton de partage sur cartes débloquées (sauf secrets cachés)
+    if (isUnlocked && !isHiddenSecret) {
+      const shareBtn = document.createElement('button');
+      shareBtn.type = 'button';
+      shareBtn.className = 'profile-achievement-share';
+      shareBtn.setAttribute('aria-label', 'Partager ce trophée');
+      shareBtn.title = 'Partager ce trophée';
+      shareBtn.innerHTML = '↗';
+      shareBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareAchievement(a);
+      });
+      card.appendChild(shareBtn);
+    }
+
     return card;
+  }
+
+  // v132d — Partage d'un trophée via Web Share API (mobile) ou clipboard (desktop)
+  function shareAchievement(a) {
+    const title = `Trophée débloqué : ${a.name}`;
+    const text = `J'ai débloqué le trophée ${a.emoji || '🏆'} ${a.name} sur CAS-IN — Investigation Numérique.\n\n${a.desc || ''}`;
+    const url = 'https://zufferdi.github.io/CAS-IN/pages/succes.html#' + encodeURIComponent(a.id);
+
+    // 1. Web Share API si dispo (mobile principalement)
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      navigator.share({ title: title, text: text, url: url })
+        .then(function () {
+          showShareToast('Trophée partagé ✓');
+        })
+        .catch(function (err) {
+          // L'utilisateur a annulé : silencieux
+          if (err && err.name !== 'AbortError') {
+            console.warn('[share] échec', err);
+            fallbackClipboard(text + '\n\n' + url);
+          }
+        });
+      return;
+    }
+
+    // 2. Fallback : copie dans le presse-papiers
+    fallbackClipboard(text + '\n\n' + url);
+  }
+
+  function fallbackClipboard(payload) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(payload)
+        .then(function () { showShareToast('Copié dans le presse-papiers ✓'); })
+        .catch(function () { showShareToast('Impossible de copier'); });
+    } else {
+      // Fallback ultime : textarea + execCommand (legacy)
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = payload;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showShareToast('Copié dans le presse-papiers ✓');
+      } catch (e) {
+        showShareToast('Partage non disponible sur ce navigateur');
+      }
+    }
+  }
+
+  function showShareToast(msg) {
+    // Réutilise le système de toasts existant si dispo, sinon fallback minimal
+    if (window.Toast && typeof window.Toast.show === 'function') {
+      window.Toast.show(msg, { duration: 2500 });
+      return;
+    }
+    // Fallback minimal
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,229,204,.95);color:#0d1117;padding:10px 18px;border-radius:8px;font-family:"Share Tech Mono",monospace;font-size:.85rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, 2200);
+    setTimeout(function () { toast.remove(); }, 2600);
   }
 
   /**
