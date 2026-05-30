@@ -18,7 +18,23 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  if (window.CasInNpcData) return;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+if (window.CasInNpcData) return;
 
   let _data = null;          // { npcs: {...} } une fois chargé
   let _loadPromise = null;
@@ -54,7 +70,7 @@
 
     _loadPromise = (async () => {
       try {
-        const r = await fetch('data/npcs.json');
+        const r = await fetch(_dataUrl('npcs.json'));
         if (!r.ok) throw new Error('HTTP ' + r.status);
         _data = await r.json();
         // Pré-calcul du family cache

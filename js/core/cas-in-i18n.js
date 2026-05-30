@@ -22,7 +22,23 @@
 (function () {
   'use strict';
 
-  const SUPPORTED_LOCALES = ['fr', 'de', 'it', 'en'];
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+const SUPPORTED_LOCALES = ['fr', 'de', 'it', 'en'];
   const DEFAULT_LOCALE = 'fr';
 
   let _locale = DEFAULT_LOCALE;
@@ -44,7 +60,7 @@
   // ─── Chargement strings ───
   function loadStrings(locale) {
     if (_loadPromise) return _loadPromise;
-    _loadPromise = fetch('data/i18n/' + locale + '.json')
+    _loadPromise = fetch(_dataUrl('i18n/') + locale + '.json')
       .then(r => {
         if (!r.ok) throw new Error('locale ' + locale + ' not found');
         return r.json();
@@ -54,7 +70,7 @@
         console.warn('[i18n] load failed for ' + locale + ', falling back to fr', err);
         _strings = {};
         if (locale !== DEFAULT_LOCALE) {
-          return fetch('data/i18n/' + DEFAULT_LOCALE + '.json')
+          return fetch(_dataUrl('i18n/') + DEFAULT_LOCALE + '.json')
             .then(r => r.json())
             .then(strings => { _strings = strings || {}; });
         }
