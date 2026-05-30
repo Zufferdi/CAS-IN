@@ -222,6 +222,11 @@
     const desc = isSecretHidden ? t('succes_page.secret_locked_desc', 'Trophée caché — révélé au déblocage.') : tr.desc;
     const icon = isSecretHidden ? '🔒' : tr.emoji;
 
+    // v132d — Bouton de partage sur trophées débloqués
+    const shareBtn = (tr.isUnlocked && !isSecretHidden)
+      ? `<button type="button" class="suc-trophy-share" data-tr-id="${escapeHtml(tr.id)}" data-tr-name="${escapeHtml(tr.name)}" data-tr-emoji="${escapeHtml(tr.emoji || '🏆')}" data-tr-desc="${escapeHtml(tr.desc || '')}" aria-label="Partager ce trophée" title="Partager ce trophée">↗</button>`
+      : '';
+
     return `
       <div class="suc-trophy ${stateCls}">
         <div class="suc-trophy-icon">${escapeHtml(icon)}</div>
@@ -234,6 +239,7 @@
           <div class="suc-trophy-xp">+${tr.xp} XP</div>
           <div class="suc-trophy-tier">${tier.icon || ''} ${escapeHtml(tier.label || '')}</div>
         </div>
+        ${shareBtn}
       </div>
     `;
   }
@@ -302,4 +308,72 @@
     }
     renderHome();
   });
+  // v132d — Délégation d'événement pour les boutons de partage de trophées
+  // (les boutons sont injectés dynamiquement par renderTrophy)
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest && e.target.closest('.suc-trophy-share');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    shareTrophy({
+      id: btn.getAttribute('data-tr-id'),
+      name: btn.getAttribute('data-tr-name'),
+      emoji: btn.getAttribute('data-tr-emoji'),
+      desc: btn.getAttribute('data-tr-desc')
+    });
+  });
+
+  function shareTrophy(tr) {
+    const title = 'Trophée débloqué : ' + tr.name;
+    const text = "J'ai débloqué le trophée " + (tr.emoji || '🏆') + ' ' + tr.name + ' sur CAS-IN — Investigation Numérique.\n\n' + (tr.desc || '');
+    const url = 'https://zufferdi.github.io/CAS-IN/pages/succes.html#' + encodeURIComponent(tr.id || '');
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      navigator.share({ title: title, text: text, url: url })
+        .then(function () { showShareToast('Trophée partagé ✓'); })
+        .catch(function (err) {
+          if (err && err.name !== 'AbortError') {
+            fallbackClipboard(text + '\n\n' + url);
+          }
+        });
+      return;
+    }
+
+    fallbackClipboard(text + '\n\n' + url);
+  }
+
+  function fallbackClipboard(payload) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(payload)
+        .then(function () { showShareToast('Copié dans le presse-papiers ✓'); })
+        .catch(function () { showShareToast('Impossible de copier'); });
+    } else {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = payload;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showShareToast('Copié dans le presse-papiers ✓');
+      } catch (e) {
+        showShareToast('Partage non disponible sur ce navigateur');
+      }
+    }
+  }
+
+  function showShareToast(msg) {
+    if (window.Toast && typeof window.Toast.show === 'function') {
+      window.Toast.show(msg, { duration: 2500 });
+      return;
+    }
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,229,204,.95);color:#0d1117;padding:10px 18px;border-radius:8px;font-family:"Share Tech Mono",monospace;font-size:.85rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, 2200);
+    setTimeout(function () { toast.remove(); }, 2600);
+  }
 })();
