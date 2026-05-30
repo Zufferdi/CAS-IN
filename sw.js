@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v139';
+const CACHE_VERSION = 'cas-in-v140';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1755,6 +1755,8 @@ const STATIC_ASSETS = [
   // et cachés en cache opportuniste par la stratégie fetch handler.
   // questions.json (legacy 4.2 MB) reste accessible mais n'est plus précachée.
   './data/questions-index.json',
+  // v132k — Index minimaliste pour cas-in-search (~425 KB au lieu de 4.2 MB)
+  './data/questions-search.json',
   './data/search-index.json',
   './data/fiches-titles.json',
   './data/parcours.json',
