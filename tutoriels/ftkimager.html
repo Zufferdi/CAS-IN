@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FTK Imager — Acquisition forensique — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas FTK Imager — Acquisition forensique : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">FTK IMAGER — ACQUISITION FORENSIQUE — PAS À PAS</span>
+  <a href="../fiches/ftkimager.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 19 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="ftkimager">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Pourquoi acquérir avant d'analyser</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Formats produits par FTK Imager</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Prérequis et téléchargement</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Installation sous Windows</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Version portable et FTK Imager Lite</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Acquérir un disque physique</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Acquérir une partition logique</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Acquérir une image dans une image (</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Capturer la mémoire vive (RAM)</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Vérifier l'intégrité d'une image (h</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Monter une image en lecture seule</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Exporter des fichiers d'une image e</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Forces de FTK Imager</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Faiblesses et limites</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Ressources utiles</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">FTK Imager — Acquisition forensique</span>
+        </div>
+
+        <h1>💾 FTK Imager — Acquisition forensique</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>acquérir une image disque write-blocked</strong> au format E01 avec hash MD5+SHA-1 vérifiés, <strong>capturer la RAM</strong> d'un poste en cours de fonctionnement, monter une image E01 en lecture seule pour exploration, et <strong>documenter une chaîne de preuve</strong> conforme à l'art. 192 CPP.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-debutant"><span class="icon">🎯</span> Niveau débutant</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~40 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows uniquement</span>
+          <span class="tuto-meta-badge "><span class="icon">💾</span> Acquisition E01</span>
+          <span class="tuto-meta-badge "><span class="icon">🔒</span> Write-blocker conseillé</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de FTK Imager</div>
+        <div><strong>FTK Imager</strong> est l'outil <strong>gratuit</strong> de référence pour l'acquisition forensique : production d'images disque write-blocked, capture mémoire RAM, vérification d'intégrité par hash, montage lecture seule. Développé par AccessData (devenu Exterro) depuis 2003. <strong>Standard de facto</strong> en perquisition.<br><br>📦 <a href="https://www.exterro.com/digital-forensics-software/ftk-imager" target="_blank" rel="noopener">exterro.com/ftk-imager</a> · Gratuit (propriétaire)</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>FTK Imager est l'<strong>outil universel d'acquisition</strong> : il fait l'image d'un support, vérifie son intégrité par hash, et permet de naviguer dans l'image obtenue sans installer un logiciel d'analyse complet. C'est ce qu'utilise un enquêteur de terrain pour saisir un disque sans contaminer la preuve.</p>
+        <p>Sa <strong>philosophie</strong> : produire une copie bit-à-bit fidèle, signée par hash, qu'on pourra ensuite analyser à froid avec Autopsy, IPED, X-Ways, EnCase ou tout autre outil compatible avec les formats <code>E01</code>, <code>AD1</code> ou <code>DD</code>.</p>
+        <p><strong>Capacités principales</strong> :</p>
+        <ul><li>Acquisition de <strong>disques physiques</strong> (HDD, SSD, NVMe, clés USB, cartes SD)</li><li>Acquisition de <strong>partitions logiques</strong> (NTFS, FAT, ext, HFS+, APFS en lecture)</li><li>Acquisition de <strong>dossiers</strong> spécifiques (image partielle ciblée)</li><li>Acquisition de la <strong>mémoire vive Windows</strong> (RAM)</li><li><strong>Vérification d'intégrité</strong> par MD5, SHA-1, SHA-256</li><li><strong>Montage</strong> d'images en lecture seule pour exploration</li><li><strong>Export</strong> de fichiers individuels depuis une image existante</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Pourquoi acquérir avant d'analyser</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Toute analyse forensique repose sur un principe : <strong>ne jamais toucher l'original</strong>. Cela vient du droit (chaîne de preuve, art. 192 CPP) et de la science (un disque modifié = preuve invalide).</p>
+        <p>L'acquisition produit :</p>
+        <ol><li>Une <strong>image bit-à-bit</strong> : copie exacte de chaque secteur, y compris l'espace non alloué.</li><li>Un <strong>hash</strong> de l'image (MD5 et SHA-256) prouvant qu'aucun bit n'a changé.</li><li>Un <strong>rapport d'acquisition</strong> documentant date, outil, opérateur, support source.</li></ol>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Sans acquisition propre, toute analyse ultérieure est juridiquement attaquable. Un avocat peut faire <strong>écarter une preuve</strong> si l'acquisition n'est pas documentée ou si le hash n'est pas vérifié.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Formats produits par FTK Imager</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Format</th><th>Extension</th><th>Description</th></tr></thead><tbody><tr><td><strong>E01 (Expert Witness)</strong></td><td><code>.E01</code>, <code>.E02</code>, ...</td><td>Format EnCase historique, compressible, segmenté, métadonnées intégrées. <strong>Standard de facto</strong>.</td></tr><tr><td><strong>AD1</strong></td><td><code>.AD1</code></td><td>Format AccessData propriétaire, supporte chiffrement et compression.</td></tr><tr><td><strong>Raw / dd</strong></td><td><code>.001</code>, <code>.002</code>, ...</td><td>Image brute, secteur par secteur, sans compression. Compatible avec tout.</td></tr><tr><td><strong>SMART (Linux)</strong></td><td><code>.s01</code></td><td>Format historique (rare).</td></tr></tbody></table>
+        <p><strong>Recommandation</strong> : utiliser <strong>E01</strong> par défaut. Compression intégrée (~50 % de gain sur un disque mixte), métadonnées (case number, examiner, notes), segmentation automatique pour transfert.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Prérequis et téléchargement</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Matériel</h3>
+        <table><thead><tr><th>Composant</th><th>Recommandé</th></tr></thead><tbody><tr><td>OS</td><td>Windows 10/11 64 bits</td></tr><tr><td>RAM</td><td>8 Go (16 Go pour disques > 1 To)</td></tr><tr><td>Stockage</td><td>SSD rapide, espace ≥ <strong>taille du disque source + 20 %</strong></td></tr><tr><td>Write-blocker</td><td><strong>Indispensable</strong> pour acquisition de disque saisi (Tableau, WiebeTech, FastBloc)</td></tr></tbody></table>
+        <h3>Téléchargement</h3>
+        <ol><li>Va sur <<a href="https://www.exterro.com/digital-forensics-software/ftk-imager" target="_blank" rel="noopener">https://www.exterro.com/digital-forensics-software/ftk-imager</a>></li><li>Clique sur <strong>« Download FTK Imager »</strong>.</li><li>Remplis le formulaire (nom, organisation, email).</li><li>Tu reçois un lien de téléchargement.</li></ol>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>conserve un installeur FTK Imager <strong>versionné</strong> dans ton matériel d'intervention. La version utilisée doit être documentée dans le rapport d'acquisition.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Méthode standard</h3>
+        <ol><li>Lance <code>AccessData FTK Imager.exe</code> (l'installeur).</li><li>Accepte l'EULA.</li><li>Choisis le dossier d'installation (par défaut <code>C:\Program Files\AccessData\FTK Imager</code>).</li><li>Termine.</li><li>Lance <code>FTK Imager.exe</code> depuis le menu Démarrer.</li></ol>
+        <h3>Vérification</h3>
+        <p>L'interface s'ouvre. Tu vois :</p>
+        <ul><li>Barre de menu : <strong>File</strong>, <strong>View</strong>, <strong>Mode</strong>, <strong>Help</strong>.</li><li>Volet <strong>Evidence Tree</strong> (gauche) : sources actuellement chargées.</li><li>Volet <strong>File List</strong> (haut) : fichiers du dossier sélectionné.</li><li>Volet <strong>Properties / Hex / Custom Content</strong> : détails du fichier sélectionné.</li></ul>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>exécute toujours FTK Imager <strong>en administrateur</strong> sur Windows, sinon l'accès aux disques physiques échoue.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Version portable et FTK Imager Lite</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Une version <strong>portable</strong> de FTK Imager existe : un dossier zippable à copier sur clé USB, sans installation.</p>
+        <h3>Cas d'usage</h3>
+        <ul><li>Intervention sur un système qu'on <strong>ne veut pas modifier</strong> (installation = modification).</li><li>Triage rapide sur poste suspect avant décision d'acquisition complète.</li><li>Acquisition sur poste sans connexion internet.</li></ul>
+        <h3>Procédure</h3>
+        <ol><li>Sur ton poste, installe FTK Imager normalement.</li><li>Copie le dossier <code>C:\Program Files\AccessData\FTK Imager</code> vers une clé USB.</li><li>Sur le poste cible, lance <code>FTK Imager.exe</code> directement depuis la clé.</li></ol>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Attention</strong> : même portable, FTK Imager écrit dans le registre Windows et utilise le filesystem. Une <strong>vraie acquisition write-safe</strong> se fait avec un <strong>write-blocker matériel</strong> entre le disque source et l'analyste.</div></div>
+        <h3>FTK Imager Lite</h3>
+        <p>Une variante <strong>Lite</strong> (très allégée) existait historiquement mais Exterro l'a abandonnée. Privilégier la version standard.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Acquérir un disque physique</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>C'est le cas le plus courant : tu as un disque saisi, branché sur write-blocker, tu veux faire une image complète.</p>
+        <h3>Étape 1 : démarrer l'acquisition</h3>
+        <p><code>File → Create Disk Image…</code></p>
+        <h3>Étape 2 : choisir la source</h3>
+        <p>Sélectionne <strong>Physical Drive</strong> (pas Logical, qui ne capture que la partition active).</p>
+        <p>Une liste apparaît : <code>\\.\PHYSICALDRIVE0</code>, <code>\\.\PHYSICALDRIVE1</code>, etc.</p>
+        <p><strong>Repère bien le disque cible</strong> par sa taille et son numéro de série :</p>
+        <ul><li><code>\\.\PHYSICALDRIVE0</code> = disque système (à ne PAS imager)</li><li><code>\\.\PHYSICALDRIVE1</code> = disque saisi via write-blocker (à imager)</li></ul>
+        <p>Clique <strong>Finish</strong>.</p>
+        <h3>Étape 3 : ajouter la destination</h3>
+        <p>Clique <strong>Add…</strong>. Choisis le format : <strong>E01</strong> (recommandé).</p>
+        <p>Remplis les métadonnées :</p>
+        <ul><li><strong>Case Number</strong> : référence de réquisition (ex. <code>MP-VD-2026-001</code>).</li><li><strong>Evidence Number</strong> : numéro de la pièce (ex. <code>01-A-DD500</code>).</li><li><strong>Unique Description</strong> : description (ex. <code>Samsung 870 EVO 500GB - Suspect PC</code>).</li><li><strong>Examiner</strong> : ton nom et fonction.</li><li><strong>Notes</strong> : observations (ex. « Disque externe trouvé dans tiroir bureau »).</li></ul>
+        <p>Clique <strong>Next</strong>.</p>
+        <h3>Étape 4 : destination de fichier</h3>
+        <ul><li><strong>Image Destination Folder</strong> : disque externe analyste (jamais le disque source !).</li><li><strong>Image Filename</strong> : <code>MP-VD-2026-001_01-A-DD500</code> (sans extension).</li><li><strong>Image Fragment Size (MB)</strong> : <code>2000</code> (2 Go par segment, standard).</li><li><strong>Compression</strong> : <code>6</code> (équilibre vitesse/taille).</li><li><strong>Use AD Encryption</strong> : décoché sauf cas spécifique.</li></ul>
+        <p>Clique <strong>Finish</strong>.</p>
+        <h3>Étape 5 : lancer</h3>
+        <p>Sur la fenêtre récapitulative :</p>
+        <ul><li>Coche <strong>Verify images after they are created</strong> (calcul automatique du hash).</li><li>Coche <strong>Precalculate Progress Statistics</strong>.</li><li>Coche <strong>Create directory listings of all files in the image</strong> (génère un fichier <code>.csv</code> des chemins).</li></ul>
+        <p>Clique <strong>Start</strong>.</p>
+        <p>L'acquisition démarre. Pour un disque de 500 Go :</p>
+        <ul><li>Sur USB 3.0 + SSD source + SSD destination : <strong>45-90 minutes</strong></li><li>Sur USB 2.0 + HDD source : <strong>5-8 heures</strong></li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>pendant l'acquisition, NE PAS débrancher ni utiliser ton poste analyste. Toute interruption casse l'image (à recommencer du début).</div></div>
+        <h3>Résultat</h3>
+        <p>Tu obtiens dans ton dossier de destination :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>MP-VD-2026-001_01-A-DD500.E01
+MP-VD-2026-001_01-A-DD500.E02
+...
+MP-VD-2026-001_01-A-DD500.E07
+MP-VD-2026-001_01-A-DD500.E01.txt   ← rapport d'acquisition</code></pre></div>
+        <p>Le <code>.txt</code> contient toutes les métadonnées et les <strong>hashs MD5 + SHA-1</strong> calculés sur source et image. Ces hashs doivent être <strong>identiques</strong> : si oui, l'image est intègre.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Acquérir une partition logique</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Cas plus rare mais utile : tu veux acquérir uniquement la partition <code>D:</code> d'un disque, pas tout le disque.</p>
+        <h3>Procédure</h3>
+        <p><code>File → Create Disk Image… → Logical Drive</code></p>
+        <p>Sélectionne la lettre (<code>D:</code>, <code>F:</code>, etc.) et procède comme pour un disque physique.</p>
+        <h3>Limitations</h3>
+        <ul><li>L'<strong>espace non alloué</strong> du disque (entre partitions, après la partition) <strong>n'est pas capturé</strong>.</li><li>Les <strong>partitions cachées</strong> (recovery, EFI) ne sont pas dans l'image.</li><li>Si l'attaquant a effacé des fichiers présents dans l'espace non alloué, tu les perds.</li></ul>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>préférer <strong>toujours l'image physique</strong> complète. L'image logique est utile uniquement quand tu cibles explicitement une partition (ex. partition chiffrée déjà déchiffrée, partage réseau).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Acquérir une image dans une image (sous-imagerie)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu reçois une image E01 contenant un VHD chiffré BitLocker. Tu as la clé, tu veux acquérir le contenu déchiffré du VHD pour analyse.</p>
+        <h3>Procédure</h3>
+        <ol><li><strong>File → Add Evidence Item → Image File</strong> : pointe vers le <code>.E01</code>.</li><li>L'image apparaît dans l'Evidence Tree.</li><li>Déchiffre le VHD via outil tiers (manage-bde, Passware, etc.).</li><li>Une fois monté, <strong>File → Create Disk Image</strong> sur le VHD déchiffré.</li><li>Tu obtiens une nouvelle image E01 du contenu déchiffré.</li></ol>
+        <p>Cette technique permet de <strong>traiter en cascade</strong> des conteneurs chiffrés sans casser la preuve d'origine.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Capturer la mémoire vive (RAM)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Capture de RAM = <strong>première étape</strong> en intervention sur un poste <strong>en cours de fonctionnement</strong>. Si tu coupes l'alimentation, la RAM s'efface — perte de :</p>
+        <ul><li>Processus actifs</li><li>Connexions réseau</li><li>Clés de chiffrement déchiffrées</li><li>Mots de passe en clair</li><li>Commandes PowerShell en cours</li><li>Malware fileless</li></ul>
+        <h3>Procédure</h3>
+        <ol><li><code>File → Capture Memory…</code></li><li><strong>Destination path</strong> : disque externe (USB 3.0 minimum).</li><li><strong>Filename</strong> : <code>RAM_HOSTNAME_AAAAMMJJ.mem</code>.</li><li>Coche <strong>Include pagefile</strong> si tu veux aussi <code>pagefile.sys</code> (très volumineux mais utile pour reconstruction d'artefacts).</li><li>Coche <strong>Create AD1 file</strong> si tu veux un format AccessData (sinon <code>.mem</code> brut).</li><li>Clique <strong>Capture Memory</strong>.</li></ol>
+        <p>Durée typique : 1-3 minutes pour 16 Go de RAM.</p>
+        <h3>Résultat exploitable par Volatility 3</h3>
+        <p>Le fichier <code>.mem</code> est directement analysable par Volatility 3 :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f RAM_HOSTNAME_20260115.mem windows.pslist
+vol -f RAM_HOSTNAME_20260115.mem windows.netscan
+vol -f RAM_HOSTNAME_20260115.mem windows.malfind</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>(1) RAM avec FTK Imager, (2) triage Windows avec KAPE, (3) image disque finale. Dans cet ordre, pour préserver la RAM (volatile) en premier.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Vérifier l'intégrité d'une image (hash)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Une image E01 sans vérification de hash est <strong>inutile juridiquement</strong>.</p>
+        <h3>Au moment de l'acquisition</h3>
+        <p>L'option <strong>Verify images after they are created</strong> lance le calcul à la fin et écrit dans le <code>.txt</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>[Computed Hashes]
+MD5 checksum:    a3f5b4c7d8e9f0a1b2c3d4e5f6a7b8c9
+SHA1 checksum:   1234567890abcdef1234567890abcdef12345678
+
+[Image Information]
+Acquired using:  ADI 4.7.1.x
+Case number:     MP-VD-2026-001
+Examiner:        Analyste DFIR</code></pre></div>
+        <p>Les hashs doivent être <strong>identiques</strong> entre source et image (MD5 et SHA-1 listés). Si différence : image corrompue, à refaire.</p>
+        <h3>A posteriori</h3>
+        <p><code>File → Verify Drive/Image</code> sur n'importe quelle image E01. FTK Imager recalcule et compare aux hashs stockés dans le fichier. Si OK, l'image est intacte depuis l'acquisition.</p>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>refaire un <strong>Verify</strong> : - Après chaque copie de l'image - Avant de la transmettre à un autre service - Avant de l'analyser dans Autopsy / IPED - À chaque nouvelle expertise sur un cas ancien</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Monter une image en lecture seule</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>FTK Imager peut <strong>monter</strong> un E01 ou un AD1 comme un disque virtuel Windows, accessible depuis l'Explorateur ou en CLI, sans extraire les fichiers.</p>
+        <h3>Procédure</h3>
+        <p><code>File → Image Mounting…</code></p>
+        <ul><li><strong>Image File</strong> : ton <code>.E01</code>.</li><li><strong>Mount Type</strong> : <code>Physical & Logical</code>.</li><li><strong>Drive Letter</strong> : choisis une lettre libre (ex. <code>Z:</code>).</li><li><strong>Write Cache Folder</strong> : laisse vide (lecture seule).</li></ul>
+        <p>Clique <strong>Mount</strong>.</p>
+        <p><code>Z:</code> apparaît dans l'Explorateur Windows. <strong>En lecture seule</strong> : tu peux parcourir, ouvrir, copier des fichiers vers ton poste analyste. Toute écriture est bloquée.</p>
+        <h3>Cas d'usage</h3>
+        <ul><li>Exploration rapide avant lancement d'Autopsy / IPED (gros traitement).</li><li>Recherche par mot-clé dans tout le disque via Windows Search.</li><li>Récupération sélective d'un fichier sans monter Autopsy.</li><li>Test d'outils tiers sur le contenu de l'image.</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>combiner avec un antivirus en lecture seule pour pré-scanner les malwares sans risque (l'image est read-only, l'AV ne peut pas modifier les fichiers).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Exporter des fichiers d'une image existante</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu veux extraire un fichier précis d'un E01 sans monter l'image.</p>
+        <h3>Procédure</h3>
+        <ol><li><code>File → Add Evidence Item → Image File</code> : ton <code>.E01</code>.</li><li>Dans l'Evidence Tree, navigue vers le fichier voulu (<code>[root]/Users/.../Documents/...</code>).</li><li>Clic droit sur le fichier → <strong>Export Files…</strong>.</li><li>Choisis le dossier de destination.</li></ol>
+        <p>Le fichier est extrait <strong>avec ses métadonnées préservées</strong> (timestamps MAC).</p>
+        <h3>Export en lot</h3>
+        <p>Clic droit sur un dossier → <strong>Export Files…</strong> export tout son contenu récursivement.</p>
+        <h3>Export avec liste</h3>
+        <p>Clic droit → <strong>Export File Hash List…</strong> génère un CSV de tous les fichiers du dossier avec leur hash MD5 / SHA-1.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>extraire la base de données SQLite d'un navigateur (<code>History</code>, <code>Cookies</code>) sans monter toute l'image, et l'analyser avec SQLite Browser.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Forces de FTK Imager</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>✅ <strong>Gratuit</strong> (sous licence propriétaire Exterro mais usage forensique libre).</p>
+        <p>✅ <strong>Standard de facto</strong> : compatible avec tous les outils d'analyse (Autopsy, IPED, X-Ways, EnCase, FTK Lab).</p>
+        <p>✅ <strong>Format E01</strong> universellement supporté.</p>
+        <p>✅ <strong>Hash automatique</strong> MD5 + SHA-1 (et SHA-256 en option) à l'acquisition.</p>
+        <p>✅ <strong>Rapport d'acquisition</strong> auto-généré avec métadonnées complètes.</p>
+        <p>✅ <strong>Acquisition mémoire</strong> Windows simple et fiable.</p>
+        <p>✅ <strong>Montage en lecture seule</strong> : exploration sans risque.</p>
+        <p>✅ <strong>Interface stable</strong> depuis 2003, faible courbe d'apprentissage.</p>
+        <p>✅ <strong>Reconnu</strong> par les juridictions du monde entier comme outil de référence.</p>
+        <p>✅ <strong>Compression intégrée</strong> : gain de ~50 % sur disques mixtes.</p>
+        <p>✅ <strong>Segmentation</strong> : images en blocs de 2 Go faciles à transférer.</p>
+        <p>✅ <strong>Documentation</strong> abondante (manuel officiel, formations DFIR, livres).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Windows uniquement</strong> : pas de version Linux ou macOS native.</p>
+        <p>❌ <strong>Pas open source</strong> : code propriétaire Exterro, audit impossible.</p>
+        <p>❌ <strong>Pas de write-blocker logiciel</strong> : il faut un <strong>write-blocker matériel</strong> (Tableau, FastBloc) pour acquisition forensique stricte.</p>
+        <p>❌ <strong>Lent sur HDD</strong> : sur disque source mécanique, l'acquisition est limitée par la lecture séquentielle.</p>
+        <p>❌ <strong>Pas d'acquisition de disques chiffrés</strong> : BitLocker, FileVault, LUKS doivent être déchiffrés en amont (sinon image chiffrée non analysable).</p>
+        <p>❌ <strong>Pas de support natif de RAID complexe</strong> : il faut reconstruire le RAID en amont ou utiliser X-Ways.</p>
+        <p>❌ <strong>Pas d'image distante</strong> : pas de capture sur un endpoint à distance (utiliser Velociraptor ou KAPE pour cela).</p>
+        <p>❌ <strong>Pas d'acquisition mobile</strong> : iPhone, Android nécessitent UFED (Cellebrite), GrayKey ou MVT.</p>
+        <p>❌ <strong>Pas de mode CLI scriptable</strong> : tout est en GUI, pas adapté pour automatisation.</p>
+        <p>❌ <strong>Vérification de hash lente</strong> : sur un E01 de 1 To, le Verify peut prendre 1-2 heures.</p>
+        <p>❌ <strong>Erreurs cryptiques</strong> : les messages d'erreur sont peu explicites, parfois il faut deviner.</p>
+        <p>❌ <strong>Dépendance</strong> à Exterro (anciennement AccessData) : si la société disparaît, plus de support.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours utiliser un write-blocker matériel</strong> entre le disque source et l'ordinateur analyste. C'est non négociable en perquisition.</p>
+        <p>🔹 <strong>Vérifier le hash systématiquement</strong> après acquisition. Si différence MD5/SHA-1 source vs image, l'image est <strong>invalide</strong>.</p>
+        <p>🔹 <strong>Documenter chaque acquisition</strong> : opérateur, date, support source (numéro de série, fabricant, taille), outil, version, write-blocker utilisé.</p>
+        <p>🔹 <strong>Préférer le format E01</strong> par défaut. Utiliser <code>.001</code> (raw) uniquement si l'outil cible n'accepte que ce format.</p>
+        <p>🔹 <strong>Acquérir en physique, pas en logique</strong>, sauf cas particulier (partition chiffrée déjà ouverte).</p>
+        <p>🔹 <strong>Sur poste live, capturer la RAM EN PREMIER</strong> (avec FTK Imager) avant tout autre action.</p>
+        <p>🔹 <strong>Stocker l'image originale en lecture seule</strong> (CD-R, BD-R) ou sur RAID redondant. Toujours analyser des <strong>copies</strong>.</p>
+        <p>🔹 <strong>Calculer hash SHA-256</strong> en plus du MD5/SHA-1 : MD5 et SHA-1 sont cryptographiquement faibles, SHA-256 est le standard moderne (peut être ajouté dans les préférences FTK Imager).</p>
+        <p>🔹 <strong>Tester l'image après acquisition</strong> : la monter via FTK Imager, naviguer dans le système de fichiers. Si l'image est invalide, FTK Imager refusera de monter.</p>
+        <p>🔹 <strong>Conserver le rapport <code>.txt</code> d'acquisition</strong> avec l'image. Sans rapport, l'image est inutilisable juridiquement.</p>
+        <p>🔹 <strong>Limiter le nombre de personnes en contact avec l'image originale</strong> : chain of custody documentée à chaque transfert.</p>
+        <p>🔹 <strong>Faire un backup de l'image avant analyse</strong> : la copie de travail peut être corrompue par accident.</p>
+        <p>🔹 <strong>Acquérir aussi le pagefile.sys et hiberfil.sys</strong> lors de la capture mémoire (option dans FTK Imager) : artefacts précieux complémentaires à la RAM.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Page officielle</strong> : <<a href="https://www.exterro.com/digital-forensics-software/ftk-imager" target="_blank" rel="noopener">https://www.exterro.com/digital-forensics-software/ftk-imager</a>></li><li>📚 <strong>User Guide FTK Imager</strong> : disponible dans l'installation (<code>Help → User Guide</code>)</li><li>📚 <strong>NIST CFTT FTK Imager Test Report</strong> : <<a href="https://www.nist.gov/itl/ssd/software-quality-group/computer-forensics-tool-testing-program-cftt" target="_blank" rel="noopener">https://www.nist.gov/itl/ssd/software-quality-group/computer-forensics-tool-testing-program-cftt</a>></li><li>🎓 <strong>SANS FOR500 / FOR508</strong> : utilisent FTK Imager dans tous les labs d'acquisition</li><li>🎓 <strong>Magnet Forensics blog</strong> : nombreux articles sur les bonnes pratiques d'acquisition</li><li>🎓 <strong>DFIR Diva — FTK Imager Cheatsheet</strong> : <<a href="https://dfirdiva.com/" target="_blank" rel="noopener">https://dfirdiva.com/</a>></li><li>📖 <strong>Carrier — File System Forensic Analysis</strong> : référence académique sur les formats E01 et acquisition</li><li>🐛 <strong>Forum Exterro</strong> : <<a href="https://community.exterro.com/" target="_blank" rel="noopener">https://community.exterro.com/</a>></li><li>🛒 <strong>Write-blockers de référence</strong> : Tableau (T35689iu, TX1), WiebeTech (USB WriteBlocker, Forensic ComboDock), CRU (WiebeTech Forensic UltraDock)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>FTK Imager est l'<strong>outil-pivot</strong> de toute investigation forensique : sans acquisition propre, aucune analyse n'a de valeur juridique. Sa maîtrise est la <strong>première compétence</strong> que doit acquérir un analyste DFIR.</p>
+        <p>Sa simplicité d'usage cache l'importance de la rigueur :</p>
+        <ol><li><strong>Toujours write-blocker</strong> matériel sur le disque source.</li><li><strong>Toujours hash</strong> vérifié après acquisition.</li><li><strong>Toujours rapport</strong> documenté et conservé.</li><li><strong>Toujours travailler sur copie</strong>, jamais sur original.</li></ol>
+        <p>Une acquisition mal faite = preuve perdue, parfois irrécupérable. Une acquisition bien faite = base solide pour des semaines d'analyse.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>S'entraîner sur clé USB</strong> ou disque externe sacrificiel avant d'acquérir une preuve réelle.</li><li><strong>Acquérir + analyser dans Autopsy</strong> sur un cas pédagogique (Digital Corpora propose des images publiques pour s'exercer).</li><li><strong>Documenter ton workflow d'acquisition</strong> sous forme de checklist imprimée à apporter sur le terrain.</li><li><strong>Maîtriser la triple capture</strong> (RAM → KAPE → image disque) avant d'intervenir en réel.</li></ol>
+        <p>Bonnes acquisitions ! 💾</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« FTK Imager — Acquisition forensique maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. E01 est le standard de facto : compression intégrée (~50% gain), segmentation en blocs de 2 Go, métadonnées du cas, hash auto-calculés, compatible avec tous les outils d'analyse (Autopsy, IPED, X-Ways, EnCase)."
+             data-feedback-ko="✗ La bonne réponse : <strong>E01</strong>. RAW est compatible avec tout mais lourd ; AD1 est propriétaire AccessData ; ZIP est inadapté (pas d'intégrité bit-à-bit).">
+          <div class="tuto-quiz-question-text">1. Quel <strong>format d'image</strong> est recommandé par défaut pour l'acquisition forensique ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">RAW / dd (.001, .002, ...)</button>
+            <button class="tuto-quiz-option" type="button">E01 (Expert Witness) — compression, segmentation, métadonnées intégrées</button>
+            <button class="tuto-quiz-option" type="button">AD1 (AccessData)</button>
+            <button class="tuto-quiz-option" type="button">ZIP du contenu du disque</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Sans vérification de hash, l'image n'a aucune valeur juridique : un avocat peut faire écarter la preuve. Le rapport <code>.txt</code> auto-généré par FTK Imager documente date, opérateur, support source, hashs — élément central de la chaîne de preuve."
+             data-feedback-ko="✗ La bonne réponse : <strong>vérifier les hashs et conserver le rapport .txt</strong>. C'est la base de la chaîne de preuve juridique.">
+          <div class="tuto-quiz-question-text">2. Que faut-il <strong>impérativement</strong> faire après une acquisition pour qu'elle ait valeur juridique ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Compresser l'image en ZIP pour la transmettre</button>
+            <button class="tuto-quiz-option" type="button">Vérifier que <strong>les hashs MD5/SHA-1 source vs image sont identiques</strong> + conserver le rapport <code>.txt</code> d'acquisition</button>
+            <button class="tuto-quiz-option" type="button">Renommer le fichier avec un nom court</button>
+            <button class="tuto-quiz-option" type="button">Décompresser l'image pour vérifier son contenu</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>La RAM est volatile</strong> : couper l'alimentation = perte définitive (processus actifs, clés de chiffrement déchiffrées, mots de passe en clair, malware fileless). On capture donc la RAM en PREMIER, puis KAPE en triage léger, puis l'image disque complète."
+             data-feedback-ko="✗ La bonne réponse : <strong>RAM → KAPE → Image disque</strong>. Du plus volatile au moins volatile. La RAM perd tout à l'extinction.">
+          <div class="tuto-quiz-question-text">3. Sur un poste en cours de fonctionnement, dans quel <strong>ordre</strong> faut-il acquérir ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Image disque → Triage KAPE → RAM</button>
+            <button class="tuto-quiz-option" type="button">RAM → Triage KAPE → Image disque</button>
+            <button class="tuto-quiz-option" type="button">Triage KAPE → RAM → Image disque</button>
+            <button class="tuto-quiz-option" type="button">Image disque uniquement (la RAM ne sert à rien)</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. L'acquisition physique capture tout le disque secteur par secteur, y compris l'espace non alloué (fichiers effacés récupérables) et les partitions cachées (recovery, EFI). L'acquisition logique perd ces traces critiques. <strong>Toujours préférer le physique</strong> sauf cas particulier."
+             data-feedback-ko="✗ La bonne réponse : l'acquisition physique capture l'espace non alloué et les partitions cachées. C'est essentiel pour récupérer les fichiers effacés.">
+          <div class="tuto-quiz-question-text">4. Quelle est la différence entre <strong>acquérir un disque physique</strong> et acquérir une partition logique ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Aucune, c'est juste un choix d'interface</button>
+            <button class="tuto-quiz-option" type="button">L'acquisition logique est plus complète</button>
+            <button class="tuto-quiz-option" type="button">L'acquisition physique capture <strong>aussi l'espace non alloué</strong> et les partitions cachées ; la logique se limite à la partition active</button>
+            <button class="tuto-quiz-option" type="button">L'acquisition physique nécessite un mandat, pas la logique</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. Le write-blocker matériel intercepte toutes les commandes d'écriture envoyées au disque source. Sans lui, Windows écrit automatiquement (mise à jour des dates d'accès, $LogFile, etc.) et invalide la preuve. Modèles de référence : Tableau T35689iu, WiebeTech Forensic ComboDock, CRU."
+             data-feedback-ko="✗ La bonne réponse : <strong>write-blocker matériel</strong>. Sans lui, le simple branchement du disque sur Windows déclenche des écritures qui altèrent la preuve. C'est non négociable en perquisition.">
+          <div class="tuto-quiz-question-text">5. Pour acquérir un disque saisi <strong>sans risquer de le modifier</strong>, quel équipement matériel est <strong>indispensable</strong> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Un convertisseur USB-SATA classique</button>
+            <button class="tuto-quiz-option" type="button">Un disque externe pour stocker l'image</button>
+            <button class="tuto-quiz-option" type="button">Un <strong>write-blocker matériel</strong> (Tableau, WiebeTech, FastBloc) entre le disque source et l'ordinateur analyste</button>
+            <button class="tuto-quiz-option" type="button">Un antivirus à jour</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/ftkimager.html" style="color:var(--cyan)">📚 Consulter la fiche FTK Imager — Acquisition forensique</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel FTK Imager — Acquisition forensique v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

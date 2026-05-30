@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CLI intermédiaire — Pipelines & scripts — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas CLI intermédiaire — Pipelines & scripts : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">CLI INTERMÉDIAIRE — PIPELINES & SCRIPTS — PAS À PAS</span>
+  <a href="../fiches/cli_intermediaire.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="cli_intermediaire">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Prérequis et positionnement</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. cut — découper par colonne</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. sort, uniq, wc — trier compter dédu</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. grep avancé : regex étendues</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. sed — Stream EDitor</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. awk — le couteau suisse</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. tr — transformer des caractères</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. xargs — passer une liste en argumen</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. find avec -exec et -delete</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Pipelines complexes — exemples DFIR</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Variables et substitution de comman</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Conditions if/then/else</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Boucles for et while</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Fonctions bash</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Gestion des erreurs (set -e, set -u</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. PowerShell intermédiaire — équivale</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. PowerShell : Where-Object, ForEach-</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Écrire un vrai script de parsing</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources utiles</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">CLI intermédiaire — Pipelines & scripts</span>
+        </div>
+
+        <h1>🔧 CLI intermédiaire — Pipelines & scripts</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras utiliser <strong>cut, sort, uniq, wc</strong> en pipelines, maîtriser <strong>grep avec regex étendues</strong>, transformer des données avec <strong>sed</strong>, parser logs et CSV avec <strong>awk</strong>, manipuler avec <strong>tr/xargs</strong>, écrire des <strong>scripts bash robustes</strong> (conditions, boucles, fonctions, <code>set -euo pipefail</code>), et l'équivalent en <strong>PowerShell</strong> (Where-Object, ForEach-Object, Select-Object).
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~60 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> bash / awk / sed</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> PowerShell</span>
+          <span class="tuto-meta-badge "><span class="icon">📝</span> Scripts robustes</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ Prérequis : Bases CLI (v127)</div>
+        <div>Ce tutoriel suppose acquis les fondamentaux : navigation, fichiers, pipes, redirection, grep et find basiques. Si ce n'est pas le cas, passe d'abord par le tutoriel <strong>Bases CLI</strong>. <br><br>Tu vas apprendre à transformer des heures de clic en <strong>30 secondes de commande</strong>, à parser n'importe quel log Apache/syslog/EVTX, et à écrire des scripts de triage qui fonctionnent vraiment.</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Prérequis et positionnement</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Prérequis</strong> : avoir terminé le tutoriel <strong>Bases CLI</strong> (v127). Tu dois savoir :</p>
+        <ul><li>Naviguer (<code>cd</code>, <code>ls</code>, <code>pwd</code>)</li><li>Lire un fichier (<code>cat</code>, <code>less</code>, <code>head</code>, <code>tail</code>)</li><li>Rediriger (<code>></code>, <code>>></code>, <code>2></code>)</li><li>Piper (<code>|</code>)</li><li>Recherches basiques (<code>grep</code>, <code>find</code>)</li></ul>
+        <p><strong>Ce que tu sauras à la fin</strong> :</p>
+        <ul><li>Parser des logs Apache/auth.log avec <strong>awk</strong> en quelques secondes</li><li>Transformer des données avec <strong>sed</strong></li><li>Écrire des <strong>scripts bash robustes</strong> (gestion d'erreurs, conditions, boucles)</li><li>Manipuler du texte avec des <strong>regex étendues</strong></li><li>Écrire l'équivalent en <strong>PowerShell</strong> moderne</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> cut — découper par colonne</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Extraire des colonnes spécifiques d'un fichier structuré.</p>
+        <h3>Par caractère</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>echo "abcdefghij" | cut -c 3-7
+# Sortie : cdefg</code></pre></div>
+        <h3>Par champ avec séparateur</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># /etc/passwd : "user:x:1000:1000:User Name:/home/user:/bin/bash"
+cut -d':' -f1,3,7 /etc/passwd
+# Sortie : user:1000:/bin/bash</code></pre></div>
+        <ul><li><code>-d':'</code> : séparateur (deux-points)</li><li><code>-f1,3,7</code> : champs 1, 3 et 7</li><li><code>-f1-3</code> : plage 1 à 3</li></ul>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Extraire les IPs depuis un access.log Apache
+cut -d' ' -f1 /var/log/apache2/access.log | head
+
+# Lister tous les utilisateurs du système
+cut -d':' -f1 /etc/passwd</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> sort, uniq, wc — trier compter dédupliquer</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>sort</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sort fichier.txt                 # alphabétique
+sort -n nombres.txt              # numérique
+sort -r fichier.txt              # ordre inversé
+sort -k 2 fichier.txt            # tri sur le 2e champ
+sort -t',' -k 3 -n data.csv      # CSV, champ 3, numérique</code></pre></div>
+        <h3>uniq</h3>
+        <p><code>uniq</code> supprime les doublons <strong>adjacents</strong> — il faut donc trier d'abord.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sort fichier.txt | uniq                   # supprime doublons
+sort fichier.txt | uniq -c                # compte les occurrences
+sort fichier.txt | uniq -c | sort -rn     # tri par fréquence décroissante</code></pre></div>
+        <h3>wc</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>wc fichier.txt          # lignes / mots / octets
+wc -l fichier.txt       # lignes uniquement
+wc -c fichier.txt       # octets
+wc -w fichier.txt       # mots</code></pre></div>
+        <h3>Le pattern classique : top N</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Top 10 des IPs ayant le plus consulté un site (access.log Apache)
+cut -d' ' -f1 access.log | sort | uniq -c | sort -rn | head -n 10</code></pre></div>
+        <p>C'est <strong>le pattern le plus utilisé</strong> en CLI analytics. Tu le verras partout.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> grep avancé : regex étendues</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Drapeaux essentiels</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>grep -i "motif" file              # insensible casse
+grep -v "motif" file              # inversé (lignes sans le motif)
+grep -c "motif" file              # nombre d'occurrences
+grep -n "motif" file              # avec numéro de ligne
+grep -r "motif" dossier/          # récursif
+grep -l "motif" *.log             # juste les noms de fichiers qui matchent
+grep -A 5 "ERROR" log             # 5 lignes après le match
+grep -B 5 "ERROR" log             # 5 lignes avant
+grep -C 5 "ERROR" log             # 5 lignes avant et après</code></pre></div>
+        <h3>Regex de base</h3>
+        <table><thead><tr><th>Motif</th><th>Sens</th></tr></thead><tbody><tr><td><code>.</code></td><td>un caractère quelconque</td></tr><tr><td><code>*</code></td><td>zéro ou plusieurs (du caractère précédent)</td></tr><tr><td><code>^motif</code></td><td>début de ligne</td></tr><tr><td><code>motif$</code></td><td>fin de ligne</td></tr><tr><td><code>[abc]</code></td><td>un caractère parmi a, b, c</td></tr><tr><td><code>[a-z]</code></td><td>un caractère minuscule</td></tr><tr><td><code>[^abc]</code></td><td>un caractère <strong>sauf</strong> a, b, c</td></tr><tr><td><code>\d</code></td><td>un chiffre (en regex étendue, avec <code>-E</code>)</td></tr></tbody></table>
+        <h3>grep -E (regex étendues, ERE)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Pipe : OU
+grep -E "ERROR|WARN|CRITICAL" application.log
+
+# Quantificateurs : ? + {n,m}
+grep -E "colou?r" file                    # color OR colour
+grep -E "[0-9]{3}-[0-9]{4}" contacts      # 555-1234
+
+# Groupes
+grep -E "(http|https)://[a-z0-9.]+" pages.txt</code></pre></div>
+        <h3>Cas DFIR : extraire des IPs</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Regex IP basique (ne valide pas strictement)
+grep -oE "\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b" access.log
+
+# Avec sort + uniq -c pour le top
+grep -oE "\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b" /var/log/auth.log | sort | uniq -c | sort -rn | head</code></pre></div>
+        <p><code>-o</code> : afficher uniquement la partie qui matche (pas la ligne entière).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> sed — Stream EDitor</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Édition de texte ligne par ligne, non interactive. Utile pour les <strong>transformations massives</strong>.</p>
+        <h3>Substituer</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sed 's/ancien/nouveau/' file              # 1re occurrence par ligne
+sed 's/ancien/nouveau/g' file             # toutes les occurrences (global)
+sed 's/ancien/nouveau/gi' file            # insensible casse
+sed 's|/var/log|/tmp/logs|g' file         # changer le délimiteur si "/" gêne</code></pre></div>
+        <h3>Modifier en place</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sed -i 's/ancien/nouveau/g' file          # IMPORTANT : modifie le fichier
+sed -i.bak 's/old/new/g' file             # avec backup file.bak</code></pre></div>
+        <h3>Supprimer</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sed '/motif/d' file                       # supprime lignes contenant motif
+sed '5,10d' file                          # supprime lignes 5 à 10
+sed '/^$/d' file                          # supprime lignes vides</code></pre></div>
+        <h3>Afficher uniquement certaines lignes</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sed -n '5,15p' file                       # affiche lignes 5 à 15
+sed -n '/ERROR/p' file                    # affiche lignes contenant ERROR</code></pre></div>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Anonymiser des IPs dans un log (remplacer par X.X.X.X)
+sed -E 's/\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b/X.X.X.X/g' access.log
+
+# Nettoyer un dump : enlever les commentaires bash
+sed '/^#/d' script.sh
+
+# Convertir CRLF en LF (Windows → Unix)
+sed -i 's/\r$//' fichier_windows.txt</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> awk — le couteau suisse</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>awk</code> est un <strong>langage de programmation</strong> intégré au shell, optimisé pour le traitement par ligne et colonne.</p>
+        <h3>Syntaxe générale</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>awk 'PATTERN { ACTION }' fichier</code></pre></div>
+        <h3>Premiers exemples</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Afficher la 1re colonne d'un fichier (séparateur espace par défaut)
+awk '{print $1}' file
+
+# Afficher la 1re et la 3e colonne
+awk '{print $1, $3}' file
+
+# Compter le nombre de lignes
+awk 'END {print NR}' file       # NR = Number of Records
+
+# Champs d'une ligne particulière
+awk 'NR==5 {print $0}' file     # ligne 5, $0 = ligne entière</code></pre></div>
+        <h3>Séparateur de champ</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># CSV
+awk -F',' '{print $1, $3}' data.csv
+
+# /etc/passwd (deux-points)
+awk -F':' '$3 &gt;= 1000 {print $1}' /etc/passwd     # users avec UID &gt;= 1000</code></pre></div>
+        <h3>Conditions</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lignes où le 4e champ vaut "ERROR"
+awk '$4 == "ERROR" {print $0}' app.log
+
+# Lignes où la taille (champ 5) &gt; 1000
+awk '$5 &gt; 1000 {print $1, $5}' file</code></pre></div>
+        <h3>Calculs</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Somme des valeurs de la 3e colonne
+awk '{sum += $3} END {print sum}' data.csv
+
+# Moyenne
+awk '{sum += $3; n++} END {print sum/n}' data.csv
+
+# Min et max
+awk 'BEGIN {max=0} {if ($3&gt;max) max=$3} END {print max}' data.csv</code></pre></div>
+        <h3>Cas DFIR avec awk</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Compter les codes HTTP dans un access.log Apache
+# Format : IP - - [date] "METHOD URL HTTP/1.1" code size ...
+awk '{print $9}' access.log | sort | uniq -c | sort -rn
+
+# Taille totale transférée par IP
+awk '{transfer[$1] += $10} END {for (ip in transfer) print transfer[ip], ip}' access.log | sort -rn | head
+
+# Heures avec le plus d'erreurs 500
+awk '$9 == 500 {print substr($4, 14, 2)}' access.log | sort | uniq -c | sort -rn</code></pre></div>
+        <p><code>awk</code> à lui seul mérite un tutoriel entier. Voici les <strong>3 idiomes essentiels</strong> à connaître :</p>
+        <ol><li><strong>Filtrer</strong> : <code>awk '$3 > 100 {print}'</code></li><li><strong>Projeter</strong> : <code>awk -F',' '{print $1, $5}'</code></li><li><strong>Agréger</strong> : <code>awk '{count[$1]++} END {for (k in count) print count[k], k}'</code></li></ol>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> tr — transformer des caractères</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Substitutions caractère par caractère, ou suppression.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Tout en majuscules
+echo "hello world" | tr 'a-z' 'A-Z'
+# Sortie : HELLO WORLD
+
+# Supprimer des caractères
+echo "Hello, World!" | tr -d ',!'
+# Sortie : Hello World
+
+# Compresser les espaces multiples en un seul
+echo "a    b    c" | tr -s ' '
+# Sortie : a b c
+
+# Remplacer toutes les ponctuations par des espaces
+echo "Hello, world! How are you?" | tr -c 'a-zA-Z' ' '</code></pre></div>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Convertir un CSV en lignes (1 valeur par ligne)
+cat data.csv | tr ',' '\n'
+
+# Normaliser un journal : suppression des caractères non-imprimables
+cat binary.log | tr -cd '[:print:]\n' &gt; clean.log</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> xargs — passer une liste en arguments</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>xargs</code> prend l'<strong>entrée standard</strong> et la transforme en <strong>arguments</strong> pour une commande.</p>
+        <h3>Syntaxe basique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Supprimer tous les fichiers .tmp du dossier courant
+ls *.tmp | xargs rm
+
+# Mieux (gère les noms avec espaces)
+find . -name "*.tmp" -print0 | xargs -0 rm</code></pre></div>
+        <h3>Plusieurs arguments à la fois</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Par défaut, xargs passe tous les args en une fois
+echo "a b c d" | xargs echo
+# Sortie : a b c d
+
+# Un par ligne :
+echo "a b c d" | xargs -n 1 echo
+# Sortie : a / b / c / d (sur 4 lignes)</code></pre></div>
+        <h3>Avec position d'argument</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Copier chaque fichier dans un dossier en gardant le nom
+ls *.txt | xargs -I {} cp {} /backup/{}</code></pre></div>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hasher tous les fichiers .exe d'un dossier
+find . -name "*.exe" | xargs sha256sum &gt; hashes.txt
+
+# Lancer une commande Volatility sur chaque dump mémoire
+ls dumps/*.mem | xargs -I {} vol -f {} windows.pslist &gt; {}.pslist.txt</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> find avec -exec et -delete</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>find</code> peut <strong>exécuter une commande sur chaque résultat</strong>.</p>
+        <h3>-exec</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hasher chaque fichier trouvé
+find /var/log -name "*.log" -exec sha256sum {} \;
+
+# Avec + (plus efficace : passe en lot, pas un par un)
+find /var/log -name "*.log" -exec sha256sum {} +</code></pre></div>
+        <p><code>{}</code> est remplacé par le chemin du fichier. <code>\;</code> (ou <code>;</code> échappé) termine la commande.</p>
+        <h3>-delete</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Supprimer tous les .tmp de plus de 30 jours
+find /tmp -name "*.tmp" -mtime +30 -delete</code></pre></div>
+        <p>🚨 <strong>Attention</strong> : <code>-delete</code> est <strong>définitif</strong>. Toujours tester d'abord avec <code>-print</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>find /tmp -name "*.tmp" -mtime +30 -print     # vérifie ce qui sera supprimé
+find /tmp -name "*.tmp" -mtime +30 -delete    # puis supprime</code></pre></div>
+        <h3>Combinaisons puissantes</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Trouver les binaires SUID modifiés récemment (suspect en DFIR)
+find / -type f -perm -u+s -mtime -30 2&gt;/dev/null
+
+# Trouver et hasher les exécutables récents dans /tmp
+find /tmp -type f \( -name "*.sh" -o -name "*.exe" \) -mtime -7 -exec sha256sum {} \;</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Pipelines complexes — exemples DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Voici comment <strong>chaîner</strong> les commandes pour des analyses puissantes en une ligne.</p>
+        <h3>Top 10 des comptes en échec d'authentification</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>grep "Failed password" /var/log/auth.log | \
+    awk '{print $9}' | \
+    sort | uniq -c | sort -rn | head -n 10</code></pre></div>
+        <h3>Top 10 des IPs sources d'authentifications échouées</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>grep "Failed password" /var/log/auth.log | \
+    awk '{print $11}' | \
+    sort | uniq -c | sort -rn | head -n 10</code></pre></div>
+        <h3>Activité par heure sur un serveur web</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>awk '{print substr($4, 14, 2)}' /var/log/apache2/access.log | \
+    sort | uniq -c | sort -k2</code></pre></div>
+        <h3>Codes HTTP les plus fréquents (Apache)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>awk '{print $9}' /var/log/apache2/access.log | \
+    sort | uniq -c | sort -rn</code></pre></div>
+        <h3>IPs ayant tenté plus de 100 requêtes (scanners potentiels)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>awk '{print $1}' /var/log/apache2/access.log | \
+    sort | uniq -c | \
+    awk '$1 &gt; 100 {print $1, $2}' | \
+    sort -rn</code></pre></div>
+        <h3>Combiner les logs de plusieurs jours et chercher une IP</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>zcat /var/log/auth.log.*.gz | grep "192.168.1.42" | head</code></pre></div>
+        <p><code>zcat</code> lit les fichiers <code>.gz</code> sans les décompresser.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Variables et substitution de commande</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Définir et utiliser</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>nom="alice"
+echo "Bonjour $nom"
+echo "Bonjour ${nom}_dupont"        # accolades pour clarifier</code></pre></div>
+        <h3>Substitution de commande : $(...)</h3>
+        <p>Exécute une commande et <strong>remplace par son résultat</strong>.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>date_du_jour=$(date +%Y-%m-%d)
+echo "Aujourd'hui : $date_du_jour"
+
+# Compter les fichiers .log
+nb=$(ls *.log | wc -l)
+echo "Il y a $nb fichiers .log"</code></pre></div>
+        <h3>Substitution arithmétique : $((...))</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>nb=$((5 + 3))
+echo $nb       # 8
+
+total=$((nb * 10 + 2))
+echo $total    # 82</code></pre></div>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Nom de dossier basé sur date + hostname
+case_dir="/cases/$(hostname)_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$case_dir"</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Conditions if/then/else</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>if [ condition ]; then
+    commande
+elif [ autre_condition ]; then
+    autre_commande
+else
+    commande_par_defaut
+fi</code></pre></div>
+        <h3>Tests courants</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Fichier existe
+if [ -f /etc/passwd ]; then echo "OK"; fi
+
+# Dossier existe
+if [ -d /home/user ]; then echo "OK"; fi
+
+# Variable non vide
+if [ -n "$var" ]; then echo "var contient quelque chose"; fi
+
+# Variable vide
+if [ -z "$var" ]; then echo "var est vide"; fi
+
+# Comparer des chaînes
+if [ "$user" = "root" ]; then echo "C'est root"; fi
+
+# Comparer des nombres
+if [ "$count" -gt 100 ]; then echo "Plus de 100"; fi</code></pre></div>
+        <table><thead><tr><th>Opérateur</th><th>Sens</th></tr></thead><tbody><tr><td><code>-eq</code></td><td>égal (numérique)</td></tr><tr><td><code>-ne</code></td><td>différent</td></tr><tr><td><code>-gt</code> <code>-lt</code></td><td>supérieur / inférieur</td></tr><tr><td><code>-ge</code> <code>-le</code></td><td>supérieur ou égal / inférieur ou égal</td></tr><tr><td><code>=</code> <code>!=</code></td><td>égal / différent (chaînes)</td></tr></tbody></table>
+        <h3>Syntaxe moderne [[ ... ]]</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>if [[ "$file" == *.log ]]; then
+    echo "C'est un fichier log"
+fi
+
+if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Format IP valide"
+fi</code></pre></div>
+        <p><code>[[ ... ]]</code> est plus puissant que <code>[ ... ]</code> (regex avec <code>=~</code>, glob avec <code>==</code>).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Boucles for et while</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>for sur une liste</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>for nom in alice bob charlie; do
+    echo "Bonjour $nom"
+done</code></pre></div>
+        <h3>for sur des fichiers</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>for f in /var/log/*.log; do
+    echo "Traitement de $f"
+    wc -l "$f"
+done</code></pre></div>
+        <h3>for avec range numérique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>for i in {1..10}; do
+    echo "$i"
+done
+
+for i in $(seq 1 100); do
+    echo "$i"
+done</code></pre></div>
+        <h3>while</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lire ligne par ligne un fichier
+while read -r line; do
+    echo "Ligne : $line"
+done &lt; fichier.txt</code></pre></div>
+        <h3>Cas DFIR</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hasher toutes les images E01 d'un dossier
+for img in /cases/*.E01; do
+    echo "Hashing $img..."
+    sha256sum "$img" &gt;&gt; manifest.txt
+done
+
+# Pour chaque utilisateur, lister le contenu de leur shellbag
+for user in $(ls /Users); do
+    SBECmd -d /Users/$user --csv /output/$user/
+done</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Fonctions bash</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Pour structurer un script.</p>
+        <h3>Définition</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ma_fonction() {
+    echo "Bonjour $1"
+    return 0
+}
+
+# Appel
+ma_fonction "Alice"</code></pre></div>
+        <h3>Arguments et valeur de retour</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hash_fichier() {
+    local fichier="$1"
+    local algo="${2:-sha256}"   # défaut : sha256
+
+    if [ ! -f "$fichier" ]; then
+        echo "Erreur : $fichier introuvable" &gt;&amp;2
+        return 1
+    fi
+
+    "${algo}sum" "$fichier"
+}
+
+# Usage
+hash_fichier image.E01
+hash_fichier image.E01 md5</code></pre></div>
+        <ul><li><code>$1</code>, <code>$2</code>... : arguments positionnels</li><li><code>$#</code> : nombre d'arguments</li><li><code>$@</code> : tous les arguments</li><li><code>local var</code> : variable locale à la fonction</li><li><code>return 0</code> : succès, <code>return 1+</code> : erreur</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Gestion des erreurs (set -e, set -u, pipefail)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Par défaut, bash <strong>continue même si une commande échoue</strong>. Dangereux en script DFIR.</p>
+        <h3>Les 3 options de robustesse</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+set -e          # Arrête si une commande échoue
+set -u          # Arrête si variable non définie
+set -o pipefail # Arrête si un élément du pipe échoue
+
+# Combiné en une ligne :
+set -euo pipefail</code></pre></div>
+        <p>Avec ces options, un script s'arrête <strong>immédiatement à la première erreur</strong> au lieu de continuer en silence.</p>
+        <h3>Trap pour le nettoyage</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+set -euo pipefail
+
+# Dossier temporaire à nettoyer même en cas d'erreur
+tmp_dir=$(mktemp -d)
+trap "rm -rf $tmp_dir" EXIT
+
+# ... script qui utilise $tmp_dir ...</code></pre></div>
+        <p><code>trap</code> exécute la commande au moment indiqué (<code>EXIT</code> = à la sortie du script, quelle qu'en soit la raison).</p>
+        <h3>Logging</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log() {
+    echo "[$(date +%H:%M:%S)] $*"
+}
+
+log "Démarrage du triage"
+log "Traitement de $fichier"</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> PowerShell intermédiaire — équivalents</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Tableau de correspondance</h3>
+        <table><thead><tr><th>Bash</th><th>PowerShell</th></tr></thead><tbody><tr><td><code>cut -d',' -f1,3</code></td><td>`... \</td><td>Select-Object -ExpandProperty col1, col3`</td></tr><tr><td><code>sort -u</code></td><td><code>Sort-Object -Unique</code></td></tr><tr><td><code>uniq -c</code></td><td>`Group-Object \</td><td>Select Name, Count`</td></tr><tr><td><code>wc -l</code></td><td><code>Measure-Object -Line</code></td></tr><tr><td><code>grep "motif"</code></td><td><code>Where-Object { $_ -match "motif" }</code></td></tr><tr><td><code>sed 's/A/B/g'</code></td><td><code>$str -replace 'A','B'</code></td></tr><tr><td><code>awk '{print $3}'</code></td><td>`... \</td><td>ForEach-Object { ($_ -split ' ')[2] }`</td></tr><tr><td><code>for f in *.log</code></td><td>`Get-ChildItem *.log \</td><td>ForEach-Object { ... }`</td></tr><tr><td><code>if [ -f X ]</code></td><td><code>if (Test-Path X)</code></td></tr></tbody></table>
+        <h3>Exemple : top 10 IPs depuis un access.log</h3>
+        <p><strong>Bash</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -n 10</code></pre></div>
+        <p><strong>PowerShell</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Get-Content access.log |
+    ForEach-Object { ($_ -split ' ')[0] } |
+    Group-Object |
+    Sort-Object Count -Descending |
+    Select-Object -First 10 Name, Count</code></pre></div>
+        <p>PowerShell est <strong>plus verbeux</strong> mais <strong>plus typé</strong> (objets, pas juste du texte). À long terme, c'est un avantage.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> PowerShell : Where-Object, ForEach-Object, Select-Object</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Les 3 cmdlets centraux du pipeline PowerShell.</p>
+        <h3>Where-Object — filtrer</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Tous les processus utilisant &gt; 100 Mo de mémoire
+Get-Process | Where-Object { $_.WS -gt 100MB }
+
+# Alias court :
+Get-Process | Where { $_.WS -gt 100MB }
+ps | ? { $_.WS -gt 100MB }</code></pre></div>
+        <h3>ForEach-Object — transformer</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hasher tous les fichiers .E01
+Get-ChildItem *.E01 | ForEach-Object {
+    Get-FileHash $_ -Algorithm SHA256
+}
+
+# Alias :
+Get-ChildItem *.E01 | foreach { Get-FileHash $_ }
+ls *.E01 | % { Get-FileHash $_ }</code></pre></div>
+        <h3>Select-Object — projeter</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Garder uniquement certaines propriétés
+Get-Process | Select-Object Name, Id, CPU, WS
+
+# Les 10 premiers
+Get-Process | Select-Object -First 10
+
+# Avec un calcul
+Get-Process | Select-Object Name, @{N='MB';E={[math]::Round($_.WS/1MB, 2)}}</code></pre></div>
+        <h3>Pattern DFIR PowerShell : top 10 processus consommateurs</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Get-Process |
+    Sort-Object WS -Descending |
+    Select-Object -First 10 Name, Id, @{N='Memory(MB)';E={[math]::Round($_.WS/1MB)}}</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Écrire un vrai script de parsing</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Mettons tout ensemble. Voici un script bash qui parse un access.log Apache et produit un rapport DFIR.</p>
+        <h3>Bash : <code>analyze_apache.sh</code></h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+#
+# analyze_apache.sh — Analyse forensique d'un access.log Apache
+# Usage : ./analyze_apache.sh /var/log/apache2/access.log
+
+set -euo pipefail
+
+# Validation des arguments
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 &lt;access.log&gt;" &gt;&amp;2
+    exit 1
+fi
+
+LOG_FILE="$1"
+
+if [ ! -f "$LOG_FILE" ]; then
+    echo "Erreur: fichier $LOG_FILE introuvable" &gt;&amp;2
+    exit 1
+fi
+
+# Dossier de rapport
+REPORT_DIR="report_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$REPORT_DIR"
+
+log() {
+    echo "[$(date +%H:%M:%S)] $*"
+}
+
+log "Analyse de $LOG_FILE"
+log "Rapport dans $REPORT_DIR/"
+
+# 1. Statistiques générales
+{
+    echo "=== Statistiques générales ==="
+    echo "Total de lignes : $(wc -l &lt; "$LOG_FILE")"
+    echo "Taille : $(du -h "$LOG_FILE" | cut -f1)"
+    echo "Période :"
+    head -n 1 "$LOG_FILE" | awk '{print "  Début:", $4}'
+    tail -n 1 "$LOG_FILE" | awk '{print "  Fin:  ", $4}'
+} &gt; "$REPORT_DIR/stats.txt"
+
+# 2. Top 20 IPs
+log "Top 20 IPs"
+awk '{print $1}' "$LOG_FILE" | sort | uniq -c | sort -rn | head -n 20 &gt; "$REPORT_DIR/top_ips.txt"
+
+# 3. Codes HTTP
+log "Codes HTTP"
+awk '{print $9}' "$LOG_FILE" | sort | uniq -c | sort -rn &gt; "$REPORT_DIR/http_codes.txt"
+
+# 4. URLs les plus consultées
+log "Top URLs"
+awk '{print $7}' "$LOG_FILE" | sort | uniq -c | sort -rn | head -n 20 &gt; "$REPORT_DIR/top_urls.txt"
+
+# 5. User-Agents suspects (PowerShell, curl en User-Agent)
+log "User-Agents suspects"
+grep -E -i "(powershell|curl|wget|python-requests|sqlmap|nikto|nmap)" "$LOG_FILE" &gt; "$REPORT_DIR/suspicious_ua.txt" || true
+
+# 6. Erreurs 5xx (problèmes serveur)
+log "Erreurs 5xx"
+awk '$9 ~ /^5/ {print}' "$LOG_FILE" &gt; "$REPORT_DIR/server_errors.txt"
+
+# 7. Activité par heure
+log "Activité par heure"
+awk '{print substr($4, 14, 2)}' "$LOG_FILE" | sort | uniq -c | sort -k2 &gt; "$REPORT_DIR/activity_per_hour.txt"
+
+# 8. Manifest
+log "Manifest"
+cd "$REPORT_DIR"
+sha256sum * &gt; MANIFEST_SHA256.txt
+cd - &gt; /dev/null
+
+log "Terminé."
+ls -lh "$REPORT_DIR/"</code></pre></div>
+        <h3>Exécuter</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>chmod +x analyze_apache.sh
+./analyze_apache.sh /var/log/apache2/access.log</code></pre></div>
+        <h3>Équivalent PowerShell : <code>Analyze-Apache.ps1</code></h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>&lt;#
+.SYNOPSIS
+    Analyse forensique d'un access.log Apache
+.EXAMPLE
+    .\Analyze-Apache.ps1 -LogPath C:\logs\access.log
+#&gt;
+
+param(
+    [Parameter(Mandatory)]
+    [string]$LogPath
+)
+
+$ErrorActionPreference = 'Stop'
+
+if (-not (Test-Path $LogPath)) {
+    Write-Error "Fichier $LogPath introuvable"
+    exit 1
+}
+
+$ReportDir = "report_$(Get-Date -Format yyyyMMdd_HHmmss)"
+New-Item -ItemType Directory -Path $ReportDir | Out-Null
+
+function Log { param($Msg); Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] $Msg" }
+
+Log "Analyse de $LogPath"
+$lines = Get-Content $LogPath
+
+# Stats
+Log "Statistiques"
+@"
+=== Statistiques générales ===
+Total de lignes : $($lines.Count)
+Taille : $((Get-Item $LogPath).Length / 1KB) Ko
+"@ | Out-File "$ReportDir/stats.txt"
+
+# Top 20 IPs
+Log "Top 20 IPs"
+$lines | ForEach-Object { ($_ -split ' ')[0] } |
+    Group-Object | Sort-Object Count -Descending |
+    Select-Object -First 20 |
+    Format-Table Count, Name | Out-File "$ReportDir/top_ips.txt"
+
+# Codes HTTP
+Log "Codes HTTP"
+$lines | ForEach-Object { ($_ -split ' ')[8] } |
+    Group-Object | Sort-Object Count -Descending |
+    Format-Table Count, Name | Out-File "$ReportDir/http_codes.txt"
+
+# Manifest
+Log "Manifest"
+Get-ChildItem $ReportDir -File | Get-FileHash -Algorithm SHA256 |
+    Export-Csv "$ReportDir/MANIFEST_SHA256.csv" -NoTypeInformation
+
+Log "Terminé. Rapport dans $ReportDir/"
+Get-ChildItem $ReportDir</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours <code>set -euo pipefail</code></strong> en début de script bash. Sécurité.</p>
+        <p>🔹 <strong>Quoter les variables</strong> : <code>"$var"</code>, jamais <code>$var</code> nu. Les espaces et caractères spéciaux cassent tout sinon.</p>
+        <p>🔹 <strong>Tester avant le <code>-delete</code> ou <code>rm -rf</code></strong> : remplacer par <code>-print</code> ou <code>echo</code> pour vérifier.</p>
+        <p>🔹 <strong>Loguer chaque action</strong> dans un fichier journal du script. Reproductibilité judiciaire.</p>
+        <p>🔹 <strong>Préférer find avec -print0 et xargs -0</strong> pour gérer les noms avec espaces.</p>
+        <p>🔹 <strong>Hashes systématiques</strong> : ajouter une étape hash en fin de chaque script de collecte.</p>
+        <p>🔹 <strong>Tests sur VM</strong> avant production. Un <code>sed -i</code> mal placé peut détruire des preuves.</p>
+        <p>🔹 <strong>Garder un journal des pipelines</strong> utiles que tu découvres — futur cheat sheet personnel.</p>
+        <p>🔹 <strong>Lire les manpages</strong> : <code>man awk</code>, <code>man sed</code>. Souvent dense mais riche.</p>
+        <p>🔹 <strong>PowerShell : préférer les cmdlets aux alias</strong> dans les scripts (<code>Get-ChildItem</code> plutôt que <code>ls</code>) pour la lisibilité.</p>
+        <p>🔹 <strong>Versionner ses scripts</strong> : Git, même un repo personnel local. Récupérer une commande oubliée vaut souvent une heure de travail.</p>
+        <p>🔹 <strong>Apprendre awk progressivement</strong> : un nouvel idiome par semaine. C'est l'outil qui transforme un analyste.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>GNU AWK manual</strong> : <<a href="https://www.gnu.org/software/gawk/manual/" target="_blank" rel="noopener">https://www.gnu.org/software/gawk/manual/</a>></li><li>📚 <strong>GNU sed manual</strong> : <<a href="https://www.gnu.org/software/sed/manual/" target="_blank" rel="noopener">https://www.gnu.org/software/sed/manual/</a>></li><li>📚 <strong>PowerShell pipeline guide</strong> : <<a href="https://learn.microsoft.com/powershell/scripting/learn/ps101/04-pipelines" target="_blank" rel="noopener">https://learn.microsoft.com/powershell/scripting/learn/ps101/04-pipelines</a>></li><li>📚 <strong>awk one-liners</strong> : <<a href="https://www.pement.org/awk/awk1line.txt" target="_blank" rel="noopener">https://www.pement.org/awk/awk1line.txt</a>></li><li>📚 <strong>sed one-liners</strong> : <<a href="https://www.pement.org/sed/sed1line.txt" target="_blank" rel="noopener">https://www.pement.org/sed/sed1line.txt</a>></li><li>🎓 <strong>explainshell</strong> : <<a href="https://explainshell.com/" target="_blank" rel="noopener">https://explainshell.com/</a>> (décompose les commandes)</li><li>🎓 <strong>regex101</strong> : <<a href="https://regex101.com/" target="_blank" rel="noopener">https://regex101.com/</a>> (tester les regex)</li><li>🎓 <strong>OverTheWire — Bandit</strong> (suite après les 20 premiers niveaux)</li><li>🎓 <strong>Linux Command Line Bible</strong> : <<a href="https://linuxcommand.org/tlcl.php" target="_blank" rel="noopener">https://linuxcommand.org/tlcl.php</a>></li><li>📖 <strong>Brian Kernighan — The AWK Programming Language</strong> (Addison-Wesley)</li><li>📖 <strong>Lee Holmes — Windows PowerShell Cookbook</strong></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu maîtrises désormais les <strong>fondations de l'analyste CLI</strong>. Avec <code>awk</code>, <code>sed</code>, les pipelines et les scripts bien structurés, tu transformes une heure de clic en 30 secondes de commande. C'est la différence entre subir les outils et les piloter.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Construire ta bibliothèque de pipelines</strong> dans un fichier <code>cheatsheet.md</code>. Top 10 IPs, top URLs, erreurs 5xx — tu les utiliseras 100 fois.</li><li><strong>Écrire tes propres scripts</strong> pour les tâches répétitives. Triage Linux, hash de collecte, parsing d'EVTX...</li><li><strong>Pratiquer les regex</strong> sur regex101 et les exercices RegexOne.</li><li><strong>Passer aux exercices OverTheWire Bandit</strong> au-delà du niveau 20.</li><li><strong>Lire les scripts d'autres</strong> sur GitHub (Awesome DFIR, dfir-scripts) pour t'inspirer.</li></ol>
+        <p>Prochaine étape : <strong>CLI niveau expert</strong> — sockets brutes, débogage, automatisation système, scripting multi-host. Ⓒ</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« CLI intermédiaire — Pipelines & scripts maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. C'est <strong>LE pattern</strong> CLI : <code>extraire (awk) → trier (sort) → compter doublons (uniq -c) → trier par fréquence (sort -rn) → top N (head)</code>. À retenir par cœur, utilisable sur n'importe quelle colonne."
+             data-feedback-ko="✗ La bonne réponse : <code>awk → sort → uniq -c → sort -rn → head</code>. C'est <strong>le mantra DFIR</strong>. Tu le verras et l'utiliseras des centaines de fois.">
+          <div class="tuto-quiz-question-text">1. Quelle est la <strong>commande standard</strong> pour produire le top 10 des IPs depuis un access.log Apache ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>head -n 10 access.log</code></button>
+            <button class="tuto-quiz-option" type="button"><code>cat access.log | awk '{print $1}' | sort | uniq -c | sort -rn | head -n 10</code></button>
+            <button class="tuto-quiz-option" type="button"><code>grep '10' access.log | head</code></button>
+            <button class="tuto-quiz-option" type="button"><code>sort access.log -k1 | head</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>-e</code> : exit on error, <code>-u</code> : variables non définies = erreur, <code>-o pipefail</code> : un pipe échoue si une commande du pipe échoue. À mettre en début de TOUT script DFIR — évite les bugs silencieux catastrophiques."
+             data-feedback-ko="✗ La bonne réponse : c'est le mode <strong>robuste</strong>. Sans ces options, bash continue silencieusement après une erreur — dangereux pour un script qui touche à des preuves.">
+          <div class="tuto-quiz-question-text">2. Que fait <code>set -euo pipefail</code> en début de script bash ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Affiche le mode debug</button>
+            <button class="tuto-quiz-option" type="button">Définit le séparateur de champs sur tab</button>
+            <button class="tuto-quiz-option" type="button"><strong>Arrête le script à la première erreur</strong>, refuse les variables non définies, propage les erreurs dans un pipe</button>
+            <button class="tuto-quiz-option" type="button">Rien, c'est un commentaire</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="0"
+             data-feedback-ok="✓ Exact. <code>-F','</code> définit le séparateur de champ (par défaut : espace). <code>$4</code> = 4e colonne, <code>$0</code> = ligne entière, <code>$NF</code> = dernière colonne. awk est <strong>le couteau suisse</strong> du parsing colonne."
+             data-feedback-ko="✗ La bonne réponse : <code>awk -F',' '{print $4}'</code>. <code>-F</code> = Field separator. Mémorise le idiome <code>awk -F'X' '{print $N}'</code>, tu l'utiliseras tous les jours.">
+          <div class="tuto-quiz-question-text">3. En <strong>awk</strong>, comment extraire la 4e colonne d'un CSV (séparateur virgule) ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>awk -F',' '{print $4}' data.csv</code></button>
+            <button class="tuto-quiz-option" type="button"><code>awk 'split:,' '{print $4}' data.csv</code></button>
+            <button class="tuto-quiz-option" type="button"><code>awk -d ',' -f 4 data.csv</code></button>
+            <button class="tuto-quiz-option" type="button"><code>awk '{print col4}' data.csv</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. sed = <strong>substitution / suppression / extraction de lignes</strong>. awk = <strong>traitement par colonnes</strong> avec conditions et calculs. Combinés : <code>cat log | sed '/^#/d' | awk '$3 > 100 {print $1, $3}'</code> = nettoyage puis filtrage."
+             data-feedback-ko="✗ La bonne réponse : sed = transformations ligne, awk = traitement par colonnes/champs. Ce sont des outils <strong>complémentaires</strong> pas concurrents.">
+          <div class="tuto-quiz-question-text">4. Quelle est la <strong>différence fondamentale</strong> entre <code>sed</code> et <code>awk</code> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">sed est plus rapide qu'awk</button>
+            <button class="tuto-quiz-option" type="button"><strong>sed</strong> est un éditeur de flux pour <strong>transformations texte ligne par ligne</strong> (substituer, supprimer) ; <strong>awk</strong> est un langage de programmation pour <strong>traitement par colonnes</strong> (filtrer, projeter, agréger)</button>
+            <button class="tuto-quiz-option" type="button">Ils font la même chose, c'est juste un alias</button>
+            <button class="tuto-quiz-option" type="button">sed est pour Linux, awk pour Windows</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>Select-String</code> est le plus proche de grep (cherche dans des fichiers). <code>Where-Object { $_ -match &quot;...&quot; }</code> filtre dans un pipeline d'objets. PowerShell étant orienté objets, le filtrage se fait via Where-Object avec opérateurs <code>-match</code>, <code>-like</code>, <code>-contains</code>."
+             data-feedback-ko="✗ La bonne réponse : <code>Select-String</code> (fichiers) ou <code>Where-Object { $_ -match &quot;motif&quot; }</code> (pipeline). PowerShell pense en objets, pas en lignes de texte.">
+          <div class="tuto-quiz-question-text">5. En PowerShell, quel cmdlet est l'équivalent du <code>grep "motif"</code> bash ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>Find-String</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Get-String</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Where-Object { $_ -match "motif" }</code> ou <code>Select-String "motif"</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Match-Object "motif"</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/cli_intermediaire.html" style="color:var(--cyan)">📚 Consulter la fiche CLI intermédiaire — Pipelines & scripts</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel CLI intermédiaire — Pipelines & scripts v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

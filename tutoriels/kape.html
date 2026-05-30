@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KAPE — Triage Windows en intervention — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas KAPE — Triage Windows en intervention : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">KAPE — TRIAGE WINDOWS EN INTERVENTION — PAS À PAS</span>
+  <a href="../fiches/kape.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 18 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="kape">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cas d'usage typiques</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Architecture : Targets et Modules</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Prérequis et téléchargement</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Installation</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Premier triage avec gkape (GUI)</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Triage en ligne de commande</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Les Targets essentiels</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Les Modules de parsing</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Workflow complet : collecte + parsi</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Triage à distance</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Personnaliser un Target ou Module</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Forces de KAPE</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Faiblesses et limites</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Ressources utiles</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">KAPE — Triage Windows en intervention</span>
+        </div>
+
+        <h1>🥋 KAPE — Triage Windows en intervention</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer KAPE</strong> et le mettre à jour avec <code>Get-KAPEUpdate.ps1</code>, lancer un <strong>triage Windows complet en 5 minutes</strong> avec <code>!SANS_Triage</code>, parser les artefacts avec EZ Tools (<strong>Prefetch, Amcache, Registry, EVTX, MFT</strong>), encapsuler en VHDX, et <strong>chasser avec Hayabusa</strong> via les Modules KAPE.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~45 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows uniquement</span>
+          <span class="tuto-meta-badge "><span class="icon">⚡</span> ~5 min de triage</span>
+          <span class="tuto-meta-badge "><span class="icon">🧰</span> EZ Tools intégrés</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de KAPE</div>
+        <div><strong>KAPE</strong> (Kroll Artifact Parser and Extractor) est l'outil de référence pour le <strong>triage forensique Windows</strong>. Développé par <strong>Eric Zimmerman</strong> pour Kroll Cyber. Standard de fait dans les CERT et MSSP. Collecte et parse en <strong>3-7 minutes</strong> ce qu'une collecte manuelle prendrait des heures.<br><br>📦 <a href="https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape" target="_blank" rel="noopener">Page officielle Kroll</a> · Gratuit (EULA non commerciale)</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>KAPE est un <strong>moteur d'exécution</strong> qui automatise deux tâches répétitives en intervention sur incident Windows :</p>
+        <ol><li><strong>Collecter</strong> des fichiers depuis un système live ou une image montée (les <em>Targets</em>).</li><li><strong>Parser</strong> ces fichiers pour produire des artefacts exploitables (les <em>Modules</em>).</li></ol>
+        <p>Là où une collecte manuelle prend une heure, KAPE le fait en <strong>2 à 5 minutes</strong> sur une machine en production, sans redémarrage. C'est devenu <strong>l'outil de triage Windows</strong> dans les CERT et chez les MSSP.</p>
+        <p><strong>Particularités</strong> :</p>
+        <ul><li>100 % portable : un dossier <code>KAPE\</code> que tu copies sur une clé USB ou un partage.</li><li><strong>Pas d'installation</strong>, pas de modifications du système cible (sauf la cible où KAPE écrit).</li><li>Lit les fichiers verrouillés Windows (ruches du registre, NTUSER.DAT actif) grâce à <strong>RawCopy</strong> et <strong>Volume Shadow Copy</strong> intégrés.</li><li>Communauté très active : 200+ Targets et 250+ Modules contribués sur GitHub.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Triage d'urgence</strong> sur un poste compromis en production, sans le redémarrer.</li><li><strong>Collecte forensique légère</strong> à utiliser à distance (RDP, PSExec, Velociraptor) sans saisir le poste.</li><li><strong>Triage de masse</strong> sur un parc compromis (ransomware) : 50 postes en parallèle.</li><li><strong>Préparation d'une analyse longue</strong> : KAPE livre déjà 80 % des artefacts à analyser avant que tu reçoives l'image disque complète.</li><li><strong>Préservation orientée</strong> sur un système où l'image complète n'est pas possible (serveur 24/7, RAID complexe).</li><li><strong>Audit de conformité</strong> : vérifier rapidement des indicateurs sur un échantillon de postes.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Architecture : Targets et Modules</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>KAPE repose sur deux types de fichiers de configuration <strong>YAML</strong>.</p>
+        <h3>Targets (.tkape)</h3>
+        <p>Un <em>Target</em> décrit <strong>quels fichiers collecter</strong> depuis le système :</p>
+        <ul><li>Chemin (avec wildcards)</li><li>Filtres (par nom, taille, date)</li><li>Récursivité</li><li>Description et catégorie</li></ul>
+        <p>Exemple simplifié : un Target « EvidenceOfExecution » collecte Prefetch, Amcache, RecentFileCache, ShimCache, BAM, UserAssist, etc.</p>
+        <h3>Modules (.mkape)</h3>
+        <p>Un <em>Module</em> décrit <strong>comment parser</strong> les fichiers collectés :</p>
+        <ul><li>Quel binaire externe exécuter (parser EZ Tools, regripper, etc.)</li><li>Quels paramètres lui passer</li><li>Quel format de sortie</li></ul>
+        <p>Exemple : le Module <strong>PECmd</strong> parse les fichiers <code>.pf</code> (Prefetch) avec l'outil <code>PECmd.exe</code> d'Eric Zimmerman et produit un CSV.</p>
+        <h3>Targets composites</h3>
+        <p>Un Target peut <strong>référencer d'autres Targets</strong> pour créer des collectes composées. Le Target <strong>!BasicCollection</strong> par exemple agrège ~20 Targets élémentaires : registre, EVTX, MFT, Prefetch, navigateurs, etc.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Prérequis et téléchargement</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>OS supportés</h3>
+        <ul><li><strong>Windows 7 / Server 2008 R2 et supérieur</strong> (KAPE lui-même est .NET)</li><li>Cible : tout Windows depuis XP (mais l'efficacité dépend des artefacts présents)</li></ul>
+        <h3>Prérequis machine analyste</h3>
+        <ul><li>.NET Framework 4.6.2+ (présent par défaut sur Win10+)</li><li>~100 Mo libres pour KAPE + binaires EZ Tools</li><li>Privilèges <strong>administrateur</strong> sur la machine cible pour lire les fichiers verrouillés</li></ul>
+        <h3>Téléchargement</h3>
+        <p>KAPE n'est pas sur GitHub directement. Procédure :</p>
+        <ol><li>Va sur la page de Kroll : <<a href="https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape" target="_blank" rel="noopener">https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape</a>></li><li>Remplis le formulaire (nom, email, organisation).</li><li>Tu reçois un lien de téléchargement par mail.</li><li>Télécharge <strong>kape.zip</strong>.</li></ol>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Licence</strong> : KAPE est gratuit pour usage légitime, mais l'EULA interdit l'usage comme <strong>livrable facturé à un client</strong>. Tu peux l'utiliser dans ta propre organisation, en consulting interne, ou en pédagogie. Lis l'EULA si tu factures du DFIR.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Installation</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : décompresser</h3>
+        <p>Décompresse <code>kape.zip</code> dans un dossier de ton choix, par exemple :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>C:\Tools\KAPE\</code></pre></div>
+        <h3>Étape 2 : exécuter Get-KAPEUpdate.ps1</h3>
+        <p>C'est <strong>l'étape critique</strong> souvent oubliée. Ouvre PowerShell <strong>en administrateur</strong> dans le dossier KAPE :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>cd C:\Tools\KAPE
+.\Get-KAPEUpdate.ps1</code></pre></div>
+        <p>Ce script télécharge :</p>
+        <ul><li>La dernière version du moteur KAPE</li><li><strong>Tous les Targets et Modules</strong> du dépôt GitHub <<a href="https://github.com/EricZimmerman/KapeFiles" target="_blank" rel="noopener">https://github.com/EricZimmerman/KapeFiles</a>></li><li>Tous les <strong>binaires EZ Tools</strong> nécessaires (PECmd, RECmd, MFTECmd, EvtxECmd, etc.)</li></ul>
+        <p>Sans cette étape, KAPE est inutilisable car les Modules réfèrent à des binaires absents.</p>
+        <h3>Étape 3 : vérifier</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>.\kape.exe --version</code></pre></div>
+        <p>Tu dois voir la version (1.x.x.x). Et :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>dir /b Targets\*.tkape | find /c /v ""
+dir /b Modules\*.mkape | find /c /v ""</code></pre></div>
+        <p>Tu dois avoir <strong>200+ Targets</strong> et <strong>250+ Modules</strong> disponibles.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>programme <code>Get-KAPEUpdate.ps1</code> en tâche planifiée hebdomadaire pour rester à jour des nouveaux Targets/Modules contribués.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Premier triage avec gkape (GUI)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>gkape.exe</code> est l'interface graphique. Elle aide à découvrir les options et génère la commande CLI équivalente.</p>
+        <h3>Étapes typiques</h3>
+        <ol><li>Lance <code>gkape.exe</code> (clic droit → exécuter en tant qu'admin).</li><li><strong>Use Target options</strong> : coche.</li><li><strong>Target source</strong> : <code>C:\</code> (ou la lettre du disque à triager).</li><li><strong>Target destination</strong> : <code>D:\KAPE_Output\HOSTNAME\</code> (vers un disque externe ou partage).</li><li>Dans la liste des Targets, coche <strong>!BasicCollection</strong> (le pack standard de triage).</li><li><strong>Use Module options</strong> : coche.</li><li><strong>Module source</strong> : le même que <strong>Target destination</strong> (parse ce qu'on vient de collecter).</li><li><strong>Module destination</strong> : <code>D:\KAPE_Modules\HOSTNAME\</code>.</li><li>Dans la liste des Modules, coche <strong>!EZParser</strong> (parse tout ce qui a été collecté).</li><li><strong>Options</strong> : coche <strong>Process VSCs</strong> si tu veux inclure les Volume Shadow Copies.</li><li><strong>Container</strong> : choisis <code>VHDX</code> pour packager le résultat.</li><li>Clique <strong>Execute!</strong>.</li></ol>
+        <p>En bas, la <strong>command line</strong> générée s'affiche. <strong>Sauvegarde-la</strong> dans tes notes — c'est ce qu'il faut taper en CLI la prochaine fois.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Triage en ligne de commande</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>La même chose en CLI, plus rapide et scriptable :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>kape.exe --tsource C: --tdest D:\KAPE_Output\HOSTNAME --target !BasicCollection ^
+  --msource D:\KAPE_Output\HOSTNAME --mdest D:\KAPE_Modules\HOSTNAME --module !EZParser ^
+  --vhdx HOSTNAME</code></pre></div>
+        <p>Explication :</p>
+        <ul><li><code>--tsource</code> : où collecter (généralement <code>C:</code>)</li><li><code>--tdest</code> : où écrire les fichiers collectés</li><li><code>--target</code> : nom du Target (ou Target composite)</li><li><code>--msource</code> : où trouver les fichiers à parser (ici, identique à <code>--tdest</code>)</li><li><code>--mdest</code> : où écrire les résultats parsés</li><li><code>--module</code> : nom du Module (ou Module composite)</li><li><code>--vhdx HOSTNAME</code> : encapsule la collecte dans un fichier VHDX nommé <code>HOSTNAME.vhdx</code></li></ul>
+        <h3>Options utiles supplémentaires</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>--vss             # Inclut les Volume Shadow Copies (versions antérieures de fichiers)
+--vhdx NAME       # Package en VHDX (montable comme un disque)
+--zip NAME        # Package en zip
+--gui             # Lance gkape
+--mlogq           # Log silencieux des Modules (pas de fenêtre par binaire)
+--debug           # Verbeux pour debug
+--mc              # Génère le manifeste de collecte</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Les Targets essentiels</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Targets composites (recommandés pour triage)</h3>
+        <table><thead><tr><th>Target</th><th>Description</th></tr></thead><tbody><tr><td><strong>!SANS_Triage</strong></td><td>Pack SANS standard (~150 Mo) — la référence pédagogique</td></tr><tr><td><strong>!BasicCollection</strong></td><td>Pack Kroll par défaut, équilibré (~100-300 Mo)</td></tr><tr><td><strong>KapeTriage</strong></td><td>Triage exhaustif (~300-500 Mo), inclut MFT et journaux</td></tr><tr><td><strong>MalwareAnalysis</strong></td><td>Tout ce qui aide à analyser un malware actif</td></tr><tr><td><strong>WebBrowsers</strong></td><td>Historiques, cookies, cache de Chrome/Edge/Firefox/IE</td></tr><tr><td><strong>EvidenceOfExecution</strong></td><td>Prefetch, Amcache, ShimCache, BAM, UserAssist, RecentFileCache, AppCompatCache</td></tr></tbody></table>
+        <h3>Targets ciblés (composer ses propres collectes)</h3>
+        <table><thead><tr><th>Target</th><th>Contenu</th></tr></thead><tbody><tr><td><strong>RegistryHives</strong></td><td>SAM, SYSTEM, SOFTWARE, SECURITY, NTUSER.DAT, UsrClass.dat</td></tr><tr><td><strong>EventLogs</strong></td><td>C:\Windows\System32\winevt\Logs\*.evtx</td></tr><tr><td><strong>MFT</strong></td><td>$MFT, $LogFile, $UsnJrnl</td></tr><tr><td><strong>Prefetch</strong></td><td>C:\Windows\Prefetch\*.pf</td></tr><tr><td><strong>ScheduledTasks</strong></td><td>C:\Windows\System32\Tasks</td></tr><tr><td><strong>PowerShellHistory</strong></td><td>History.txt et journaux PowerShell</td></tr><tr><td><strong>ChromeHistory</strong></td><td>History, Login Data, Cookies (par profil)</td></tr><tr><td><strong>EdgeChromium</strong></td><td>Idem pour Edge</td></tr><tr><td><strong>WindowsTimeline</strong></td><td>ActivitiesCache.db</td></tr><tr><td><strong>Office</strong></td><td>Listes MRU, fichiers récents, modèles</td></tr><tr><td><strong>AmazonWebServicesCLI</strong></td><td>Profils AWS, credentials, history</td></tr><tr><td><strong>OneDriveLogs</strong></td><td>Logs OneDrive (sync, partage)</td></tr><tr><td><strong>RDPCache</strong></td><td>Bitmap cache RDP (reconstruction d'écrans distants)</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur un poste compromis, commence par <code>!SANS_Triage</code> puis si tu as besoin de plus, lance des Targets ciblés (<code>!BasicCollection_OptionalBitlocker</code>, <code>WindowsTimeline</code>, <code>RDPCache</code>).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Les Modules de parsing</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>KAPE intègre les <strong>EZ Tools</strong> d'Eric Zimmerman comme parsers principaux.</p>
+        <h3>Modules essentiels</h3>
+        <table><thead><tr><th>Module</th><th>Parse quoi</th><th>Outil sous-jacent</th></tr></thead><tbody><tr><td><strong>!EZParser</strong></td><td>Composite : exécute tous les EZ Tools sur la collecte</td><td>Plusieurs</td></tr><tr><td><strong>PECmd</strong></td><td>Prefetch → CSV</td><td>PECmd.exe</td></tr><tr><td><strong>RECmd_Kroll</strong></td><td>Registre → CSV (batch Kroll)</td><td>RECmd.exe</td></tr><tr><td><strong>MFTECmd</strong></td><td>$MFT, $J, $LogFile, $Boot</td><td>MFTECmd.exe</td></tr><tr><td><strong>EvtxECmd</strong></td><td>EVTX → CSV (avec maps de chasse)</td><td>EvtxECmd.exe</td></tr><tr><td><strong>AmcacheParser</strong></td><td>Amcache.hve</td><td>AmcacheParser.exe</td></tr><tr><td><strong>AppCompatCacheParser</strong></td><td>ShimCache → CSV</td><td>AppCompatCacheParser.exe</td></tr><tr><td><strong>JLECmd</strong></td><td>Jumplists / LNK</td><td>JLECmd.exe</td></tr><tr><td><strong>LECmd</strong></td><td>Fichiers .lnk individuels</td><td>LECmd.exe</td></tr><tr><td><strong>RBCmd</strong></td><td>$Recycle.Bin</td><td>RBCmd.exe</td></tr><tr><td><strong>SBECmd</strong></td><td>Shellbags</td><td>SBECmd.exe</td></tr><tr><td><strong>SrumECmd</strong></td><td>SRUM (System Resource Usage Monitor)</td><td>SrumECmd.exe</td></tr><tr><td><strong>WxTCmd</strong></td><td>Windows 10 Timeline (ActivitiesCache.db)</td><td>WxTCmd.exe</td></tr></tbody></table>
+        <h3>Modules de chasse (hunting)</h3>
+        <table><thead><tr><th>Module</th><th>But</th></tr></thead><tbody><tr><td><strong>Hayabusa</strong></td><td>Chasse Sigma sur les EVTX (très puissant)</td></tr><tr><td><strong>Chainsaw</strong></td><td>Idem, autre moteur Sigma</td></tr><tr><td><strong>Plaso</strong></td><td>Génère une super-timeline (lent mais exhaustif)</td></tr><tr><td><strong>Loki</strong></td><td>Scan d'IoC YARA sur les fichiers collectés</td></tr><tr><td><strong>DensityScout</strong></td><td>Détection de fichiers chiffrés/empaquetés (entropie)</td></tr></tbody></table>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Workflow complet : collecte + parsing en un coup</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le scénario typique en intervention sur incident : tu arrives sur un poste compromis, tu veux la collecte standardisée en 5 minutes, parsée et zippée.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>kape.exe ^
+  --tsource C: ^
+  --tdest D:\Triage\WORKSTATION01 ^
+  --target !SANS_Triage ^
+  --vss ^
+  --msource D:\Triage\WORKSTATION01 ^
+  --mdest D:\Triage\WORKSTATION01\Parsed ^
+  --module !EZParser,Hayabusa,Loki ^
+  --vhdx WORKSTATION01_2026-01-15 ^
+  --mlogq</code></pre></div>
+        <p>Cette commande :</p>
+        <ol><li>Collecte tous les artefacts SANS Triage depuis C: (avec Volume Shadow Copies pour les versions historiques)</li><li>Parse immédiatement avec EZ Tools + Hayabusa (chasse Sigma) + Loki (YARA)</li><li>Encapsule la collecte brute dans <code>WORKSTATION01_2026-01-15.vhdx</code></li><li>Place les parses dans <code>D:\Triage\WORKSTATION01\Parsed\</code></li></ol>
+        <p>Tu obtiens en sortie :</p>
+        <ul><li><code>WORKSTATION01_2026-01-15.vhdx</code> : montable, contient toute la collecte brute</li><li><code>Parsed\</code> : CSV exploitables dans Excel / Timeline Explorer / Splunk</li><li>Logs KAPE détaillés</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur un disque externe NVMe, ce workflow prend <strong>3 à 7 minutes</strong> pour un poste utilisateur standard. Préparer une clé USB pré-configurée avec ce <code>.bat</code> est un réflexe DFIR.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Triage à distance</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>KAPE peut être exécuté à distance via plusieurs moyens.</p>
+        <h3>PSExec / Sysinternals</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>psexec \\TARGET-PC -c -s -h kape.exe --tsource C: --tdest \\NAS\Triage\TARGET-PC --target !SANS_Triage --vss --zip TARGET-PC</code></pre></div>
+        <p>Copie KAPE vers la cible, l'exécute en SYSTEM, et écrit le résultat vers un partage.</p>
+        <h3>Velociraptor</h3>
+        <p>KAPE est intégré dans Velociraptor via l'artefact <strong>Windows.KapeFiles.Targets</strong>. Voir le tutoriel Velociraptor pour les détails.</p>
+        <h3>GPO + tâche planifiée</h3>
+        <p>Pour un triage de masse, déployer KAPE via GPO et déclencher via tâche planifiée distante (<code>schtasks /create /s TARGET /tn ...</code>).</p>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>un triage à distance écrit potentiellement sur la <strong>cible</strong> (ou un partage). Documenter précisément où vont les fichiers et <strong>hasher</strong> la collecte dès qu'elle est close.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Personnaliser un Target ou Module</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Créer un Target custom</h3>
+        <p>Crée un fichier <code>Targets\Custom\MonCas.tkape</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">yaml</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Description: Collecte spécifique pour le cas Affaire 2026-001
+Author: Analyste DFIR
+Version: 1.0
+Id: 12345678-abcd-ef00-1234-567890abcdef
+RecreateDirectories: true
+Targets:
+    -
+        Name: Fichiers suspects identifiés
+        Category: Custom
+        Path: 'C:\Users\*\AppData\Local\Temp\suspicious_*.exe'
+    -
+        Name: Logs application X
+        Category: Custom
+        Path: 'C:\ProgramData\AppX\Logs\*.log'
+        Recursive: true</code></pre></div>
+        <p>Au lancement suivant, KAPE détecte le nouveau Target et tu peux le sélectionner.</p>
+        <h3>Créer un Module custom</h3>
+        <p><code>Modules\Custom\MonParser.mkape</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">yaml</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Description: Mon parser custom
+Category: Custom
+Author: Analyste DFIR
+Version: 1.0
+Id: 87654321-abcd-ef00-1234-567890abcdef
+BinaryUrl: https://example.com/myparser
+ExportFormat: csv
+Processors:
+    -
+        Executable: myparser.exe
+        CommandLine: -input %sourceDirectory% -output %destinationDirectory%\output.csv
+        ExportFormat: csv</code></pre></div>
+        <h3>Contribuer au projet</h3>
+        <p>Si ton Target ou Module est généralisable, <strong>propose une PR</strong> au dépôt <<a href="https://github.com/EricZimmerman/KapeFiles" target="_blank" rel="noopener">https://github.com/EricZimmerman/KapeFiles</a>>. La communauté est très réactive et la qualité de revue est élevée.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Forces de KAPE</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>✅ <strong>Gratuit</strong> (sous EULA non commerciale stricte).</p>
+        <p>✅ <strong>Rapidité</strong> : 3-10 minutes pour un triage complet, sans redémarrage.</p>
+        <p>✅ <strong>Portable</strong> : un dossier, une clé USB, aucune installation.</p>
+        <p>✅ <strong>Lit les fichiers verrouillés</strong> Windows (registre actif, NTUSER.DAT, EVTX en cours d'écriture) via RawCopy et VSS.</p>
+        <p>✅ <strong>Communauté très active</strong> : ~250 Modules, ~200 Targets contribués, mises à jour fréquentes.</p>
+        <p>✅ <strong>Intégration EZ Tools</strong> : tous les parsers de référence d'Eric Zimmerman directement disponibles.</p>
+        <p>✅ <strong>Encapsulation VHDX</strong> : collecte montable comme un disque virtuel, idéale pour analyse ultérieure.</p>
+        <p>✅ <strong>VSS</strong> : récupère les versions antérieures de fichiers via Volume Shadow Copies (parfois la seule trace d'un malware effacé).</p>
+        <p>✅ <strong>Documentation foisonnante</strong> : tutoriels SANS, Magnet Forensics, Kroll, blog Eric Zimmerman.</p>
+        <p>✅ <strong>Standard de fait</strong> : reconnu par les CERT, les MSSP, les forces de l'ordre.</p>
+        <p>✅ <strong>Scriptable</strong> : intégrable dans tout workflow PowerShell, batch, ou orchestrateur (Velociraptor, MS Sentinel, Splunk SOAR).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Windows seulement</strong> : pas de support Linux ou macOS (sauf collecter une image montée).</p>
+        <p>❌ <strong>EULA restrictive</strong> : interdit la facturation comme livrable client direct. Ambigu en consulting — relire avant chaque mission commerciale.</p>
+        <p>❌ <strong>Pas open source</strong> : le code de KAPE lui-même est propriétaire Kroll. Seuls les Targets/Modules sont open source.</p>
+        <p>❌ <strong>Pas de signature numérique</strong> sur tous les binaires EZ Tools, ce qui peut alerter l'EDR ou l'antivirus de la cible.</p>
+        <p>❌ <strong>Antivirus / EDR sensibles</strong> : certains EDR considèrent KAPE comme suspect (lecture massive du système). Prévoir une exclusion ou désactivation temporaire avec validation hiérarchique.</p>
+        <p>❌ <strong>Dépendance internet pour les updates</strong> : <code>Get-KAPEUpdate.ps1</code> nécessite un accès à GitHub. Sur une mission air-gappée, prévoir un pack pré-téléchargé.</p>
+        <p>❌ <strong>Configuration verbeuse</strong> : créer un Target ou Module custom demande de comprendre la syntaxe YAML et la sémantique KAPE (chemins, wildcards, recursion).</p>
+        <p>❌ <strong>Pas de moteur de chasse intégré</strong> : KAPE collecte et parse, mais c'est à toi de chercher dans les CSV (ou d'utiliser Hayabusa/Chainsaw en Module).</p>
+        <p>❌ <strong>VHDX limité à 2 To</strong> : sur un serveur volumineux, fractionner.</p>
+        <p>❌ <strong>Pas de mode hors-ligne natif sur image montée</strong> : il faut utiliser <code>--tsource F:\Windows</code> après avoir monté l'image, en faisant attention aux chemins.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Préparer une clé USB KAPE</strong> dédiée, avec <code>kape.exe</code> à jour et un fichier <code>.bat</code> standard pour la collecte triage.</p>
+        <p>🔹 <strong>Toujours écrire la collecte sur un disque externe</strong>, jamais sur le disque cible (sauf si impossible — alors documenter).</p>
+        <p>🔹 <strong>Inclure les VSS</strong> (<code>--vss</code>) par défaut : c'est souvent là que tu trouves les traces effacées par l'attaquant.</p>
+        <p>🔹 <strong>Hasher la collecte</strong> (<code>Get-FileHash *.vhdx -Algorithm SHA256</code>) dès qu'elle est terminée, et consigner.</p>
+        <p>🔹 <strong>Documenter le contexte</strong> : utilisateur connecté à l'instant t, processus actifs, dernière mise à jour Windows, etc. (KAPE inclut un manifeste mais le complémenter).</p>
+        <p>🔹 <strong>Combiner KAPE avec une acquisition mémoire</strong> (Surge, MAGNET RAM Capture, DumpIt, winpmem) — KAPE ne fait pas de mémoire vive.</p>
+        <p>🔹 <strong>Whitelister KAPE dans l'EDR</strong> avant l'intervention si possible, ou prévoir le risque d'alerte.</p>
+        <p>🔹 <strong>Triage en local d'abord, parsing ensuite</strong> : sur une mission, exécute <code>--target</code> rapidement, puis lance <code>--module</code> en parallèle dans un second terminal pendant que tu prépares la suite.</p>
+        <p>🔹 <strong>Conserver la collecte brute (VHDX)</strong> intacte, et travailler sur copies des CSV de parsing.</p>
+        <p>🔹 <strong>Apprendre EZ Tools en parallèle</strong> : KAPE est génial, mais comprendre PECmd, RECmd, EvtxECmd directement permet de creuser un cas spécifique sans passer par KAPE.</p>
+        <p>🔹 <strong>Tester sur une VM avant d'utiliser en mission réelle</strong> — créer un scénario de compromission (Cobalt Strike beacon, persistence registry, exécution Mimikatz) et faire le triage.</p>
+        <p>🔹 <strong>Croiser avec MITRE ATT&CK</strong> : chaque artefact KAPE correspond à une ou plusieurs techniques (T1059 PowerShell → PowerShellHistory, T1547 Persistence → Registry Run keys, etc.).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Page officielle Kroll</strong> : <<a href="https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape" target="_blank" rel="noopener">https://www.kroll.com/en/services/cyber-risk/incident-response-litigation-support/kroll-artifact-parser-extractor-kape</a>></li><li>📚 <strong>GitHub KapeFiles</strong> (Targets & Modules) : <<a href="https://github.com/EricZimmerman/KapeFiles" target="_blank" rel="noopener">https://github.com/EricZimmerman/KapeFiles</a>></li><li>📚 <strong>Site Eric Zimmerman</strong> (binaires EZ Tools) : <<a href="https://ericzimmerman.github.io/" target="_blank" rel="noopener">https://ericzimmerman.github.io/</a>></li><li>📚 <strong>Documentation officielle KAPE</strong> : incluse dans <code>kape.zip</code> (Documentation\\)</li><li>🎓 <strong>Cours SANS FOR308 & FOR508</strong> : utilisent KAPE largement</li><li>🎓 <strong>13Cubed YouTube channel</strong> : tutos vidéo gratuits sur KAPE et EZ Tools</li><li>🎓 <strong>Magnet Forensics blog</strong> : nombreux articles KAPE</li><li>💬 <strong>Discord Eric Zimmerman</strong> : invitation depuis ericzimmerman.github.io</li><li>🐛 <strong>Issues KapeFiles</strong> : <<a href="https://github.com/EricZimmerman/KapeFiles/issues" target="_blank" rel="noopener">https://github.com/EricZimmerman/KapeFiles/issues</a>></li><li>📖 <strong>Cheat Sheet KAPE</strong> (SANS) : <<a href="https://www.sans.org/posters/" target="_blank" rel="noopener">https://www.sans.org/posters/</a>> (rechercher KAPE)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>KAPE est devenu <strong>l'outil pivot du triage Windows</strong> en intervention sur incident. Sa capacité à collecter et parser en quelques minutes ce qui prenait des heures manuellement transforme le métier de l'analyste DFIR : on peut désormais traiter dix postes là où on n'en traitait qu'un.</p>
+        <p>La courbe d'apprentissage est rapide (1-2 jours pour être opérationnel) mais la <strong>maîtrise approfondie</strong> (Targets custom, Modules custom, intégration Velociraptor/Sentinel) demande quelques semaines de pratique.</p>
+        <p>Recommandations finales :</p>
+        <ol><li>Préparer ta clé USB KAPE avec <code>Get-KAPEUpdate.ps1</code> exécuté <strong>avant chaque mission</strong>.</li><li>Maîtriser les Targets composites <code>!SANS_Triage</code> et <code>!BasicCollection</code> avant de créer du custom.</li><li>Apprendre les EZ Tools en parallèle pour creuser un cas hors workflow KAPE.</li><li>Tester sur VM compromise avant déploiement réel.</li></ol>
+        <p>Bons triages ! 🥋</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« KAPE — Triage Windows en intervention maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>Get-KAPEUpdate.ps1</code> télécharge le dépôt GitHub KapeFiles (200+ Targets, 250+ Modules) et tous les binaires EZ Tools nécessaires. Sans cette étape, KAPE est quasi inutilisable."
+             data-feedback-ko="✗ La bonne réponse : exécuter <code>Get-KAPEUpdate.ps1</code> en PowerShell admin. Cela rapatrie le contenu de github.com/EricZimmerman/KapeFiles + les binaires EZ Tools.">
+          <div class="tuto-quiz-question-text">1. Quelle est l'<strong>étape critique</strong> souvent oubliée juste après avoir décompressé <code>kape.zip</code> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Renommer <code>kape.exe</code> en <code>kape-portable.exe</code></button>
+            <button class="tuto-quiz-option" type="button">Exécuter <code>Get-KAPEUpdate.ps1</code> en PowerShell admin pour télécharger Targets, Modules et EZ Tools</button>
+            <button class="tuto-quiz-option" type="button">Importer le certificat racine Kroll dans le magasin Windows</button>
+            <button class="tuto-quiz-option" type="button">Compiler les Targets en YAML local</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>!SANS_Triage</code> est la collecte de référence pédagogique SANS — ~150 Mo, exhaustive sur les artefacts utiles : registre, EVTX, Prefetch, MFT, navigateurs."
+             data-feedback-ko="✗ La bonne réponse : <code>!SANS_Triage</code>. C'est le pack standard reconnu, ~150 Mo, qui couvre l'essentiel sans tout collecter inutilement.">
+          <div class="tuto-quiz-question-text">2. Quel Target composite est le plus recommandé pour un <strong>triage initial standard</strong> sur un poste compromis ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>!ALL_FILES</code></button>
+            <button class="tuto-quiz-option" type="button"><code>RegistryHives</code></button>
+            <button class="tuto-quiz-option" type="button"><code>!SANS_Triage</code></button>
+            <button class="tuto-quiz-option" type="button"><code>FullDisk</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="0"
+             data-feedback-ok="✓ Exact. Target = <strong>collecte</strong> (fichiers depuis le système, .tkape). Module = <strong>parsing</strong> (transformation en CSV via EZ Tools, .mkape)."
+             data-feedback-ko="✗ La bonne réponse : Target collecte (.tkape), Module parse (.mkape). Les deux sont en YAML.">
+          <div class="tuto-quiz-question-text">3. Quelle est la différence entre un <strong>Target</strong> et un <strong>Module</strong> KAPE ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Un Target collecte des fichiers, un Module parse des fichiers déjà collectés en CSV exploitables</button>
+            <button class="tuto-quiz-option" type="button">Les Targets sont en YAML, les Modules en JSON</button>
+            <button class="tuto-quiz-option" type="button">Un Target s'exécute en CLI, un Module en GUI uniquement</button>
+            <button class="tuto-quiz-option" type="button">Les deux font la même chose, c'est juste un alias</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>--vhdx HOSTNAME</code> emballe la collecte en VHDX montable comme un disque (clic droit → Mount sous Windows, <code>guestmount</code> sous Linux). Très pratique pour analyse a posteriori."
+             data-feedback-ko="✗ La bonne réponse : <code>VHDX</code>. C'est le format virtuel disk Microsoft, montable nativement Windows, et exploitable par Volatility et les analyseurs d'image.">
+          <div class="tuto-quiz-question-text">4. Quel format de sortie permet d'<strong>encapsuler la collecte</strong> dans un fichier monté plus tard comme un disque virtuel ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">ZIP</button>
+            <button class="tuto-quiz-option" type="button">TAR.GZ</button>
+            <button class="tuto-quiz-option" type="button">VHDX</button>
+            <button class="tuto-quiz-option" type="button">ISO</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>!EZParser</code> est le Module composite Eric Zimmerman qui orchestre PECmd (Prefetch), RECmd (Registre), MFTECmd, EvtxECmd, AmcacheParser, JLECmd, SBECmd, etc."
+             data-feedback-ko="✗ La bonne réponse : <code>!EZParser</code>. C'est le Module composite qui chaîne tous les EZ Tools de référence pour parser la collecte.">
+          <div class="tuto-quiz-question-text">5. Quel Module composite parse <strong>automatiquement tous les artefacts</strong> collectés par KAPE avec les outils Eric Zimmerman ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>!PARSE_ALL</code></button>
+            <button class="tuto-quiz-option" type="button"><code>!EZParser</code></button>
+            <button class="tuto-quiz-option" type="button"><code>!FullAnalysis</code></button>
+            <button class="tuto-quiz-option" type="button"><code>KAPEParser</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/kape.html" style="color:var(--cyan)">📚 Consulter la fiche KAPE — Triage Windows en intervention</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel KAPE — Triage Windows en intervention v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

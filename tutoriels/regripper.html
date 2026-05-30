@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RegRipper — Analyse Registry Windows par plugins — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas RegRipper — Analyse Registry Windows par plugins : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">REGRIPPER — ANALYSE REGISTRY WINDOWS PAR PLUGINS — PAS À PAS</span>
+  <a href="../fiches/regripper.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="regripper">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Pourquoi le Registry est un trésor </a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Les hives Registry expliqués</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. RegRipper vs autres outils Registry</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Cas d'usage typiques</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Prérequis</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation sous Windows</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Installation sous Linux</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Premier lancement et structure</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Anatomie d'un plugin RegRipper</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Lister et choisir les plugins</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Première extraction sur un hive SYS</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Plugins essentiels par hive</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Extraction sur NTUSER.DAT (artefact</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. AmCache, ShimCache, AppCompatCache</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. USB et clés branchées</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Profils RegRipper (rip.pl all)</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Intégration KAPE + EZ Tools + RegRi</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Forces, faiblesses et limites</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources et bonnes pratiques</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">RegRipper — Analyse Registry Windows par plugins</span>
+        </div>
+
+        <h1>🗝️ RegRipper — Analyse Registry Windows par plugins</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras analyser les <strong>hives Registry Windows</strong> avec RegRipper (créé par Harlan Carvey). Tu comprendras les hives (SYSTEM, SOFTWARE, NTUSER, SAM, AmCache), maîtriseras les <strong>100+ plugins Perl</strong> (UserAssist, ShimCache, AmCache, ShellBags, USBSTOR, BAM, etc.), reconstitueras l'<strong>activité utilisateur</strong> (programmes lancés, USB branchées, dossiers visités), et orchestreras un workflow <strong>KAPE + EZ Tools + RegRipper</strong> complet.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~55 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows Registry</span>
+          <span class="tuto-meta-badge "><span class="icon">🐪</span> Perl CLI</span>
+          <span class="tuto-meta-badge "><span class="icon">🗝️</span> 100+ plugins</span>
+          <span class="tuto-meta-badge "><span class="icon">📚</span> Référence DFIR depuis 2008</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ Référence DFIR Windows depuis 2008 — Harlan Carvey</div>
+        <div>RegRipper est <strong>l'outil de référence</strong> pour le Registry Windows en DFIR. 100+ plugins Perl maintenus par Harlan Carvey (auteur de <em>Windows Forensic Analysis Toolkit</em>). Complément naturel de KAPE (v125) et EZ Tools (v126). Outil purement défensif/forensique — pas d'aspect dual-use. Workflow typique : KAPE collecte les hives → RegRipper triage rapide texte → Registry Explorer (EZ Tools) pour exploration GUI ciblée.<br><br>📦 <a href="https://github.com/keydet89/RegRipper3.0" target="_blank" rel="noopener">github.com/keydet89/RegRipper3.0</a> · Open source</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>RegRipper est un outil <strong>CLI</strong> Perl qui automatise l'extraction d'artefacts forensiques depuis les <strong>fichiers de Registry Windows</strong> (hives).</p>
+        <h3>Pourquoi c'est important</h3>
+        <p>Le Registry Windows contient une <strong>quantité énorme</strong> d'informations forensiques : programmes installés et lancés, périphériques USB branchés, sites web visités, dossiers ouverts, recherches effectuées, mots de passe Wi-Fi, comptes utilisateurs, services système, configurations réseau, etc.</p>
+        <p>Sans outil dédié : parser manuellement avec regedit = impossible (millions de clés). Avec RegRipper : <strong>commande unique → rapport texte</strong> structuré.</p>
+        <h3>Le principe</h3>
+        <ul><li>100+ plugins Perl, un par artefact connu</li><li>Chaque plugin sait extraire <strong>une clé Registry précise</strong> et la formater</li><li>Plugins maintenus par la communauté DFIR (Harlan Carvey + contributeurs)</li><li>Sortie texte → facile à grepper, archiver, intégrer</li></ul>
+        <h3>Open source mais utilisé en pro</h3>
+        <p>RegRipper est gratuit, mais c'est le <strong>standard de facto</strong> dans :</p>
+        <ul><li>Police (Suisse, France, US)</li><li>Cabinets d'audit cybersécurité</li><li>SOC / IR teams</li><li>Formations SANS FOR500</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Pourquoi le Registry est un trésor DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le Registry Windows est une <strong>base de données hiérarchique</strong> où Windows et les applications stockent leurs configurations. Mais il enregistre aussi <strong>énormément de traces d'activité</strong> :</p>
+        <table><thead><tr><th>Artefact Registry</th><th>Information révélée</th></tr></thead><tbody><tr><td><strong>UserAssist</strong></td><td>Programmes lancés par l'utilisateur (avec fréquence, dernière exécution)</td></tr><tr><td><strong>ShimCache</strong> (AppCompatCache)</td><td>Binaires exécutés (même sans UserAssist)</td></tr><tr><td><strong>AmCache</strong></td><td>Binaires exécutés avec métadonnées (taille, hash SHA-1)</td></tr><tr><td><strong>ShellBags</strong></td><td>Dossiers visités via l'Explorer (même supprimés)</td></tr><tr><td><strong>TypedURLs</strong></td><td>URLs tapées dans Internet Explorer / Edge</td></tr><tr><td><strong>TypedPaths</strong></td><td>Chemins tapés dans la barre Explorer</td></tr><tr><td><strong>RecentDocs</strong></td><td>Documents récemment ouverts</td></tr><tr><td><strong>OpenSavePidlMRU</strong></td><td>Fichiers ouverts/sauvegardés via dialogue Windows</td></tr><tr><td><strong>USBSTOR</strong></td><td>Périphériques USB branchés (avec dates)</td></tr><tr><td><strong>MountedDevices</strong></td><td>Volumes montés</td></tr><tr><td><strong>NetworkList</strong></td><td>Réseaux Wi-Fi connectés</td></tr><tr><td><strong>Run / RunOnce</strong></td><td>Programmes lancés au démarrage</td></tr><tr><td><strong>Services</strong></td><td>Services installés</td></tr><tr><td><strong>TimeZoneInformation</strong></td><td>Fuseau horaire du système</td></tr><tr><td><strong>ComputerName</strong></td><td>Nom du PC</td></tr><tr><td><strong>Microsoft\Office\X\Word\Reading Locations</strong></td><td>Documents Word récents avec positions de lecture</td></tr><tr><td><strong>TypedPaths</strong></td><td>Chemins UNC tapés</td></tr></tbody></table>
+        <p>C'est <strong>la mine d'or</strong> de l'analyse Windows. Sans Registry, beaucoup d'enquêtes seraient aveugles.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Les hives Registry expliqués</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le Registry est éclaté en plusieurs <strong>fichiers</strong> appelés "hives" :</p>
+        <h3>Hives système</h3>
+        <table><thead><tr><th>Hive (chemin Windows)</th><th>Fichier sur disque</th><th>Contenu</th></tr></thead><tbody><tr><td><strong>HKLM\SYSTEM</strong></td><td><code>C:\Windows\System32\config\SYSTEM</code></td><td>Config système, services, drivers, USB, ControlSets</td></tr><tr><td><strong>HKLM\SOFTWARE</strong></td><td><code>C:\Windows\System32\config\SOFTWARE</code></td><td>Logiciels installés, options OS, AmCache</td></tr><tr><td><strong>HKLM\SAM</strong></td><td><code>C:\Windows\System32\config\SAM</code></td><td>Comptes utilisateurs locaux, hashs NTLM</td></tr><tr><td><strong>HKLM\SECURITY</strong></td><td><code>C:\Windows\System32\config\SECURITY</code></td><td>Policies de sécurité</td></tr></tbody></table>
+        <h3>Hives utilisateur</h3>
+        <table><thead><tr><th>Hive</th><th>Fichier</th><th>Contenu</th></tr></thead><tbody><tr><td><strong>HKCU</strong> (par user)</td><td><code>C:\Users\<user>\NTUSER.DAT</code></td><td>Préférences user, UserAssist, ShellBags, RecentDocs, TypedURLs</td></tr><tr><td><strong>HKCU\Software\Classes</strong></td><td><code>C:\Users\<user>\AppData\Local\Microsoft\Windows\UsrClass.dat</code></td><td>ShellBags étendus, MUICache</td></tr></tbody></table>
+        <h3>Acquisition des hives</h3>
+        <p>Pour utiliser RegRipper, il faut d'abord <strong>récupérer ces fichiers</strong> :</p>
+        <ul><li><strong>Image disque</strong> : monter avec Autopsy/IPED/X-Ways, extraire les hives</li><li><strong>Triage live</strong> : KAPE (cf. v125) collecte tous les hives automatiquement</li><li><strong>EZ Tools</strong> : <code>Reg.exe export</code> ou <code>RegistryExplorer</code></li><li><strong>FTK Imager</strong> : extraction logique des fichiers</li><li><strong>Volume Shadow Copy</strong> : peut révéler des hives anciens</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Les hives sont <strong>verrouillés</strong> sur un système Windows en cours d'exécution. Tu ne peux pas simplement les copier en vif. Il faut une copie via VSS, RawCopy (KAPE/EZ Tools), ou depuis une image disque.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> RegRipper vs autres outils Registry</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Outil</th><th>Type</th><th>Force</th></tr></thead><tbody><tr><td><strong>RegRipper</strong></td><td>CLI Perl, plugins</td><td>Sortie texte structurée, scriptable, exhaustif sur artefacts connus</td></tr><tr><td><strong>Registry Explorer</strong> (EZ Tools)</td><td>GUI Windows</td><td>Excellent pour navigation manuelle, support transaction logs</td></tr><tr><td><strong>regedit</strong> (Windows)</td><td>GUI natif</td><td>Trop manuel, pas d'export structuré</td></tr><tr><td><strong>Autopsy Recent Activity</strong></td><td>Module</td><td>Bon pour artefacts courants, intégré dans cas</td></tr><tr><td><strong>Yarp + yarp-print</strong> (Python)</td><td>Lib Python</td><td>Pour scripting custom</td></tr><tr><td><strong>libregf</strong> (C)</td><td>Lib bas niveau</td><td>Backend de plein d'outils</td></tr></tbody></table>
+        <h3>Quand utiliser RegRipper</h3>
+        <ul><li><strong>Triage rapide</strong> : un hive → un rapport complet en quelques secondes</li><li><strong>Automatisation</strong> : pipeline DFIR sur N machines</li><li><strong>Couverture exhaustive</strong> : 100+ plugins = très peu d'artefacts ratés</li><li><strong>Audit reproductible</strong> : ligne de commande exacte documentable</li></ul>
+        <h3>Quand préférer un autre outil</h3>
+        <ul><li><strong>Exploration manuelle</strong> : Registry Explorer (EZ Tools) plus ergonomique</li><li><strong>Recherche spécifique non couverte par plugin</strong> : Yarp Python pour scripter</li><li><strong>Tout-en-un</strong> : Autopsy intègre déjà Recent Activity</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Combinaison gagnante : <strong>RegRipper en triage rapide</strong> + <strong>Registry Explorer pour exploration approfondie</strong> sur les zones suspectes identifiées.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Incident response</strong> : reconstituer l'activité utilisateur sur poste compromis</li><li><strong>Investigation pénale</strong> : prouver qu'un programme a été exécuté, qu'une clé USB a été branchée</li><li><strong>Insider threat</strong> : retracer les dossiers consultés, fichiers ouverts</li><li><strong>Malware analysis</strong> : identifier la persistance (Run, Services, BHO)</li><li><strong>eDiscovery</strong> : prouver l'accès à un document</li><li><strong>Audit sécurité</strong> : vérifier configurations système</li><li><strong>Forensique post-mortem</strong> : analyse complète d'une machine retraitée</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Prérequis</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Composant</th><th>Minimum</th></tr></thead><tbody><tr><td>OS</td><td>Windows / Linux / macOS</td></tr><tr><td><strong>Perl</strong></td><td>5.x (Strawberry Perl sur Windows)</td></tr><tr><td>RAM</td><td>512 Mo</td></tr><tr><td>Stockage</td><td>100 Mo pour RegRipper + plugins</td></tr></tbody></table>
+        <h3>Connaissances</h3>
+        <ul><li>Bases CLI (tutoriel <strong>Bases CLI</strong> v127)</li><li>Familiarité avec le Registry Windows (concepts HKLM, HKCU, valeurs, sous-clés)</li><li>Idéalement : tutoriels <strong>KAPE</strong> (v125) et <strong>EZ Tools</strong> (v126) pour le contexte</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : installer Perl</h3>
+        <p>RegRipper est en <strong>Perl</strong>. Sur Windows, installer <strong>Strawberry Perl</strong> :</p>
+        <ol><li>Aller sur <<a href="https://strawberryperl.com/" target="_blank" rel="noopener">https://strawberryperl.com/</a>></li><li>Télécharger l'installeur 64 bits</li><li>Installer (option « Add to PATH » cochée)</li><li>Tester : <code>perl -v</code> dans cmd</li></ol>
+        <h3>Étape 2 : télécharger RegRipper</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">cmd</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>cd C:\Tools
+git clone https://github.com/keydet89/RegRipper3.0.git RegRipper
+cd RegRipper</code></pre></div>
+        <p>Ou télécharger le ZIP depuis GitHub.</p>
+        <h3>Étape 3 : tester</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">cmd</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl</code></pre></div>
+        <p>Doit afficher l'aide. Si erreur Perl : modules manquants — installer :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">cmd</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>cpan install Parse::Win32Registry</code></pre></div>
+        <h3>Étape 4 : GUI optionnelle (rr.exe)</h3>
+        <p>L'ancienne version 2.x avait <code>rr.exe</code> (GUI Windows). La version 3.0 est CLI pure (<code>rip.pl</code>). Pour une GUI, utiliser <strong>Registry Explorer</strong> d'EZ Tools en complément.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Installation sous Linux</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Méthode standard</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Dépendances
+sudo apt update
+sudo apt install -y perl libparse-win32registry-perl git
+
+# Récupérer RegRipper
+cd /opt
+sudo git clone https://github.com/keydet89/RegRipper3.0.git RegRipper
+cd RegRipper
+
+# Tester
+perl rip.pl</code></pre></div>
+        <h3>Ajout au PATH</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>echo 'alias rip="perl /opt/RegRipper/rip.pl"' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre></div>
+        <p>Maintenant : <code>rip -r SYSTEM -p compname</code> fonctionne.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Premier lancement et structure</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Structure du dépôt</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>RegRipper3.0/
+├── rip.pl              ← script principal CLI
+├── plugins/            ← 100+ plugins Perl
+│   ├── compname.pl
+│   ├── userassist.pl
+│   ├── shimcache.pl
+│   ├── amcache.pl
+│   ├── usbstor.pl
+│   ├── shellbags.pl
+│   └── ...
+├── docs/
+├── README.md
+└── lib/</code></pre></div>
+        <h3>Help</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl</code></pre></div>
+        <p>Affiche les options :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>-r [hive]       Hive à parser
+-p [plugin]     Plugin à exécuter
+-f [profile]    Profil (= ensemble de plugins)
+-l              Lister tous les plugins
+-l -c           Lister les plugins en CSV
+-h              Aide</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Anatomie d'un plugin RegRipper</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Chaque plugin est un fichier Perl <code>.pl</code> dans <code>plugins/</code>. Exemple <code>compname.pl</code> (nom du PC) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">perl</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>package compname;
+use strict;
+
+my %config = (
+    hive          =&gt; "System",
+    hasShortDescr =&gt; 1,
+    hasDescr      =&gt; 0,
+    hasRefs       =&gt; 0,
+    osmask        =&gt; 22,
+    version       =&gt; 20200526
+);
+
+sub getConfig {return %config}
+sub getShortDescr {
+    return "Gets ComputerName and Hostname values from System hive";
+}
+
+sub pluginmain {
+    my $class = shift;
+    my $hive = shift;
+
+    ::rptMsg("compname v.".$VERSION);
+    ::rptMsg("Hive: ".$hive."\n");
+
+    my $reg = Parse::Win32Registry-&gt;new($hive);
+    my $root_key = $reg-&gt;get_root_key;
+
+    my $key_path = "ControlSet001\\Control\\ComputerName\\ActiveComputerName";
+    my $key = $root_key-&gt;get_subkey($key_path);
+
+    if (defined($key)) {
+        my $name = $key-&gt;get_value("ComputerName")-&gt;get_data();
+        ::rptMsg("ComputerName: $name");
+    }
+}
+
+1;</code></pre></div>
+        <h3>Ce qu'on apprend</h3>
+        <ul><li>Chaque plugin déclare le <strong>hive cible</strong> (System, Software, NTUSER, etc.)</li><li>Description courte affichée dans <code>-l</code></li><li>Plugin parse une clé précise et formate la sortie</li><li>Sortie via <code>::rptMsg()</code> → texte brut</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>chaque plugin est ~50-200 lignes Perl. Tu peux comprendre exactement ce qu'il fait.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Lister et choisir les plugins</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Liste textuelle</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -l</code></pre></div>
+        <p>Affiche :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>1. compname v.20200526
+   Gets ComputerName and Hostname values from System hive
+
+2. userassist v.20200526
+   Gets UserAssist data from NTUSER.DAT hive
+...</code></pre></div>
+        <h3>Liste CSV (pour filtrage / scripting)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -l -c &gt; plugins_liste.csv</code></pre></div>
+        <p>CSV avec colonnes : Plugin, Hive, Description, Version.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Voir les plugins NTUSER
+grep ",NTUSER," plugins_liste.csv | cut -d',' -f1</code></pre></div>
+        <h3>Plugins par hive</h3>
+        <table><thead><tr><th>Hive</th><th>Nombre de plugins</th></tr></thead><tbody><tr><td><strong>SYSTEM</strong></td><td>~30 plugins</td></tr><tr><td><strong>SOFTWARE</strong></td><td>~30 plugins</td></tr><tr><td><strong>NTUSER.DAT</strong></td><td>~30 plugins</td></tr><tr><td><strong>SAM</strong></td><td>~5 plugins</td></tr><tr><td><strong>SECURITY</strong></td><td>~5 plugins</td></tr><tr><td><strong>UsrClass.dat</strong></td><td>~5 plugins</td></tr><tr><td><strong>AmCache.hve</strong></td><td>~5 plugins</td></tr></tbody></table>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Première extraction sur un hive SYSTEM</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu as une copie du fichier <code>SYSTEM</code> (extrait via KAPE ou Autopsy).</p>
+        <h3>Plugin unique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p compname</code></pre></div>
+        <p>Sortie :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>compname v.20200526
+Hive: /path/to/SYSTEM
+
+ControlSet001\Control\ComputerName\ActiveComputerName
+LastWrite: 2025-12-15 14:32:11Z
+
+ComputerName: DESKTOP-A7B2X9</code></pre></div>
+        <h3>Plusieurs plugins en série</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p compname
+perl rip.pl -r /path/to/SYSTEM -p timezone
+perl rip.pl -r /path/to/SYSTEM -p services
+perl rip.pl -r /path/to/SYSTEM -p usbstor</code></pre></div>
+        <h3>Tous les plugins du hive</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -a &gt; system_full_report.txt</code></pre></div>
+        <p><code>-a</code> lance <strong>tous les plugins pertinents</strong> pour le hive détecté.</p>
+        <h3>Format de sortie</h3>
+        <p>Brut, texte. Sortie typique d'un plugin :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>plugin_name v.YYYYMMDD
+Hive: /path/...
+
+[Section optionnelle]
+Key path
+LastWrite: 2025-XX-XX HH:MM:SSZ
+
+Value1: data1
+Value2: data2
+...</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Plugins essentiels par hive</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>SYSTEM</h3>
+        <table><thead><tr><th>Plugin</th><th>Information</th></tr></thead><tbody><tr><td><code>compname</code></td><td>Nom de la machine</td></tr><tr><td><code>timezone</code></td><td>Fuseau horaire</td></tr><tr><td><code>winver</code></td><td>Version Windows</td></tr><tr><td><code>services</code></td><td>Services installés</td></tr><tr><td><code>usbstor</code></td><td>Clés USB branchées (avec dates)</td></tr><tr><td><code>mountdev</code></td><td>Volumes montés</td></tr><tr><td><code>bam</code></td><td>Background Activity Moderator (exécutions récentes)</td></tr><tr><td><code>shimcache</code></td><td>AppCompatCache (binaires exécutés)</td></tr><tr><td><code>networklist</code></td><td>Réseaux Wi-Fi connectés</td></tr><tr><td><code>routes</code></td><td>Routes réseau</td></tr></tbody></table>
+        <h3>SOFTWARE</h3>
+        <table><thead><tr><th>Plugin</th><th>Information</th></tr></thead><tbody><tr><td><code>winver</code></td><td>Version Windows</td></tr><tr><td><code>installdate</code></td><td>Date d'installation Windows</td></tr><tr><td><code>installedapps</code></td><td>Applications installées</td></tr><tr><td><code>amcache</code></td><td>AmCache (exécutions avec hash)</td></tr><tr><td><code>run</code></td><td>Run keys (persistance)</td></tr><tr><td><code>runmru</code></td><td>Recent typed commands (Run dialog)</td></tr><tr><td><code>tracing</code></td><td>Tracing log entries</td></tr><tr><td><code>wlan</code></td><td>Connexions WLAN détaillées</td></tr></tbody></table>
+        <h3>NTUSER.DAT (par utilisateur)</h3>
+        <table><thead><tr><th>Plugin</th><th>Information</th></tr></thead><tbody><tr><td><code>userassist</code></td><td>Programmes lancés par l'utilisateur (avec fréquence)</td></tr><tr><td><code>shellbags</code></td><td>Dossiers visités via Explorer</td></tr><tr><td><code>recentdocs</code></td><td>Documents récemment ouverts</td></tr><tr><td><code>typedurls</code></td><td>URLs tapées (IE/Edge)</td></tr><tr><td><code>typedpaths</code></td><td>Chemins tapés (Explorer)</td></tr><tr><td><code>runmru</code></td><td>Commandes Run récentes</td></tr><tr><td><code>wordmru</code></td><td>Documents Word récents (toutes versions)</td></tr><tr><td><code>office_docs</code></td><td>Office Documents MRU</td></tr><tr><td><code>outlook2013</code></td><td>Outlook records</td></tr><tr><td><code>mountpoints2</code></td><td>Points de montage user</td></tr><tr><td><code>comdlg32</code></td><td>OpenSaveMRU et autres dialogues</td></tr></tbody></table>
+        <h3>SAM</h3>
+        <table><thead><tr><th>Plugin</th><th>Information</th></tr></thead><tbody><tr><td><code>samparse</code></td><td>Comptes utilisateurs locaux (login, RID, last logon, badpass count)</td></tr></tbody></table>
+        <h3>AmCache.hve</h3>
+        <table><thead><tr><th>Plugin</th><th>Information</th></tr></thead><tbody><tr><td><code>amcache</code></td><td>Binaires exécutés avec <strong>taille, SHA-1, chemin complet, date d'exécution</strong></td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>est l'un des artefacts <strong>les plus précieux</strong> de Windows 10/11 : il garde le SHA-1 de chaque exe lancé, parfait pour corréler avec VirusTotal.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Extraction sur NTUSER.DAT (artefacts utilisateur)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le fichier <code>NTUSER.DAT</code> est <strong>par utilisateur</strong>. Si plusieurs comptes : un fichier par compte.</p>
+        <h3>UserAssist — le plugin star</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/NTUSER.DAT -p userassist &gt; userassist.txt</code></pre></div>
+        <p>Sortie :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>UserAssist
+LastWrite: 2025-12-20 09:14:23Z
+
+{F4E57C4B-2036-45F0-A9AB-443BCFE33D9F}\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{CEBFF5CD-ACE2-4F4F-9178-9926F41749EA}\Count
+Last Write Time: 2025-12-20 09:14:23Z
+
+Wed Dec 20 09:14:23 2025 Z
+  Microsoft.Windows.Notepad - count 3, runtime 0 seconds, focus time 245
+  Microsoft.Edge - count 47, runtime 0 seconds, focus time 12450
+  cmd.exe - count 2, runtime 0 seconds, focus time 89
+  PowerShell - count 1, runtime 0 seconds, focus time 32
+  ...</code></pre></div>
+        <p>Tu obtiens <strong>la liste des programmes lancés</strong> avec :</p>
+        <ul><li>Compteur d'exécutions</li><li>Temps en focus</li><li>Dernière exécution</li></ul>
+        <h3>ShellBags — dossiers visités</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/NTUSER.DAT -p shellbags &gt; shellbags.txt
+perl rip.pl -r /path/to/UsrClass.dat -p shellbags &gt; shellbags_class.txt</code></pre></div>
+        <p>Sortie : tous les dossiers ouverts via l'Explorer, <strong>même supprimés</strong> ou <strong>clés USB déconnectées</strong>.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>suspect prétend ne jamais avoir branché telle clé USB. ShellBags révèle le chemin <code>E:\TopSecret\</code> visité à 14h32 → mensonge prouvé.</div></div>
+        <h3>RecentDocs — documents récents</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/NTUSER.DAT -p recentdocs</code></pre></div>
+        <p>Tous les documents récemment ouverts, par extension.</p>
+        <h3>TypedURLs</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/NTUSER.DAT -p typedurls</code></pre></div>
+        <p>URLs <strong>tapées</strong> dans Internet Explorer / Edge (différent de l'historique de navigation).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> AmCache, ShimCache, AppCompatCache</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Trois artefacts qui se recoupent partiellement mais sont <strong>complémentaires</strong>.</p>
+        <h3>ShimCache (AppCompatCache)</h3>
+        <p>Dans <code>SYSTEM</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p shimcache &gt; shimcache.txt</code></pre></div>
+        <p>Liste des <strong>binaires exécutés</strong>, avec date de <strong>modification du fichier</strong> (pas d'exécution). Conservé sur reboot. <strong>Précieux</strong> pour détecter des malwares effacés.</p>
+        <h3>AmCache (Windows 8+)</h3>
+        <p>Fichier séparé : <code>C:\Windows\AppCompat\Programs\Amcache.hve</code></p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/Amcache.hve -p amcache &gt; amcache.txt</code></pre></div>
+        <p>Liste des binaires exécutés avec :</p>
+        <ul><li><strong>SHA-1 du fichier</strong></li><li>Taille</li><li>Date de première exécution</li><li>Chemin complet</li><li>Éditeur</li></ul>
+        <p>C'est <strong>l'artefact ultime</strong> pour Windows moderne. Combiner avec VirusTotal sur les SHA-1 pour détecter du malware.</p>
+        <h3>BAM (Background Activity Moderator)</h3>
+        <p>Dans <code>SYSTEM</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p bam &gt; bam.txt</code></pre></div>
+        <p>Liste des <strong>exécutions récentes</strong> avec timestamp précis. Très utile sur Windows 10/11.</p>
+        <h3>Tableau comparatif</h3>
+        <table><thead><tr><th>Artefact</th><th>Capture</th><th>Précision date</th><th>Hash</th></tr></thead><tbody><tr><td><strong>UserAssist</strong></td><td>Lancements GUI utilisateur</td><td>Dernière exécution + count</td><td>non</td></tr><tr><td><strong>ShimCache</strong></td><td>Binaires apparus dans la VM</td><td>Date modif fichier</td><td>non</td></tr><tr><td><strong>AmCache</strong></td><td>Binaires exécutés</td><td>Première exécution</td><td><strong>SHA-1</strong></td></tr><tr><td><strong>BAM</strong></td><td>Exécutions récentes</td><td>Timestamp précis</td><td>non</td></tr><tr><td><strong>Prefetch</strong> (hors Registry)</td><td>Programmes lancés</td><td>8 dernières dates</td><td>non</td></tr></tbody></table>
+        <p><strong>Workflow DFIR</strong> : croiser ces 4-5 sources pour avoir une vue complète des exécutions.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> USB et clés branchées</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'un des cas DFIR <strong>les plus fréquents</strong> : prouver qu'une clé USB a été branchée à tel moment.</p>
+        <h3>USBSTOR</h3>
+        <p>Dans <code>SYSTEM</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p usbstor &gt; usbstor.txt</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>usbstor v.20200526
+
+ControlSet001\Enum\USBSTOR
+LastWrite: 2025-12-19 16:42:18Z
+
+  Disk&amp;Ven_SanDisk&amp;Prod_Ultra_USB_3.0&amp;Rev_1.00 [LastWrite: 2025-12-19 16:42:18Z]
+    S/N: 4C530001120329122210&amp;0
+    FriendlyName: SanDisk Ultra USB 3.0 USB Device
+
+  Disk&amp;Ven_Kingston&amp;Prod_DT_USB_3.0&amp;Rev_PMAP [LastWrite: 2025-12-18 14:03:22Z]
+    S/N: 002618E0AF92F23150F61C5C
+    FriendlyName: Kingston DT USB 3.0 USB Device</code></pre></div>
+        <p>Tu vois :</p>
+        <ul><li><strong>Marque et modèle</strong> de chaque clé branchée</li><li><strong>Numéro de série</strong> (unique, prouvable)</li><li><strong>Date de dernière connexion</strong></li></ul>
+        <h3>Croiser avec MountedDevices</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r /path/to/SYSTEM -p mountdev &gt; mountdev.txt</code></pre></div>
+        <p>Permet d'identifier la <strong>lettre de lecteur</strong> assignée (E:, F:, etc.).</p>
+        <h3>Croiser avec ShellBags</h3>
+        <p>ShellBags (NTUSER.DAT, UsrClass.dat) révèle quels <strong>dossiers</strong> sur ces clés ont été visités.</p>
+        <h3>Workflow USB enquête</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># 1. Liste USB
+rip -r SYSTEM -p usbstor &gt; usbstor.txt
+
+# 2. Lettres assignées
+rip -r SYSTEM -p mountdev &gt; mountdev.txt
+
+# 3. ShellBags pour activité
+rip -r NTUSER.DAT -p shellbags &gt; shellbags_user1.txt
+rip -r UsrClass.dat -p shellbags &gt; shellbags_class_user1.txt
+
+# 4. EventLog : DeviceSetupManager EID 112 (cf. Hayabusa, à venir)</code></pre></div>
+        <p>Tu reconstitues <strong>qui a branché quoi, quand, et a accédé à quels dossiers</strong>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Profils RegRipper (rip.pl all)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Au lieu de lancer plugin par plugin, RegRipper a des <strong>profils</strong> pré-définis.</p>
+        <h3>Profils standards</h3>
+        <table><thead><tr><th>Profil</th><th>Hive cible</th></tr></thead><tbody><tr><td><code>-a</code> (all auto)</td><td>Auto-détection du hive et tous les plugins</td></tr><tr><td><code>-f system</code></td><td>Tous les plugins SYSTEM</td></tr><tr><td><code>-f software</code></td><td>Tous les plugins SOFTWARE</td></tr><tr><td><code>-f ntuser</code></td><td>Tous les plugins NTUSER.DAT</td></tr><tr><td><code>-f sam</code></td><td>Tous les plugins SAM</td></tr><tr><td><code>-f amcache</code></td><td>Tous les plugins AmCache</td></tr><tr><td><code>-f usrclass</code></td><td>Tous les plugins UsrClass</td></tr></tbody></table>
+        <h3>Exemple complet</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>mkdir reports
+
+perl rip.pl -r SYSTEM -a &gt; reports/SYSTEM.txt
+perl rip.pl -r SOFTWARE -a &gt; reports/SOFTWARE.txt
+perl rip.pl -r SAM -a &gt; reports/SAM.txt
+perl rip.pl -r SECURITY -a &gt; reports/SECURITY.txt
+perl rip.pl -r users/user1/NTUSER.DAT -a &gt; reports/user1_NTUSER.txt
+perl rip.pl -r users/user1/UsrClass.dat -a &gt; reports/user1_UsrClass.txt
+perl rip.pl -r Amcache.hve -a &gt; reports/Amcache.txt</code></pre></div>
+        <p>En quelques minutes : <strong>rapport complet</strong> de tous les artefacts Registry.</p>
+        <h3>Profil custom</h3>
+        <p>Créer un fichier <code>monprofil.prof</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>compname
+timezone
+userassist
+shimcache
+amcache
+usbstor
+shellbags
+recentdocs</code></pre></div>
+        <p>Lancer :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>perl rip.pl -r SYSTEM -f monprofil</code></pre></div>
+        <p>Permet de cibler les plugins pertinents pour ton type d'enquête.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Intégration KAPE + EZ Tools + RegRipper</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Workflow DFIR typique combinant les trois outils.</p>
+        <h3>Étape 1 — Collecte avec KAPE</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">cmd</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>KAPE.exe --tsource C: --tdest C:\triage --tflush --target !SANS_Triage</code></pre></div>
+        <p>KAPE copie tous les hives Registry dans <code>C:\triage\Registry\</code>.</p>
+        <h3>Étape 2 — Exploration avec Registry Explorer (EZ Tools)</h3>
+        <p>GUI pour navigation manuelle, exploration ciblée d'une clé suspecte.</p>
+        <h3>Étape 3 — Triage rapide avec RegRipper</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>cd /triage_processed/
+mkdir -p reports
+
+for hive in System Software Sam Security; do
+    perl /opt/RegRipper/rip.pl -r ../triage/Registry/$hive -a &gt; reports/${hive}.txt
+done
+
+for user_dir in ../triage/Users/*/; do
+    user=$(basename "$user_dir")
+    if [ -f "$user_dir/NTUSER.DAT" ]; then
+        perl /opt/RegRipper/rip.pl -r "$user_dir/NTUSER.DAT" -a &gt; reports/${user}_NTUSER.txt
+    fi
+    if [ -f "$user_dir/AppData/Local/Microsoft/Windows/UsrClass.dat" ]; then
+        perl /opt/RegRipper/rip.pl -r "$user_dir/AppData/Local/Microsoft/Windows/UsrClass.dat" -a \
+            &gt; reports/${user}_UsrClass.txt
+    fi
+done
+
+# AmCache
+if [ -f ../triage/Windows/AppCompat/Programs/Amcache.hve ]; then
+    perl /opt/RegRipper/rip.pl -r ../triage/Windows/AppCompat/Programs/Amcache.hve -a \
+        &gt; reports/Amcache.txt
+fi
+
+echo "Rapports générés dans reports/"
+ls -la reports/</code></pre></div>
+        <h3>Étape 4 — Analyse</h3>
+        <p>Grep ciblé :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Toutes les USB
+grep -A 2 "S/N:" reports/*SYSTEM.txt
+
+# Exécutions de cmd.exe ou powershell
+grep -i "powershell\|cmd.exe" reports/*NTUSER.txt
+
+# Hashes AmCache à vérifier sur VirusTotal
+grep -E "^SHA1:" reports/Amcache.txt | awk '{print $2}' | sort -u &gt; hashes_to_check.txt</code></pre></div>
+        <h3>Étape 5 — Croiser avec autres sources</h3>
+        <ul><li><strong>EVTX</strong> (cf. Hayabusa, à venir) : confirmer les exécutions avec EID 4688</li><li><strong>Prefetch</strong> (cf. EZ Tools v126) : précision sur les premières exécutions</li><li><strong>Browser history</strong> (Autopsy/IPED) : croiser TypedURLs avec history complète</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Registry + EventLog + Prefetch + Browser = vision 360° de l'activité Windows.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Forces, faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Référence DFIR</strong> depuis 2008, maintenu par Harlan Carvey.</p>
+        <p>✅ <strong>100+ plugins</strong> couvrent quasi tous les artefacts Registry connus.</p>
+        <p>✅ <strong>Open source</strong>, auditable, modifiable.</p>
+        <p>✅ <strong>Sortie texte structurée</strong> : facile à grepper, archiver, intégrer en pipeline.</p>
+        <p>✅ <strong>CLI scriptable</strong> : automation parfaite.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : Windows / Linux / macOS (Perl partout).</p>
+        <p>✅ <strong>Léger</strong> : pas d'install lourde, fichiers Perl simples.</p>
+        <p>✅ <strong>Communauté DFIR active</strong> : nouveaux plugins régulièrement.</p>
+        <p>✅ <strong>Format reproductible</strong> : commande exacte documentable.</p>
+        <p>✅ <strong>Complément naturel</strong> de KAPE, EZ Tools, Autopsy.</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>CLI uniquement</strong> : pas de GUI native (utiliser Registry Explorer en complément).</p>
+        <p>❌ <strong>Sortie texte brute</strong> : pas de format JSON/CSV natif (workarounds existent).</p>
+        <p>❌ <strong>Dépend de la maintenance des plugins</strong> : nouvelles clés Windows = plugins à écrire/mettre à jour.</p>
+        <p>❌ <strong>Pas de support transaction logs</strong> : pour les hives "dirty" avec logs non commit, utiliser <strong>yarp</strong> ou Registry Explorer (EZ Tools).</p>
+        <p>❌ <strong>Pas de timeline native</strong> : pour timeline, exporter et intégrer dans Plaso ou super-timeline.</p>
+        <p>❌ <strong>Documentation parfois sèche</strong> : Harlan Carvey est expert, suppose connaissance Registry préalable.</p>
+        <p>❌ <strong>Perl</strong> : langage moins populaire que Python, courbe d'apprentissage pour écrire des plugins custom.</p>
+        <p>❌ <strong>Pas d'analyse comportementale</strong> : juste extraction. L'interprétation reste manuelle.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources et bonnes pratiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Bonnes pratiques DFIR</h3>
+        <p>🔹 <strong>Toujours sur copie</strong> des hives, jamais sur Registry live.</p>
+        <p>🔹 <strong>Hasher les hives</strong> avant analyse (chaîne de preuve).</p>
+        <p>🔹 <strong>Documenter les versions</strong> RegRipper et plugins (date de release).</p>
+        <p>🔹 <strong>Profil custom</strong> par type d'enquête (USB, malware, insider, etc.).</p>
+        <p>🔹 <strong>Combiner RegRipper + Registry Explorer</strong> : CLI pour triage, GUI pour exploration.</p>
+        <p>🔹 <strong>Croiser avec EVTX + Prefetch + Browser</strong> : Registry seul ne suffit pas.</p>
+        <p>🔹 <strong>Conserver les rapports</strong> texte (légers) en archive long terme.</p>
+        <p>🔹 <strong>Versionner les profils custom</strong> dans Git interne.</p>
+        <p>🔹 <strong>Mises à jour régulières</strong> : <code>git pull</code> mensuel sur le repo RegRipper.</p>
+        <p>🔹 <strong>Contribuer</strong> : si tu trouves un artefact non couvert → écrire un plugin et soumettre PR.</p>
+        <p>🔹 <strong>Lire Harlan Carvey</strong> : <em>Windows Forensic Analysis Toolkit</em> (4e édition, 2014, toujours pertinent).</p>
+        <p>🔹 <strong>Tester les plugins</strong> sur image de test avant production.</p>
+        <p>🔹 <strong>Pour les hives "dirty"</strong> (transaction logs non commit) : passer par <strong>yarp</strong> ou Registry Explorer (EZ Tools) qui supportent les logs.</p>
+        <h3>Documentation officielle</h3>
+        <ul><li>📚 <strong>GitHub RegRipper3.0</strong> : <<a href="https://github.com/keydet89/RegRipper3.0" target="_blank" rel="noopener">https://github.com/keydet89/RegRipper3.0</a>></li><li>📚 <strong>GitHub Harlan Carvey</strong> : <<a href="https://github.com/keydet89" target="_blank" rel="noopener">https://github.com/keydet89</a>></li><li>📚 <strong>Blog Windows IR</strong> : <<a href="https://windowsir.blogspot.com/" target="_blank" rel="noopener">https://windowsir.blogspot.com/</a>></li></ul>
+        <h3>Livres incontournables</h3>
+        <ul><li>📖 **Harlan Carvey — <em>Windows Forensic Analysis Toolkit</em> 4e éd.** : la référence</li><li>📖 **Harlan Carvey — *Windows Registry Forensics*** : focus Registry pur</li><li>📖 **Brian Carrier — *File System Forensic Analysis*** : pour contexte</li></ul>
+        <h3>Outils complémentaires</h3>
+        <ul><li>🔧 <strong>Registry Explorer</strong> (EZ Tools, v126) : GUI Windows, support transaction logs</li><li>🔧 <strong>KAPE</strong> (v125) : collecte hives</li><li>🔧 <strong>yarp</strong> + <strong>yarp-print</strong> : librairie Python alternative</li><li>🔧 <strong>Autopsy Recent Activity</strong> : module intégré</li><li>🔧 <strong>Hayabusa</strong> (à venir) : analyse EVTX (complémentaire)</li></ul>
+        <h3>Formations</h3>
+        <ul><li>🎓 <strong>SANS FOR500 — Windows Forensic Analysis</strong> : couvre RegRipper en module</li><li>🎓 <strong>SANS FOR508 — Advanced IR</strong> : usage avancé</li><li>🎓 <strong>13Cubed YouTube</strong> : tutoriels Registry DFIR gratuits</li></ul>
+        <h3>Communauté</h3>
+        <ul><li>💬 <strong>Twitter/X DFIR</strong> : @HCarvey, @4n6k, @Hexacorn</li><li>💬 <strong>r/computerforensics</strong></li><li>💬 <strong>DFIR.training</strong></li></ul>
+        <h3>Références Registry</h3>
+        <ul><li>📚 <strong>AndreaFortuna</strong> : <<a href="https://www.andreafortuna.org/category/dfir/" target="_blank" rel="noopener">https://www.andreafortuna.org/category/dfir/</a>> (articles Registry détaillés)</li><li>📚 <strong>Hexacorn</strong> : <<a href="https://www.hexacorn.com/blog/" target="_blank" rel="noopener">https://www.hexacorn.com/blog/</a>> (artefacts Windows rares)</li><li>📚 <strong>4n6Time</strong> : ressources DFIR</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>RegRipper est <strong>l'outil de référence</strong> pour l'analyse forensique du Registry Windows. 100+ plugins Perl exhaustifs, CLI scriptable, open source, maintenu depuis 2008 par Harlan Carvey lui-même.</p>
+        <p>Sa place dans un workflow DFIR Windows complet :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>KAPE (collecte)
+  ↓
+RegRipper (triage Registry rapide, texte)  +  EZ Tools (exploration manuelle GUI)
+  ↓
+Croisement avec EVTX (Hayabusa, à venir), Prefetch, Browser
+  ↓
+Reconstitution chronologique → rapport</code></pre></div>
+        <p>RegRipper ne <strong>remplace</strong> ni Autopsy ni X-Ways — il est <strong>complémentaire</strong>. Sa force : extraction ciblée et exhaustive du Registry, là où d'autres outils sont généralistes.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Installer RegRipper sur ta machine DFIR</strong> (Linux ou Windows).</li><li><strong>Maîtriser les ~20 plugins essentiels</strong> (compname, timezone, userassist, shimcache, amcache, usbstor, shellbags, recentdocs, typedurls, services, run, networklist, samparse, bam).</li><li><strong>Construire ton workflow</strong> KAPE → RegRipper → grep ciblé.</li><li><strong>Croiser systématiquement</strong> Registry + EVTX + Prefetch + Browser.</li><li><strong>Lire Harlan Carvey</strong> : <em>Windows Forensic Analysis Toolkit</em> est incontournable.</li><li><strong>Suivre les blogs DFIR</strong> pour nouveaux artefacts Registry découverts.</li><li><strong>Contribuer</strong> un plugin si tu identifies un artefact non couvert.</li><li><strong>Tester sur CTFs</strong> (CyberDefenders, DFIR Madness) pour pratiquer.</li></ol>
+        <p>Le Registry Windows ne ment pas. RegRipper te le révèle. 🗝️</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« RegRipper — Analyse Registry Windows par plugins maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. RegRipper est <strong>en Perl</strong> depuis 2008 (Harlan Carvey). Chaque plugin est un fichier .pl ~50-200 lignes qui : déclare le hive cible, extrait une clé Registry précise, formate la sortie texte via <code>::rptMsg()</code>. Auditable. Sur Windows : Strawberry Perl. Sur Linux : <code>perl + libparse-win32registry-perl</code>."
+             data-feedback-ko="✗ La bonne réponse : <strong>Perl</strong>. Choix d'Harlan Carvey en 2008, maintenu depuis. Langage moins populaire que Python aujourd'hui mais code clair et compact. Permet d'écrire ses propres plugins facilement.">
+          <div class="tuto-quiz-question-text">1. Quel est le <strong>format des plugins RegRipper</strong> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Python 3</button>
+            <button class="tuto-quiz-option" type="button"><strong>Perl</strong> (100+ plugins .pl dans <code>plugins/</code> du repo, parsing du Registry via <code>Parse::Win32Registry</code>)</button>
+            <button class="tuto-quiz-option" type="button">Go</button>
+            <button class="tuto-quiz-option" type="button">Bash</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>AmCache</strong> est l'un des artefacts <strong>les plus précieux</strong> de Windows 8+ : il enregistre le SHA-1 de chaque exe lancé. Permet de : (1) identifier des binaires malicieux par hash (corrélation VirusTotal), (2) prouver qu'un programme suspect a été exécuté même s'il a été effacé du disque, (3) reconstituer chronologiquement les premières exécutions. <code>rip.pl -r Amcache.hve -p amcache</code> → liste exhaustive."
+             data-feedback-ko="✗ La bonne réponse : <strong>binaires exécutés avec SHA-1</strong>. C'est <strong>l'artefact ultime</strong> Windows moderne. À croiser systématiquement avec VirusTotal pour identifier les exécutables malicieux. Beaucoup d'enquêtes IR commencent par là.">
+          <div class="tuto-quiz-question-text">2. Le plugin <strong>amcache</strong> sur le hive AmCache révèle quoi de précieux pour le DFIR ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Les mots de passe Windows</button>
+            <button class="tuto-quiz-option" type="button"><strong>Les binaires exécutés avec leur SHA-1, taille, chemin et date — à croiser avec VirusTotal pour détecter du malware</strong></button>
+            <button class="tuto-quiz-option" type="button">Les fichiers supprimés</button>
+            <button class="tuto-quiz-option" type="button">Les sites visités</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Workflow USB DFIR complet : (1) <code>usbstor</code> liste les clés branchées (marque, modèle, S/N unique, dates), (2) <code>mountdev</code> donne la lettre de lecteur assignée (E:, F:, ...), (3) <code>shellbags</code> sur NTUSER.DAT et UsrClass.dat révèle quels dossiers ont été visités sur la clé, (4) <code>samparse</code> identifie quel compte utilisateur était actif. Reconstitution complète : qui, quoi, quand. À croiser avec EventLog DeviceSetupManager (EID 112)."
+             data-feedback-ko="✗ La bonne réponse : <strong>usbstor + mountdev + shellbags + samparse</strong>. Combinaison clé pour les enquêtes USB. Chaque plugin apporte une pièce du puzzle. ShellBags est souvent le détail qui prouve l'intention (le suspect a navigué dans tel dossier précis).">
+          <div class="tuto-quiz-question-text">3. Tu enquêtes sur un <strong>vol de données via clé USB</strong>. Quels plugins RegRipper utiliser ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">userassist seul</button>
+            <button class="tuto-quiz-option" type="button"><strong>usbstor (SYSTEM) + mountdev (SYSTEM) + shellbags (NTUSER + UsrClass) + samparse (SAM)</strong> pour reconstituer : quelle clé branchée + lettre assignée + dossiers visités + utilisateur connecté</button>
+            <button class="tuto-quiz-option" type="button">amcache seul</button>
+            <button class="tuto-quiz-option" type="button">Aucun plugin n'est utile</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>-a</code> = <strong>auto</strong>. RegRipper détecte le type de hive (SYSTEM, SOFTWARE, NTUSER, etc.) et exécute tous les plugins pertinents. Pratique pour <strong>triage rapide</strong>. Alternative : <code>-f system</code> (profil explicite) ou profils custom (fichier .prof avec liste). Sortie texte à archiver : <code>perl rip.pl -r SYSTEM -a > system_report.txt</code>."
+             data-feedback-ko="✗ La bonne réponse : <strong><code>-a</code> pour auto</strong>. Mode triage rapide essentiel. À utiliser systématiquement comme première passe pour avoir une vue d'ensemble du hive avant exploration ciblée.">
+          <div class="tuto-quiz-question-text">4. Comment <strong>lancer tous les plugins pertinents</strong> sur un hive sans les énumérer un par un ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Impossible, il faut les lancer individuellement</button>
+            <button class="tuto-quiz-option" type="button"><strong><code>perl rip.pl -r SYSTEM -a</code></strong> : <code>-a</code> = auto, exécute tous les plugins pertinents pour le hive (détection automatique du type)</button>
+            <button class="tuto-quiz-option" type="button"><code>perl rip.pl --all</code></button>
+            <button class="tuto-quiz-option" type="button"><code>perl rip.pl -r SYSTEM -*</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. RegRipper est <strong>complémentaire</strong>, jamais isolé. Workflow optimal : (1) <strong>KAPE</strong> pour la collecte triage rapide des hives, (2) <strong>RegRipper</strong> pour analyse texte exhaustive scriptable, (3) <strong>Registry Explorer</strong> (EZ Tools) pour exploration GUI ciblée sur clés suspectes identifiées, (4) <strong>croisement</strong> avec EventLog (Hayabusa/Chainsaw), Prefetch (PECmd), Browser (Autopsy/IPED) → vision 360° de l'activité Windows."
+             data-feedback-ko="✗ La bonne réponse : <strong>workflow combiné KAPE + RegRipper + EZ Tools + croisement</strong>. RegRipper excelle au <strong>triage Registry rapide</strong> mais ne fait qu'une partie du DFIR Windows. La force vient de la combinaison d'outils, chacun spécialiste de son domaine.">
+          <div class="tuto-quiz-question-text">5. Pour un workflow DFIR Windows complet, RegRipper s'intègre comment ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">RegRipper se suffit à lui-même</button>
+            <button class="tuto-quiz-option" type="button"><strong>KAPE (v125) collecte les hives → RegRipper triage rapide texte → Registry Explorer (EZ Tools v126) exploration GUI ciblée → croisement EVTX (Hayabusa), Prefetch, Browser → reconstitution chronologique</strong></button>
+            <button class="tuto-quiz-option" type="button">RegRipper remplace Autopsy</button>
+            <button class="tuto-quiz-option" type="button">RegRipper n'est pas intégrable</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/regripper.html" style="color:var(--cyan)">📚 Consulter la fiche RegRipper — Analyse Registry Windows par plugins</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel RegRipper — Analyse Registry Windows par plugins v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

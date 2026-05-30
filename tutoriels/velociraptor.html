@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Velociraptor — DFIR endpoint à distance — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Velociraptor — DFIR endpoint à distance : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">VELOCIRAPTOR — DFIR ENDPOINT À DISTANCE — PAS À PAS</span>
+  <a href="../fiches/velociraptor.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 19 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="velociraptor">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cas d'usage typiques</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Architecture client/serveur</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. VQL : le langage de Velociraptor</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Prérequis système</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Installation du serveur (Linux)</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Génération et déploiement des agent</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Premier hunt : lister les processus</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Artefacts intégrés : panorama</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Collecter avec KAPE via Velocirapto</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Mode triage offline (collector stan</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Chasse Sigma et YARA à l'échelle</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Notebooks et investigation interact</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Forces de Velociraptor</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Faiblesses et limites</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Ressources utiles</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Velociraptor — DFIR endpoint à distance</span>
+        </div>
+
+        <h1>🦖 Velociraptor — DFIR endpoint à distance</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer Velociraptor</strong> en standalone, déployer des agents Windows via MSI, <strong>écrire et lancer un hunt</strong> sur des centaines d'endpoints en VQL, intégrer <strong>KAPE</strong> via l'artefact dédié, générer un <strong>collecteur offline autonome</strong>, et chasser des menaces avec <strong>Sigma + YARA</strong> à l'échelle.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~70 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Serveur Linux</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows / Linux / macOS agents</span>
+          <span class="tuto-meta-badge "><span class="icon">🌐</span> Endpoint à l'échelle</span>
+          <span class="tuto-meta-badge "><span class="icon">🛠️</span> VQL (SQL-like)</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de Velociraptor</div>
+        <div><strong>Velociraptor</strong> est la plateforme open source de <strong>collecte forensique distante</strong> et de <strong>chasse aux menaces</strong> à l'échelle. Développée par <strong>Mike Cohen</strong> (ex-Google, auteur de GRR) depuis 2018, soutenue par <strong>Rapid7</strong>. Permet d'agir sur des milliers d'endpoints depuis un point central, en open source autohébergeable.<br><br>📦 <a href="https://github.com/Velocidex/velociraptor" target="_blank" rel="noopener">github.com/Velocidex/velociraptor</a> · Licence Apache 2.0</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Velociraptor est un <strong>agent endpoint</strong> + <strong>serveur central</strong> + <strong>langage de requête</strong> (VQL) qui permet, depuis un point central, de :</p>
+        <ul><li>Interroger des <strong>milliers d'endpoints</strong> Windows / Linux / macOS simultanément</li><li><strong>Collecter</strong> des artefacts forensiques distants en quelques minutes</li><li><strong>Chasser</strong> des menaces avec Sigma, YARA, ou des règles VQL custom</li><li><strong>Quarantainer</strong> un endpoint compromis (isolation réseau)</li><li><strong>Triage offline</strong> pour générer un binaire autonome à exécuter sur un poste isolé</li></ul>
+        <p>Le tout en <strong>open source</strong>, <strong>autohébergeable</strong>, <strong>sans agent commercial à payer</strong>.</p>
+        <p>C'est l'outil utilisé par les CERT modernes, les MSSP et plusieurs services nationaux (CISA, NCSC-FI, ANSSI dans certains incidents).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Réponse à incident à l'échelle</strong> : un ransomware touche 200 postes, tu veux les identifier et collecter en parallèle.</li><li><strong>Chasse menaces (threat hunting)</strong> : balayer 5000 endpoints à la recherche d'un IoC spécifique.</li><li><strong>Forensique distant</strong> : collecter Prefetch + Amcache + EVTX sur un poste à 800 km sans VPN.</li><li><strong>Triage offline</strong> : générer un binaire autonome (Windows .exe) que l'utilisateur lance, qui collecte et envoie vers un partage S3.</li><li><strong>Quarantaine d'un endpoint</strong> : isolation réseau immédiate d'un poste compromis.</li><li><strong>Monitoring continu</strong> : agent persistant qui remonte des événements en quasi temps réel.</li><li><strong>Préservation d'urgence</strong> : capturer la mémoire d'un poste suspect avant que l'utilisateur ne s'en rende compte.</li><li><strong>Audit de conformité</strong> : vérifier que tous les postes ont un AV à jour, BitLocker activé, etc.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Architecture client/serveur</h2>
+        </header>
+        <div class="tuto-section-content">
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>+----------------+         TLS         +-----------------+
+| Endpoints      | &lt;-------- gRPC --------&gt; | Serveur          |
+| (agents)       |  pinned cert        | Velociraptor     |
+| Windows/Linux/ |                     | (Frontend +      |
+| macOS          |                     |  Datastore +     |
++----------------+                     |  GUI)            |
+                                       +-----------------+
+                                                ^
+                                                |
+                                       +-----------------+
+                                       | Analyste DFIR    |
+                                       | (HTTPS GUI ou   |
+                                       |  velociraptor   |
+                                       |  CLI)           |
+                                       +-----------------+</code></pre></div>
+        <ul><li><strong>Endpoint</strong> : exécute l'agent <code>velociraptor.exe</code> (Windows) ou binaire (Linux/macOS). L'agent est piloté par le serveur via gRPC avec authentification mTLS (certificats épinglés).</li><li><strong>Serveur</strong> : héberge le datastore (fichiers), la GUI web, et le frontend gRPC. Peut tourner sur un VPS / serveur on-prem.</li><li><strong>Analyste</strong> : se connecte via la GUI HTTPS ou la CLI pour lancer des hunts, collecter des artefacts, consulter les notebooks.</li></ul>
+        <h3>Modèle de déploiement</h3>
+        <ul><li><strong>Standalone</strong> : un seul binaire <code>velociraptor</code>, fait serveur + GUI. Idéal pour les petits déploiements (< 1000 endpoints).</li><li><strong>Multi-frontend</strong> : plusieurs frontends derrière un load balancer pour les déploiements massifs (> 10 000 endpoints).</li><li><strong>Triage offline</strong> : aucun serveur, un binaire autonome avec configuration embarquée qui exporte vers S3 ou partage SMB.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> VQL : le langage de Velociraptor</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>VQL (Velociraptor Query Language) est un <strong>langage proche de SQL</strong> spécialisé pour la forensique. Toute interaction avec Velociraptor — collecte, chasse, monitoring — se fait via VQL.</p>
+        <h3>Exemple basique</h3>
+        <p>Lister les processus avec une commande PowerShell :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">sql</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>SELECT Pid, Name, CommandLine
+FROM pslist()
+WHERE CommandLine =~ "powershell"</code></pre></div>
+        <h3>Concepts clés</h3>
+        <ul><li><strong>Plugins</strong> : fonctions qui retournent des données (<code>pslist()</code>, <code>glob()</code>, <code>parse_evtx()</code>, <code>parse_pe()</code>)</li><li><strong>Fonctions</strong> : transformations sur des valeurs (<code>hash()</code>, <code>regex_replace()</code>, <code>parse_string_with_regex()</code>)</li><li><strong>Sources</strong> : un artefact peut avoir plusieurs sources (collecte côté client + post-traitement côté serveur)</li><li><strong>Parameters</strong> : un artefact prend des paramètres réglables au lancement</li></ul>
+        <h3>Lecture d'un artefact</h3>
+        <p>Les artefacts (collectes prédéfinies) sont des <strong>fichiers YAML</strong> qui contiennent du VQL. Exemple simplifié :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">yaml</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>name: Windows.System.Pslist
+description: List Windows processes
+parameters:
+  - name: ProcessRegex
+    default: .
+sources:
+  - query: |
+      SELECT Pid, Ppid, Name, Exe, CommandLine
+      FROM pslist()
+      WHERE Name =~ ProcessRegex</code></pre></div>
+        <p>Cet artefact est invocable depuis la GUI avec un paramètre <code>ProcessRegex</code> configurable.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Prérequis système</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Serveur</h3>
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th></tr></thead><tbody><tr><td>OS</td><td>Linux 64 bits (Debian/Ubuntu/RHEL)</td><td>Debian 12+ ou Ubuntu 22.04 LTS</td></tr><tr><td>CPU</td><td>2 vCPU</td><td>8 vCPU</td></tr><tr><td>RAM</td><td>4 Go</td><td>16 Go (>1000 endpoints)</td></tr><tr><td>Disque</td><td>50 Go SSD</td><td>500 Go NVMe (collectes peuvent peser)</td></tr><tr><td>Réseau</td><td>IP publique ou VPN</td><td>TLS 8000/tcp obligatoire</td></tr></tbody></table>
+        <h3>Endpoint</h3>
+        <ul><li>Windows 7+ / Server 2008 R2+</li><li>Linux kernel 3.10+ (CentOS 7, Debian 9+)</li><li>macOS 10.13+</li><li>~50 Mo RAM en idle, pic ~200 Mo pendant collecte</li></ul>
+        <h3>Analyste</h3>
+        <ul><li>Navigateur moderne (Chrome, Firefox, Edge)</li><li>Compétences SQL/VQL basiques pour écrire des requêtes custom</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Installation du serveur (Linux)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : télécharger le binaire</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Sur Debian/Ubuntu
+mkdir -p /opt/velociraptor &amp;&amp; cd /opt/velociraptor
+wget https://github.com/Velocidex/velociraptor/releases/latest/download/velociraptor-v0.x.x-linux-amd64
+mv velociraptor-v0.x.x-linux-amd64 velociraptor
+chmod +x velociraptor</code></pre></div>
+        <p>Remplace <code>v0.x.x</code> par la dernière version (au moment de l'écriture, branche 0.7.x).</p>
+        <h3>Étape 2 : générer une configuration</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>./velociraptor config generate -i</code></pre></div>
+        <p>Mode interactif. Réponds aux questions :</p>
+        <ul><li>OS du serveur : Linux</li><li>Path datastore : <code>/opt/velociraptor/datastore</code></li><li>Logs : <code>/opt/velociraptor/logs</code></li><li>DNS / nom public : <code>vr.example.com</code> (ou IP)</li><li>Frontend port : <code>8000</code> (TCP, exposé aux agents)</li><li>GUI port : <code>8889</code> (HTTPS, exposé aux analystes)</li><li>Utiliser Let's Encrypt ? Oui pour production, Non pour PoC (certificat auto-signé)</li><li>Créer un compte admin : oui</li></ul>
+        <p>Deux fichiers générés :</p>
+        <ul><li><code>server.config.yaml</code> (pour démarrer le serveur)</li><li><code>client.config.yaml</code> (à embarquer dans les agents)</li></ul>
+        <h3>Étape 3 : initialiser le datastore et créer l'admin</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>./velociraptor --config server.config.yaml user add admin --role administrator</code></pre></div>
+        <p>Tu seras invité à saisir un mot de passe.</p>
+        <h3>Étape 4 : lancer le serveur</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>./velociraptor --config server.config.yaml frontend -v</code></pre></div>
+        <p>Le serveur écoute sur les ports configurés. La GUI est accessible à <code>https://localhost:8889/</code>.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>crée un service systemd. Velociraptor fournit une commande pour générer le fichier service :  ``<code>bash ./velociraptor --config server.config.yaml service install </code>``</div></div>
+        <h3>Vérification</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>curl -k https://localhost:8889/</code></pre></div>
+        <p>Devrait répondre la page de login.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Génération et déploiement des agents Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : créer un installeur MSI Windows</h3>
+        <p>Depuis le serveur :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>./velociraptor --config client.config.yaml package install msi --msi_name velociraptor-client.msi</code></pre></div>
+        <p>Cela génère <code>velociraptor-client.msi</code> contenant l'agent + la configuration client (URL du serveur, certificat épinglé).</p>
+        <h3>Étape 2 : déployer sur les endpoints</h3>
+        <p>Plusieurs voies :</p>
+        <ul><li><strong>Manuel</strong> : copier le MSI et l'installer (<code>msiexec /i velociraptor-client.msi /qn</code>)</li><li><strong>GPO</strong> : Software Installation policy avec le MSI</li><li><strong>Intune / SCCM / Tanium</strong> : déployer comme tout autre logiciel</li><li><strong>Ansible / Chef / Puppet</strong> : installation via gestionnaire de config</li><li><strong>Script PowerShell</strong> sur poste isolé</li></ul>
+        <p>Une fois installé, l'agent enregistre un service <code>Velociraptor</code> qui se lance au démarrage.</p>
+        <h3>Étape 3 : vérifier dans la GUI</h3>
+        <p>Connecte-toi à <<a href="https://vr.example.com:8889/" target="_blank" rel="noopener">https://vr.example.com:8889/</a>> avec ton compte admin. Onglet <strong>Search clients</strong> → l'agent doit apparaître après quelques secondes.</p>
+        <h3>Étape 4 : labels et organisation</h3>
+        <p>Pour ranger les clients par criticité ou par site, applique des <strong>labels</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">sql</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>SELECT label(client_id="C.123abc", labels="critical,site-geneva", op="set")
+FROM scope()</code></pre></div>
+        <p>Tu peux ensuite filtrer les hunts par label.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Premier hunt : lister les processus</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Un <strong>hunt</strong> est une collecte lancée sur <strong>plusieurs clients à la fois</strong>. C'est le concept central de Velociraptor.</p>
+        <h3>Via la GUI</h3>
+        <ol><li><strong>Hunt Manager → New Hunt</strong></li><li><strong>Description</strong> : « Liste des processus PowerShell suspects »</li><li><strong>Expiry</strong> : 24 hours</li><li><strong>Condition</strong> : <code>OS == "windows"</code> (ou un label)</li><li><strong>Artifact Selection</strong> : choisir <code>Windows.System.Pslist</code></li><li><strong>Parameters</strong> : <code>ProcessRegex = powershell|cmd|wmic</code></li><li><strong>Resources</strong> : limite par défaut (10 minutes CPU, 100 Mo RAM)</li><li><strong>Review and launch</strong></li></ol>
+        <p>Le hunt démarre. Au fur et à mesure que les agents se connectent, ils exécutent la collecte et remontent les résultats.</p>
+        <h3>Consulter les résultats</h3>
+        <p><strong>Hunt Manager → Selectionne le hunt → Results</strong>. Tu vois un tableau agrégé de tous les clients, avec la commande PowerShell détectée.</p>
+        <h3>Avec l'API CLI</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>./velociraptor --config server.config.yaml \
+  hunts create \
+  --description "Pslist hunt" \
+  --artifact Windows.System.Pslist \
+  --condition 'OS == "windows"'</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>nomme tes hunts avec un identifiant de ticket (<code>INC-2026-0123 — Pslist</code>) pour pouvoir les retrouver après le post-mortem.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Artefacts intégrés : panorama</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Velociraptor fournit <strong>300+ artefacts</strong> prédéfinis, organisés par catégorie.</p>
+        <h3>Windows — exécution et persistance</h3>
+        <table><thead><tr><th>Artefact</th><th>Description</th></tr></thead><tbody><tr><td><code>Windows.System.Pslist</code></td><td>Liste des processus actifs</td></tr><tr><td><code>Windows.Forensics.Prefetch</code></td><td>Parse Prefetch .pf</td></tr><tr><td><code>Windows.Forensics.Amcache</code></td><td>Parse Amcache.hve</td></tr><tr><td><code>Windows.Forensics.RecentDocs</code></td><td>RecentDocs registre</td></tr><tr><td><code>Windows.Persistence.PermanentWMIEvents</code></td><td>Persistance WMI</td></tr><tr><td><code>Windows.Registry.NTUser</code></td><td>Clés Run/RunOnce par utilisateur</td></tr><tr><td><code>Windows.System.Services</code></td><td>Services Windows</td></tr><tr><td><code>Windows.System.TaskScheduler</code></td><td>Tâches planifiées</td></tr></tbody></table>
+        <h3>Windows — réseau et lateral movement</h3>
+        <table><thead><tr><th>Artefact</th><th>Description</th></tr></thead><tbody><tr><td><code>Windows.Network.Netstat</code></td><td>Connexions TCP/UDP actives</td></tr><tr><td><code>Windows.Forensics.RDPCache</code></td><td>Cache RDP (bitmaps reconstruits)</td></tr><tr><td><code>Windows.EventLogs.RDPAuth</code></td><td>Authentifications RDP via EVTX</td></tr><tr><td><code>Windows.Sysinternals.Autoruns</code></td><td>Wrapper Autoruns.exe</td></tr></tbody></table>
+        <h3>Windows — credentials et secrets</h3>
+        <table><thead><tr><th>Artefact</th><th>Description</th></tr></thead><tbody><tr><td><code>Windows.Credentials.NTUserCreds</code></td><td>Credentials sauvegardés</td></tr><tr><td><code>Windows.Forensics.Hashdump</code></td><td>Dump SAM offline</td></tr><tr><td><code>Windows.Forensics.Lsa</code></td><td>Secrets LSA</td></tr></tbody></table>
+        <h3>Cross-platform</h3>
+        <table><thead><tr><th>Artefact</th><th>Description</th></tr></thead><tbody><tr><td><code>Generic.Forensic.Yara.Glob</code></td><td>Scan YARA sur un pattern de fichiers</td></tr><tr><td><code>Generic.Forensic.SQLiteHunter</code></td><td>Recherche dans toutes les bases SQLite</td></tr><tr><td><code>Generic.Detection.SigmaRules</code></td><td>Chasse Sigma sur les EVTX</td></tr><tr><td><code>Generic.System.Crontab</code></td><td>Tâches cron (Linux/macOS)</td></tr></tbody></table>
+        <h3>Linux / macOS</h3>
+        <table><thead><tr><th>Artefact</th><th>Description</th></tr></thead><tbody><tr><td><code>Linux.System.Pslist</code></td><td>Processus Linux</td></tr><tr><td><code>Linux.Sys.BashShell</code></td><td>Historiques bash</td></tr><tr><td><code>MacOS.System.Pslist</code></td><td>Processus macOS</td></tr><tr><td><code>MacOS.System.Launchd</code></td><td>Launchd jobs</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>la page <strong>« View Artifacts »</strong> de la GUI permet de lire le code VQL de chaque artefact. C'est la <strong>meilleure école</strong> pour apprendre VQL.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Collecter avec KAPE via Velociraptor</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Velociraptor intègre KAPE via l'artefact <strong><code>Windows.KapeFiles.Targets</code></strong>.</p>
+        <h3>Configuration</h3>
+        <ol><li><strong>Hunt → New Hunt</strong></li><li><strong>Artifact</strong> : <code>Windows.KapeFiles.Targets</code></li><li><strong>Parameters</strong> :</li></ol>
+        <ul><li><code>Device</code>: <code>C:</code></li><li><code>KapeTargets</code> : <code>!SANS_Triage</code> (ou autre composite)</li><li><code>UseAutoAccessor</code> : <code>Y</code> (NTFS raw access pour fichiers verrouillés)</li><li><code>Output</code> : <code>vfs</code> (stocke dans le datastore Velociraptor)</li></ul>
+        <p>Lance le hunt. Les agents exécutent la collecte KAPE-style directement et remontent les fichiers via le canal gRPC chiffré.</p>
+        <h3>Avantages</h3>
+        <ul><li>Pas besoin de copier KAPE sur la cible (Velociraptor implémente nativement les Targets)</li><li>Les fichiers transitent chiffrés (TLS + mTLS) vers le serveur central</li><li>Centralisation immédiate (pas de partage SMB / clé USB à gérer)</li><li>Hash + provenance documentés automatiquement</li></ul>
+        <h3>Récupérer la collecte</h3>
+        <p>Dans la vue du client → <strong>Collected</strong> → ton hunt apparaît → <strong>Download zip</strong> te donne l'archive complète.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Mode triage offline (collector standalone)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Cas typique : tu dois faire le triage d'un poste <strong>isolé</strong> (sans accès au serveur Velociraptor) ou d'un poste où tu <strong>ne veux pas installer d'agent permanent</strong>.</p>
+        <h3>Générer un collecteur autonome</h3>
+        <p>Dans la GUI :</p>
+        <ol><li><strong>Server Artifacts → Server.Utils.CreateCollector</strong></li><li><strong>Parameters</strong> :</li></ol>
+        <ul><li><code>OS</code> : Windows</li><li><code>target</code> : <code>ZIP</code></li><li><code>target_args</code> : nom du fichier de sortie</li><li><code>Artifacts</code> : sélectionner les artefacts à collecter (Pslist, Prefetch, EvtxECmd, etc.)</li></ul>
+        <ol><li><strong>Launch</strong></li></ol>
+        <p>Velociraptor compile un <strong>exécutable autonome</strong> (<code>Collector_velociraptor.exe</code>, ~50 Mo) qui contient tous les artefacts demandés.</p>
+        <h3>Utiliser le collecteur</h3>
+        <p>Copie le binaire sur la machine cible (clé USB, partage). Lance-le en admin :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Collector_velociraptor.exe</code></pre></div>
+        <p>Il collecte tout, crée un ZIP local, et c'est fini. Tu récupères le ZIP et tu l'importes ensuite sur le serveur Velociraptor pour analyse.</p>
+        <h3>Variantes d'output</h3>
+        <ul><li><code>ZIP</code> : local</li><li><code>S3</code> : upload direct S3</li><li><code>Azure</code> : upload Azure Blob</li><li><code>SFTP</code> : envoi SFTP</li><li><code>GCS</code> : Google Cloud Storage</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>prépare en amont des collecteurs offline pré-configurés par scénario (<code>triage_workstation.exe</code>, <code>triage_server.exe</code>, <code>memory_capture.exe</code>) sur ta clé USB d'intervention.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Chasse Sigma et YARA à l'échelle</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Sigma : chasse dans les EVTX</h3>
+        <p>L'artefact <strong><code>Generic.Detection.SigmaRules</code></strong> permet d'évaluer des règles <strong>Sigma</strong> (le standard ouvert de détection) sur les journaux EVTX de tous les endpoints.</p>
+        <ol><li>Hunt → <code>Generic.Detection.SigmaRules</code></li><li>Paramètres :</li></ol>
+        <ul><li><code>SigmaRulePath</code> : URL ou contenu YAML des règles</li><li><code>EVTXGlob</code> : <code>C:\Windows\System32\winevt\Logs\*.evtx</code></li></ul>
+        <p>Velociraptor évalue les règles côté client (économise la bande passante) et remonte uniquement les <strong>hits</strong>.</p>
+        <p>Tu peux pointer vers le dépôt officiel SigmaHQ (~3000 règles maintenues par la communauté) ou tes propres règles.</p>
+        <h3>YARA : chasse sur les fichiers et la mémoire</h3>
+        <p>L'artefact <strong><code>Generic.Forensic.Yara.Glob</code></strong> scanne des fichiers selon un pattern avec des règles YARA.</p>
+        <ol><li>Hunt → <code>Generic.Forensic.Yara.Glob</code></li><li>Paramètres :</li></ol>
+        <ul><li><code>Glob</code> : ex. <code>C:\Users\**\AppData\Local\Temp\*.exe</code></li><li><code>YaraRule</code> : contenu YARA ou URL d'un fichier <code>.yar</code></li></ul>
+        <p>Pour scanner la <strong>mémoire d'un processus</strong> (détection Cobalt Strike, Meterpreter), utiliser <code>Windows.Detection.Yara.Process</code>.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>utiliser des packs YARA de référence (florian-roth/signature-base, Volexity, Mandiant) pour la chasse APT à l'échelle.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Notebooks et investigation interactive</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Velociraptor inclut des <strong>notebooks</strong> type Jupyter pour l'analyse interactive en VQL.</p>
+        <h3>Créer un notebook</h3>
+        <ol><li><strong>Notebooks → New Notebook</strong></li><li>Ajouter une cellule <strong>VQL</strong> :</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">sql</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>SELECT Name, Pid, CommandLine
+FROM pslist()
+WHERE CommandLine =~ "powershell"</code></pre></div>
+        <ol><li>Exécute. Résultats en tableau.</li></ol>
+        <h3>Cellules Markdown</h3>
+        <p>Intercaler des cellules Markdown pour documenter ton raisonnement, comme dans Jupyter.</p>
+        <h3>Cellules Python / shell</h3>
+        <p>Velociraptor 0.7+ supporte des cellules Python pour traitement avancé (pandas, etc.). Utile pour les graphiques complexes ou l'intégration avec d'autres APIs.</p>
+        <h3>Cas d'usage</h3>
+        <ul><li><strong>Post-incident</strong> : reconstituer l'attaque en interrogeant successivement les hunts</li><li><strong>Brouillon de nouvel artefact</strong> : développer du VQL en mode REPL avant de le coder en YAML</li><li><strong>Rapport interactif</strong> : produire un notebook commenté à remettre au client</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Forces de Velociraptor</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>✅ <strong>Open source Apache 2.0</strong> — auditable, modifiable, sans verrouillage.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : Windows, Linux, macOS sur le même agent.</p>
+        <p>✅ <strong>Échelle massive</strong> : éprouvé sur 100 000+ endpoints chez certains opérateurs.</p>
+        <p>✅ <strong>VQL puissant</strong> : SQL-like, accessible aux analystes qui connaissent SQL ; extensible avec plugins custom.</p>
+        <p>✅ <strong>300+ artefacts intégrés</strong> maintenus par la communauté et l'équipe Rapid7.</p>
+        <p>✅ <strong>Triage offline</strong> : collecteur standalone autonome (idéal pour les sites isolés).</p>
+        <p>✅ <strong>Notebooks</strong> : analyse interactive intégrée, documenter en même temps qu'on enquête.</p>
+        <p>✅ <strong>Intégration KAPE</strong> native : profite de tous les Targets KAPE depuis l'interface centralisée.</p>
+        <p>✅ <strong>Chasse Sigma / YARA</strong> à l'échelle : pas besoin d'un SIEM en plus.</p>
+        <p>✅ <strong>Quarantaine</strong> : isolation réseau d'un endpoint en un clic (Windows Firewall ou Sysmon).</p>
+        <p>✅ <strong>Communauté active</strong> : Discord, forum, vidéos de l'équipe (Mike Cohen, Kevin Stokes), formations Rapid7.</p>
+        <p>✅ <strong>Documentation excellente</strong> : <<a href="https://docs.velociraptor.app/" target="_blank" rel="noopener">https://docs.velociraptor.app/</a>> couvre tout.</p>
+        <p>✅ <strong>Pas de licence par endpoint</strong> : déploiement gratuit à volonté.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Courbe d'apprentissage VQL</strong> : familier pour qui connaît SQL, hostile pour les autres. Compter 2-4 semaines de pratique avant d'être autonome.</p>
+        <p>❌ <strong>Pas d'EDR temps réel</strong> : Velociraptor est un outil de <strong>collecte sur demande</strong>, pas un EDR continu (pas de blocking de processus, pas d'alertes temps réel sans monitoring artifact actif).</p>
+        <p>❌ <strong>Pas d'isolation totale</strong> : la quarantaine via firewall peut être contournée par un attaquant privilégié.</p>
+        <p>❌ <strong>Stockage côté serveur peut exploser</strong> : collectes massives = datastore gros. Prévoir 100 Go à 1 To selon le volume d'endpoints.</p>
+        <p>❌ <strong>Pas d'interface mobile</strong> : la GUI web n'est pas optimisée mobile (pas grave pour les analystes en SOC, gênant en déplacement).</p>
+        <p>❌ <strong>Pas d'auto-update</strong> des agents par défaut : il faut redéployer manuellement (ou via outil de déploiement) pour mettre à jour.</p>
+        <p>❌ <strong>EDR commerciaux peuvent l'alerter</strong> : sur certains EDR, Velociraptor est considéré suspect (collecte massive). Whitelister.</p>
+        <p>❌ <strong>Pas de SIEM intégré</strong> : pour corréler les collectes avec d'autres sources (firewall, AD), il faut exporter vers Splunk / Elastic.</p>
+        <p>❌ <strong>Configuration TLS épinglée</strong> : si tu perds les certificats du serveur, tu dois redéployer tous les agents (à protéger).</p>
+        <p>❌ <strong>Performance des hunts longs</strong> : un hunt complexe peut surcharger un agent (CPU 100 % pendant 10 min sur un poste user).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours déployer avec mTLS et certificat épinglé</strong> — ne jamais accepter une connexion d'un agent non autorisé.</p>
+        <p>🔹 <strong>Limiter les ressources des hunts</strong> : <code>CpuLimit</code>, <code>MaxBytes</code>, <code>Timeout</code> configurables. Sur un poste utilisateur, jamais > 30 % CPU.</p>
+        <p>🔹 <strong>Hash et conserver chaque collecte</strong> : Velociraptor le fait automatiquement, mais documenter dans le rapport DFIR.</p>
+        <p>🔹 <strong>Préparer des hunts standards</strong> par scénario (ransomware, exfiltration, lateral movement) avant l'incident — pas pendant.</p>
+        <p>🔹 <strong>Tester chaque artefact en VM</strong> avant de le lancer en production. Certains artefacts peuvent crasher des services (rare, mais possible).</p>
+        <p>🔹 <strong>Backup régulier du datastore</strong> : c'est ton coffre-fort de preuves. RPO < 24 h.</p>
+        <p>🔹 <strong>Audit des comptes admin</strong> Velociraptor — chaque action d'un analyste est tracée mais il faut surveiller.</p>
+        <p>🔹 <strong>Combiner avec une acquisition mémoire</strong> (Surge Collect, WinPmem, MAGNET RAM Capture) — Velociraptor a <code>Windows.Memory.Acquisition</code> mais limité.</p>
+        <p>🔹 <strong>Whitelister Velociraptor</strong> dans l'AV et l'EDR en amont du déploiement.</p>
+        <p>🔹 <strong>Documenter chaque hunt</strong> avec un identifiant de ticket et une description claire.</p>
+        <p>🔹 <strong>Apprendre VQL progressivement</strong> : commence par lire les artefacts intégrés, modifie-les, puis crée tes propres artefacts custom.</p>
+        <p>🔹 <strong>Ne pas remplacer l'EDR temps réel</strong> : Velociraptor est complémentaire d'un EDR commercial, pas un remplacement.</p>
+        <p>🔹 <strong>Tester la quarantaine</strong> sur une VM avant utilisation en production.</p>
+        <p>🔹 <strong>Programmer des hunts récurrents</strong> légers (par exemple Pslist + Persistence Run keys toutes les 6h) pour détection passive.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Documentation officielle</strong> : <<a href="https://docs.velociraptor.app/" target="_blank" rel="noopener">https://docs.velociraptor.app/</a>></li><li>📚 <strong>Dépôt GitHub</strong> : <<a href="https://github.com/Velocidex/velociraptor" target="_blank" rel="noopener">https://github.com/Velocidex/velociraptor</a>></li><li>📚 <strong>Releases</strong> : <<a href="https://github.com/Velocidex/velociraptor/releases" target="_blank" rel="noopener">https://github.com/Velocidex/velociraptor/releases</a>></li><li>📚 <strong>Artefacts intégrés</strong> : <<a href="https://docs.velociraptor.app/artifact_references/" target="_blank" rel="noopener">https://docs.velociraptor.app/artifact_references/</a>></li><li>📚 <strong>Knowledge Base</strong> : <<a href="https://docs.velociraptor.app/knowledge_base/" target="_blank" rel="noopener">https://docs.velociraptor.app/knowledge_base/</a>></li><li>🎓 <strong>Chaîne YouTube officielle</strong> (Mike Cohen) : <<a href="https://www.youtube.com/@velocidex" target="_blank" rel="noopener">https://www.youtube.com/@velocidex</a>></li><li>🎓 <strong>Rapid7 Velociraptor courses</strong> : formation officielle (payante)</li><li>🎓 <strong>SANS FOR508 / FOR509</strong> : utilisent Velociraptor en lab</li><li>💬 <strong>Discord Velocidex</strong> : invitation depuis docs.velociraptor.app</li><li>💬 <strong>Forum Discord Rapid7</strong> : section dédiée Velociraptor</li><li>🐛 <strong>Issues GitHub</strong> : <<a href="https://github.com/Velocidex/velociraptor/issues" target="_blank" rel="noopener">https://github.com/Velocidex/velociraptor/issues</a>></li><li>📖 <strong>Blog Rapid7 — Velociraptor tag</strong> : tutoriels et cas d'usage récents</li><li>🎯 <strong>DFIR Workshop labs</strong> : <<a href="https://github.com/Velocidex/velociraptor-docs" target="_blank" rel="noopener">https://github.com/Velocidex/velociraptor-docs</a>> (exercices et VM)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Velociraptor est devenu le <strong>standard open source du DFIR moderne</strong>. Il transforme un analyste isolé en force de frappe capable d'agir simultanément sur des milliers d'endpoints. Sa philosophie open source autohébergeable en fait l'alternative crédible aux EDR commerciaux pour les organisations qui ne veulent pas dépendre d'un fournisseur unique.</p>
+        <p>La courbe d'apprentissage VQL est l'unique obstacle réel. Une fois passé, l'outil débloque des capacités qui prenaient autrefois des jours d'effort manuel.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Monter un lab maison</strong> : VM Debian pour le serveur, 2-3 VM Windows comme endpoints.</li><li><strong>Faire passer les exercices</strong> de <<a href="https://github.com/Velocidex/velociraptor-docs" target="_blank" rel="noopener">https://github.com/Velocidex/velociraptor-docs</a>>.</li><li><strong>Lire les artefacts intégrés</strong> un par un pour apprendre VQL en contexte.</li><li><strong>Construire ses propres artefacts</strong> custom pour les besoins spécifiques de son organisation.</li><li><strong>Intégrer dans le runbook IR</strong> : Velociraptor devient une étape <strong>standard</strong> des interventions, pas un outil exceptionnel.</li></ol>
+        <p>Bonnes chasses ! 🦖</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Velociraptor — DFIR endpoint à distance maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. VQL est <strong>SQL-like</strong> avec des plugins forensiques : <code>SELECT ... FROM pslist() WHERE ...</code>. Familier pour qui connaît SQL, courbe d'apprentissage 2-4 semaines pour les autres."
+             data-feedback-ko="✗ La bonne réponse : SQL-like (Velociraptor Query Language). <code>SELECT Pid, Name FROM pslist() WHERE Name =~ &quot;powershell&quot;</code>.">
+          <div class="tuto-quiz-question-text">1. Velociraptor utilise un langage de requête appelé <strong>VQL</strong>. À quoi ressemble-t-il le plus ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">JavaScript</button>
+            <button class="tuto-quiz-option" type="button">SQL (avec des plugins forensiques)</button>
+            <button class="tuto-quiz-option" type="button">PowerShell</button>
+            <button class="tuto-quiz-option" type="button">Bash</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Collection = exécution d'un artefact sur <strong>1 client</strong>. Hunt = exécution sur <strong>N clients</strong> qui satisfont une condition (label, OS, version, etc.)."
+             data-feedback-ko="✗ La bonne réponse : collection cible 1 client, hunt cible plusieurs clients via une condition. C'est la primitive de scalabilité de Velociraptor.">
+          <div class="tuto-quiz-question-text">2. Quelle est la différence entre une <strong>collection</strong> et un <strong>hunt</strong> dans Velociraptor ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Aucune, ce sont des synonymes</button>
+            <button class="tuto-quiz-option" type="button">Une collection cible un client unique, un hunt cible plusieurs clients selon une condition (label, OS, etc.)</button>
+            <button class="tuto-quiz-option" type="button">Un hunt est local, une collection est distante</button>
+            <button class="tuto-quiz-option" type="button">Une collection est limitée à 100 Mo, un hunt peut être plus volumineux</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>Windows.KapeFiles.Targets</code> implémente nativement les Targets KAPE et fait remonter les fichiers via gRPC mTLS — pas besoin de partage SMB ou clé USB."
+             data-feedback-ko="✗ La bonne réponse : <code>Windows.KapeFiles.Targets</code>. C'est l'artefact qui implémente les Targets KAPE côté agent et fait remonter la collecte de manière chiffrée.">
+          <div class="tuto-quiz-question-text">3. Quel artefact Velociraptor intègre directement la <strong>collecte KAPE-style</strong> via le canal gRPC chiffré ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>Windows.System.Pslist</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Generic.Forensic.SQLiteHunter</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Windows.KapeFiles.Targets</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Server.Utils.KAPE</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>Server.Utils.CreateCollector</code> compile un exécutable autonome (~50 Mo, Windows .exe) avec les artefacts embarqués. À lancer sur le poste isolé, produit un ZIP local importable plus tard."
+             data-feedback-ko="✗ La bonne réponse : générer un collecteur offline standalone via <code>Server.Utils.CreateCollector</code>. C'est un binaire autonome qui collecte localement, sans serveur.">
+          <div class="tuto-quiz-question-text">4. Tu dois faire le triage d'un poste <strong>isolé</strong> (sans accès au serveur Velociraptor). Quelle solution ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Installer un mini-serveur Velociraptor sur le poste</button>
+            <button class="tuto-quiz-option" type="button">Générer un <strong>collecteur offline standalone</strong> via <code>Server.Utils.CreateCollector</code></button>
+            <button class="tuto-quiz-option" type="button">Utiliser Wireshark à la place</button>
+            <button class="tuto-quiz-option" type="button">Velociraptor ne marche pas sans serveur, abandon</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="0"
+             data-feedback-ok="✓ Exact. <code>Generic.Detection.SigmaRules</code> évalue les règles Sigma côté client (économise la bande passante) et ne remonte que les hits. Combinable avec le dépôt SigmaHQ (~3000 règles)."
+             data-feedback-ko="✗ La bonne réponse : <code>Generic.Detection.SigmaRules</code>. Chasse Sigma à l'échelle, évaluation côté agent, remontée des hits uniquement.">
+          <div class="tuto-quiz-question-text">5. Pour chasser des menaces avec <strong>Sigma à l'échelle</strong> sur les EVTX de centaines d'endpoints, quel artefact utiliser ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>Generic.Detection.SigmaRules</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Windows.EventLogs.RDPAuth</code></button>
+            <button class="tuto-quiz-option" type="button"><code>Server.Hunts.Sigma</code></button>
+            <button class="tuto-quiz-option" type="button">Sigma n'est pas supporté nativement par Velociraptor</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/velociraptor.html" style="color:var(--cyan)">📚 Consulter la fiche Velociraptor — DFIR endpoint à distance</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Velociraptor — DFIR endpoint à distance v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

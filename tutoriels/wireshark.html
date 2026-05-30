@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Wireshark — Analyse réseau et PCAP — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Wireshark — Analyse réseau et PCAP : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">WIRESHARK — ANALYSE RÉSEAU ET PCAP — PAS À PAS</span>
+  <a href="../fiches/wireshark.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 19 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="wireshark">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cas d'usage typiques en DFIR</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Wireshark vs tshark vs dumpcap</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Prérequis système</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Installation sous Windows</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Installation sous Linux</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation sous macOS</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Capturer du trafic en direct</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Ouvrir et naviguer dans un PCAP</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Les filtres : capture vs display</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Suivre un flux TCP / UDP / HTTP</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Statistiques essentielles</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Extraire des fichiers transmis (HTT</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Décrypter du TLS avec une clé de se</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. tshark : Wireshark en ligne de comm</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Ressources utiles</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Wireshark — Analyse réseau et PCAP</span>
+        </div>
+
+        <h1>🦈 Wireshark — Analyse réseau et PCAP</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer Wireshark</strong>, capturer du trafic avec <code>dumpcap</code>, <strong>filtrer par adresse, port et protocole</strong>, suivre un flux TCP/HTTP, extraire des fichiers transmis (HTTP/SMB), <strong>décrypter du TLS</strong> avec une clé de session, et automatiser des analyses avec <code>tshark</code> en ligne de commande.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~50 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows / Linux / macOS</span>
+          <span class="tuto-meta-badge "><span class="icon">📡</span> Network forensics</span>
+          <span class="tuto-meta-badge "><span class="icon">📦</span> PCAP / PCAPNG</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de Wireshark</div>
+        <div>Wireshark est <strong>l'outil de référence</strong> pour la capture et l'analyse de trafic réseau. Open source, multi-plateforme, développé depuis 1998 (initialement <em>Ethereal</em>). 3000+ dissecteurs de protocoles. Standard de facto pour la <strong>network forensics</strong>, le débogage réseau et l'investigation d'incidents.<br><br>📦 <a href="https://www.wireshark.org/" target="_blank" rel="noopener">www.wireshark.org</a> · Licence GPL v2</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Wireshark capture et <strong>dissèque les paquets réseau</strong> circulant sur une interface (Ethernet, Wi-Fi, USB, loopback, Bluetooth). Il transforme des octets bruts en information lisible : protocoles décodés, champs nommés, conversations reconstruites.</p>
+        <p>L'outil repose sur quatre composants :</p>
+        <ul><li><strong>dumpcap</strong> : démon de capture bas niveau (le seul à avoir les privilèges réseau)</li><li><strong>tshark</strong> : moteur d'analyse en ligne de commande</li><li><strong>wireshark</strong> : interface graphique Qt</li><li><strong>3000+ dissecteurs</strong> : un par protocole connu (HTTP, DNS, TLS, SMB, Kerberos, mDNS, etc.)</li></ul>
+        <p><strong>Formats supportés</strong> :</p>
+        <p><code>pcap</code> (libpcap classique), <code>pcapng</code> (format moderne, métadonnées riches), <code>cap</code> (Windows), <code>snoop</code>, <code>etl</code> (ETW Windows), et <strong>40+ autres</strong> via lecture seule.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cas d'usage typiques en DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Analyse post-mortem d'un PCAP</strong> capturé par un IDS, SOC ou firewall lors d'un incident.</li><li><strong>Identification de communications C2</strong> : beaconing périodique, DGA, exfiltration via DNS.</li><li><strong>Reconstruction de transferts de fichiers</strong> sur HTTP, SMB, FTP, ou tunnelés.</li><li><strong>Investigation de phishing</strong> : extraire l'URL exacte cliquée, le payload téléchargé.</li><li><strong>Analyse d'attaques réseau</strong> : ARP poisoning, Kerberos roasting, port scanning, SMB relay.</li><li><strong>Décryptage TLS</strong> quand on dispose de la clé privée ou des <code>SSLKEYLOGFILE</code>.</li><li><strong>Triage initial</strong> d'un environnement compromis : identifier les hôtes parlant à des IP suspectes.</li><li><strong>Confirmation d'IoC réseau</strong> fournis par un threat intelligence feed.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Wireshark vs tshark vs dumpcap</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Outil</th><th>Rôle</th><th>Usage typique</th></tr></thead><tbody><tr><td><strong>dumpcap</strong></td><td>Capture bas niveau, écrit dans un fichier</td><td>Capture longue durée sans charge</td></tr><tr><td><strong>tshark</strong></td><td>CLI : capture + dissection + filtrage</td><td>Scripts, pipelines, post-traitement automatisé</td></tr><tr><td><strong>wireshark</strong></td><td>GUI : analyse interactive, statistiques visuelles</td><td>Investigation humaine, suivi de flux, IO graphs</td></tr></tbody></table>
+        <p><strong>Règle d'or DFIR</strong> : capturer avec <strong>dumpcap ou tshark</strong>, analyser avec <strong>wireshark</strong>. La GUI consomme énormément de mémoire sur de longues captures et peut perdre des paquets.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Prérequis système</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Matériel recommandé</h3>
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th></tr></thead><tbody><tr><td>RAM</td><td>4 Go</td><td>16 Go (PCAP > 1 Go)</td></tr><tr><td>Stockage</td><td>1 Go libre</td><td>SSD pour PCAP volumineux</td></tr><tr><td>Réseau</td><td>Toute interface IP</td><td>Carte avec mode promiscuous</td></tr><tr><td>OS</td><td>Windows 10+, Linux 64 bits, macOS 11+</td><td>Identique</td></tr></tbody></table>
+        <h3>Connaissances préalables</h3>
+        <ul><li>Bases TCP/IP (encapsulation, ports, handshake 3-way)</li><li>Notions HTTP, DNS, TLS</li><li>Modèle OSI (couches L2/L3/L4/L7)</li></ul>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Sur Windows, l'installation embarque <strong>Npcap</strong> (driver de capture). Sur Linux, c'est <strong>libpcap</strong> qui est utilisé. Sous macOS, BPF intégré au noyau.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Méthode standard : installateur officiel</h3>
+        <ol><li>Va sur <<a href="https://www.wireshark.org/download.html" target="_blank" rel="noopener">https://www.wireshark.org/download.html</a>></li><li>Télécharge <strong>Wireshark-x.y.z-x64.exe</strong>.</li><li>Lance l'installateur en tant qu'administrateur.</li><li>Accepte l'installation de <strong>Npcap</strong> quand demandée — c'est le driver de capture.</li><li><strong>Coche</strong> « Install Npcap in WinPcap API-compatible Mode » si tu utilises d'anciens outils.</li><li>Termine l'installation.</li></ol>
+        <h3>Vérification</h3>
+        <p>Ouvre une invite de commande :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bat</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>wireshark -v</code></pre></div>
+        <p>Tu dois voir : <code>Wireshark 4.x.x (v4.x.x-x)</code> suivi des composants et de la version de Npcap.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur Windows, ajoute l'utilisateur au groupe <strong>Network Capture Users</strong> créé par Npcap pour lancer Wireshark sans droits admin.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Installation sous Linux</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Ubuntu / Debian</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo apt update
+sudo apt install -y wireshark tshark</code></pre></div>
+        <p>L'installateur te demande <strong>« Should non-superusers be able to capture packets? »</strong> — réponds <strong>Yes</strong> (cela installe <code>dumpcap</code> avec les capabilities adéquates).</p>
+        <p>Puis ajoute ton utilisateur au groupe :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo usermod -aG wireshark $USER
+newgrp wireshark</code></pre></div>
+        <p>Vérifie :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>wireshark -v
+tshark -v</code></pre></div>
+        <h3>Fedora / RHEL / Rocky</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo dnf install -y wireshark wireshark-cli
+sudo usermod -aG wireshark $USER</code></pre></div>
+        <h3>Arch</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo pacman -S wireshark-qt wireshark-cli
+sudo usermod -aG wireshark $USER</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Si Wireshark refuse de lister les interfaces sans <code>sudo</code>, c'est que les <strong>capabilities</strong> ne sont pas posées sur <code>dumpcap</code>. Corriger : <code>sudo setcap cap_net_raw,cap_net_admin=eip $(which dumpcap)</code>.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation sous macOS</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Via Homebrew (recommandé)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>brew install --cask wireshark
+brew install wireshark</code></pre></div>
+        <p>Le cask installe l'application graphique. Le formula CLI installe <code>tshark</code> et les outils en ligne de commande.</p>
+        <h3>Vérification</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>wireshark -v
+tshark -v</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Au premier lancement, macOS demande d'installer <strong>ChmodBPF</strong> pour donner accès aux devices réseau. Accepte, sinon les interfaces n'apparaîtront pas.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Capturer du trafic en direct</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Avec Wireshark (GUI)</h3>
+        <ol><li>Lance Wireshark.</li><li>Sélectionne l'interface qui t'intéresse (eth0, wlan0, en0…).</li><li>Optionnel : applique un <strong>filtre de capture</strong> (cf. section 10).</li><li>Clique sur le bouton bleu d'aileron de requin pour démarrer.</li><li>Clique sur le carré rouge pour arrêter.</li><li><strong>Fichier → Enregistrer sous</strong> pour conserver la capture.</li></ol>
+        <h3>Avec dumpcap (recommandé en DFIR)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lister les interfaces
+dumpcap -D
+
+# Capturer sur eth0, rotation toutes les 1h ou 500 Mo, jusqu'à 24 fichiers
+sudo dumpcap -i eth0 -b duration:3600 -b filesize:500000 -b files:24 -w /case/capture.pcapng</code></pre></div>
+        <p>Cette commande crée un anneau circulaire : 24 fichiers max, rotation chaque heure ou chaque 500 Mo, le plus ancien remplacé.</p>
+        <h3>Avec tshark</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo tshark -i eth0 -w /case/capture.pcapng -F pcapng -P</code></pre></div>
+        <p><code>-P</code> affiche les paquets à l'écran en plus de les enregistrer.</p>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>capture toujours dans un fichier <strong>pcapng</strong> (format moderne avec timestamps précis et métadonnées), jamais dans le buffer mémoire de la GUI seule. Hash le fichier (<code>sha256sum capture.pcapng</code>) <strong>dès qu'il est clos</strong>.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Ouvrir et naviguer dans un PCAP</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Ouvrir</h3>
+        <p><code>Fichier → Ouvrir → capture.pcapng</code>. Wireshark charge tout en mémoire — sur un PCAP > 500 Mo, prévois plusieurs Go de RAM.</p>
+        <h3>Vue principale</h3>
+        <p>L'interface est divisée en trois zones :</p>
+        <ol><li><strong>Liste des paquets</strong> (haut) : un paquet par ligne, colonnes No / Time / Source / Destination / Protocol / Length / Info.</li><li><strong>Détail du paquet</strong> (milieu) : arborescence des couches (Ethernet → IP → TCP → HTTP, par exemple).</li><li><strong>Octets bruts</strong> (bas) : hex + ASCII du paquet sélectionné.</li></ol>
+        <h3>Navigation utile</h3>
+        <ul><li>Touches <code>Ctrl+G</code> : aller à un numéro de paquet précis.</li><li>Touches <code>Ctrl+F</code> : rechercher dans les paquets (texte, hex, regex).</li><li>Clic droit sur un champ → <strong>Apply as Filter → Selected</strong> : génère un filtre display sur ce champ.</li><li>Clic droit sur un paquet → <strong>Follow → TCP Stream</strong> : reconstitue la conversation TCP.</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>crée un profil dédié dans <code>Edit → Configuration Profiles → New</code>, ajuste les colonnes (ajoute <code>tcp.stream</code>, <code>http.host</code>, <code>dns.qry.name</code>). Sauvegarde et réutilise sur chaque cas.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Les filtres : capture vs display</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Wireshark a <strong>deux langages de filtres bien distincts</strong>.</p>
+        <h3>Filtre de capture (BPF, à la capture)</h3>
+        <p>Plus restrictif, syntaxe BSD Packet Filter. <strong>Réduit ce qui est écrit sur disque</strong>, à appliquer avant de capturer.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>host 192.168.1.5
+port 443
+tcp port 80 or tcp port 443
+not arp and not stp
+host 10.0.0.1 and port 53</code></pre></div>
+        <h3>Filtre d'affichage (display, après capture)</h3>
+        <p>Beaucoup plus expressif. <strong>N'affecte que l'affichage</strong>, le PCAP reste complet. Syntaxe propre à Wireshark.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ip.addr == 192.168.1.5
+tcp.port == 443
+http.request.method == "POST"
+dns.qry.name contains "evil.com"
+tcp.flags.syn == 1 and tcp.flags.ack == 0
+http.host == "phishing-domain.example"
+tcp.analysis.retransmission
+frame.time &gt;= "2026-01-15 14:00:00"</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Wireshark colorie en vert un filtre display valide, en rose un filtre invalide. Et il y a l'auto-complétion sur chaque champ. Profite-en pour explorer.</div></div>
+        <h3>Filtres DFIR essentiels</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Trafic vers une IP suspecte
+ip.addr == 185.142.236.123
+
+# Requêtes DNS pour des domaines longs (potentiel DGA)
+dns.qry.name.len &gt; 30
+
+# Requêtes HTTP vers User-Agent suspects
+http.user_agent contains "powershell"
+
+# Authentification Kerberos avec ASREP roasting potentiel
+kerberos.req_type == 0xa and kerberos.padata == 0
+
+# Transferts SMB volumineux
+smb2.cmd == 9 and frame.len &gt; 50000</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Suivre un flux TCP / UDP / HTTP</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'une des fonctions les plus puissantes : reconstituer la conversation complète.</p>
+        <h3>Suivre un flux TCP</h3>
+        <ol><li>Clic droit sur n'importe quel paquet TCP de la conversation.</li><li><strong>Follow → TCP Stream</strong>.</li><li>Une fenêtre s'ouvre avec <strong>client en rouge</strong> et <strong>serveur en bleu</strong>, dans l'ordre chronologique.</li></ol>
+        <p>Format possible : ASCII, Hex Dump, C Arrays, YAML, Raw. Pour un transfert binaire, choisis <strong>Raw</strong> et <strong>Save As</strong> pour récupérer le fichier transmis.</p>
+        <h3>Suivre un flux HTTP</h3>
+        <p>Idem mais clic droit → <strong>Follow → HTTP Stream</strong>. Les en-têtes et le corps de chaque requête/réponse apparaissent enchaînés.</p>
+        <h3>Suivre une conversation UDP</h3>
+        <p>Clic droit → <strong>Follow → UDP Stream</strong>. Utile pour DNS, DHCP, VoIP.</p>
+        <h3>En tshark</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -z follow,tcp,ascii,4</code></pre></div>
+        <p>Le <code>4</code> est l'index du flux. Pour lister tous les flux : <code>tshark -r capture.pcapng -q -z conv,tcp</code>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Statistiques essentielles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Conversations</h3>
+        <p><code>Statistics → Conversations</code> : tableau de toutes les paires source/destination avec volumes en paquets et octets. Tri par octets décroissants pour identifier les <strong>gros transferts suspects</strong>.</p>
+        <h3>Endpoints</h3>
+        <p><code>Statistics → Endpoints</code> : volume par hôte unique. Cocher <strong>« Limit to display filter »</strong> pour filtrer.</p>
+        <h3>Protocol Hierarchy</h3>
+        <p><code>Statistics → Protocol Hierarchy</code> : répartition par protocole. Si tu vois 80 % de <strong>TLS sur un port non standard</strong> ou du <strong>DNS sur le port 80</strong>, c'est suspect.</p>
+        <h3>I/O Graph</h3>
+        <p><code>Statistics → I/O Graph</code> : volumes au cours du temps. Permet de repérer visuellement un <strong>beaconing C2</strong> (pics réguliers) ou une <strong>exfiltration en bloc</strong>.</p>
+        <h3>DNS analysis</h3>
+        <p><code>Statistics → DNS</code> : toutes les requêtes DNS, leur fréquence, leurs réponses. Repérer les <strong>NXDOMAIN en série</strong> (typique DGA).</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur un PCAP d'incident, commence systématiquement par <strong>Conversations</strong> (sort par octets), puis <strong>Protocol Hierarchy</strong>, puis <strong>DNS analysis</strong>. En 5 minutes tu as souvent l'angle d'attaque.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Extraire des fichiers transmis (HTTP, SMB, FTP)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>HTTP</h3>
+        <p><code>Fichier → Exporter les objets → HTTP</code>. Wireshark liste tous les objets HTTP avec leur taille, hostname, content-type. Sélectionne et <strong>Save</strong> ou <strong>Save All</strong> pour tout extraire dans un dossier.</p>
+        <h3>SMB</h3>
+        <p><code>Fichier → Exporter les objets → SMB</code>. Idem pour les fichiers partagés via SMB1/2/3 (lecture, écriture, copie).</p>
+        <h3>DICOM, TFTP, IMF (email)</h3>
+        <p>Mêmes principes via le menu Export Objects.</p>
+        <h3>Avec tshark</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng --export-objects http,./extracted_http</code></pre></div>
+        <p>Crée un dossier <code>extracted_http/</code> avec tous les fichiers HTTP transmis.</p>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>les fichiers extraits peuvent contenir du malware. Analyse-les dans un environnement isolé (sandbox, VM), <strong>jamais directement</strong> sur ton poste d'analyse.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Décrypter du TLS avec une clé de session</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le trafic TLS est chiffré, mais Wireshark peut le déchiffrer dans deux cas :</p>
+        <h3>Cas 1 — Tu as les clés de session (SSLKEYLOGFILE)</h3>
+        <p>Si l'application cliente (navigateur, curl, malware analysé) a écrit ses clés de session dans un fichier (variable d'environnement <code>SSLKEYLOGFILE</code>), Wireshark peut décrypter :</p>
+        <ol><li><code>Edit → Preferences → Protocols → TLS</code>.</li><li><strong>(Pre)-Master-Secret log filename</strong> : pointer vers le fichier <code>sslkeys.log</code>.</li><li>Le trafic TLS sera décrypté automatiquement.</li></ol>
+        <p>Pour générer ce fichier pendant l'exécution d'un malware en sandbox :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>export SSLKEYLOGFILE=/tmp/sslkeys.log
+# Le navigateur ou curl écrira les clés ici</code></pre></div>
+        <h3>Cas 2 — Tu as la clé privée RSA du serveur</h3>
+        <p>Seulement si le serveur utilise un échange de clés RSA (rare aujourd'hui, la plupart utilisent ECDHE qui offre la <em>forward secrecy</em>).</p>
+        <ol><li><code>Edit → Preferences → Protocols → TLS</code>.</li><li><strong>RSA keys list → Edit → New</strong> : ajouter IP, port, protocole, chemin vers la clé.</li></ol>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>pour analyser un malware qui parle en TLS, lance-le dans une VM isolée avec <code>SSLKEYLOGFILE</code> défini, capture le trafic, puis charge la clé dans Wireshark pour voir le contenu en clair des communications C2.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> tshark : Wireshark en ligne de commande</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Lire un PCAP en CLI</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng</code></pre></div>
+        <h3>Filtrer en CLI (display filter)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -Y "http.request.method == GET"</code></pre></div>
+        <h3>Extraire des champs en CSV</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -T fields \
+  -e frame.time \
+  -e ip.src \
+  -e ip.dst \
+  -e http.host \
+  -e http.request.uri \
+  -E header=y -E separator=, &gt; requests.csv</code></pre></div>
+        <p>Très puissant pour pipeliner vers <code>awk</code>, <code>jq</code>, ou Splunk.</p>
+        <h3>Compter les requêtes DNS uniques</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -Y "dns" -T fields -e dns.qry.name | sort -u | wc -l</code></pre></div>
+        <h3>Top 10 des hôtes contactés</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -q -z hosts | head -20</code></pre></div>
+        <h3>Décoder un protocole non standard</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tshark -r capture.pcapng -d tcp.port==8443,ssl -Y "ssl.handshake.type == 1"</code></pre></div>
+        <p>Force le décodage du port 8443 en TLS et filtre les Client Hello.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>tshark + <code>jq</code> est imbattable pour automatiser. Exemple : extraire tous les User-Agent uniques d'une capture HTTP :  ``<code>bash tshark -r capture.pcapng -Y "http.user_agent" -T fields -e http.user_agent | sort -u </code>``</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Capturer dans un fichier dès le départ</strong> (jamais en buffer GUI). Privilégier <strong>pcapng</strong> avec timestamps haute résolution.</p>
+        <p>🔹 <strong>Hash immédiatement</strong> le fichier PCAP après clôture (<code>sha256sum</code>) et documenter dans la chaîne de preuve.</p>
+        <p>🔹 <strong>Capture rotative</strong> sur les longues durées (<code>dumpcap -b ...</code>) pour éviter un fichier de 50 Go ingérable.</p>
+        <p>🔹 <strong>Ne jamais ouvrir un PCAP suspect directement dans Wireshark</strong> sans précautions : certains exploits ciblent les dissecteurs eux-mêmes (CVE historiques). Utiliser tshark en CLI ou Wireshark dans une VM isolée.</p>
+        <p>🔹 <strong>Préférer un filtre de capture</strong> quand on sait ce qu'on cherche (réduit la taille du fichier et la surface d'attaque).</p>
+        <p>🔹 <strong>Conserver le PCAP original intact</strong>, travailler sur des copies filtrées (<code>tshark -r orig.pcapng -w filtered.pcapng -Y "ip.addr == 10.1.1.5"</code>).</p>
+        <p>🔹 <strong>Documenter les filtres utilisés</strong> dans le rapport, pour qu'un autre analyste puisse reproduire ton analyse.</p>
+        <p>🔹 <strong>Croiser avec les logs</strong> (firewall, proxy, EDR) pour valider les hypothèses tirées du PCAP.</p>
+        <p>🔹 <strong>Apprendre la syntaxe BPF et display</strong> progressivement — un cheat sheet imprimé près du clavier accélère énormément.</p>
+        <p>🔹 <strong>Désactiver la résolution DNS automatique</strong> (<code>View → Name Resolution → décoche Resolve Network Addresses</code>) lors de l'analyse de PCAP suspect : éviter que ton poste ne contacte des serveurs DNS douteux.</p>
+        <p>🔹 <strong>Profils par cas</strong> : un profil Wireshark par investigation, avec ses colonnes, filtres et règles de coloration.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Site officiel</strong> : <<a href="https://www.wireshark.org/" target="_blank" rel="noopener">https://www.wireshark.org/</a>></li><li>📚 <strong>Manuel utilisateur</strong> : <<a href="https://www.wireshark.org/docs/wsug_html_chunked/" target="_blank" rel="noopener">https://www.wireshark.org/docs/wsug_html_chunked/</a>></li><li>📚 <strong>Wiki Wireshark (énorme)</strong> : <<a href="https://wiki.wireshark.org/" target="_blank" rel="noopener">https://wiki.wireshark.org/</a>></li><li>📚 <strong>Display filter reference</strong> : <<a href="https://www.wireshark.org/docs/dfref/" target="_blank" rel="noopener">https://www.wireshark.org/docs/dfref/</a>></li><li>📚 <strong>tshark man page</strong> : <<a href="https://www.wireshark.org/docs/man-pages/tshark.html" target="_blank" rel="noopener">https://www.wireshark.org/docs/man-pages/tshark.html</a>></li><li>🎓 <strong>SANS SEC503 « Intrusion Detection In-Depth »</strong> : référence de la formation Wireshark/DFIR</li><li>🎓 **Chris Sanders — *Practical Packet Analysis*** : le livre de référence (3e édition, No Starch Press)</li><li>🎓 <strong>PacketTotal</strong> : analyser un PCAP en ligne <<a href="https://packettotal.com/" target="_blank" rel="noopener">https://packettotal.com/</a>></li><li>🐛 <strong>Bug tracker</strong> : <<a href="https://gitlab.com/wireshark/wireshark/-/issues" target="_blank" rel="noopener">https://gitlab.com/wireshark/wireshark/-/issues</a>></li><li>💬 <strong>Q&A</strong> : <<a href="https://ask.wireshark.org/" target="_blank" rel="noopener">https://ask.wireshark.org/</a>></li><li>📦 <strong>Captures publiques d'entraînement</strong> : <<a href="https://www.malware-traffic-analysis.net/" target="_blank" rel="noopener">https://www.malware-traffic-analysis.net/</a>> (Brad Duncan, exercices PCAP réels)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Wireshark est un <strong>outil incontournable</strong> du DFIR : aucune analyse d'incident impliquant le réseau ne se passe vraiment sans lui. Sa courbe d'apprentissage est exigeante mais payante — investir une dizaine d'heures dans la maîtrise des filtres et des statistiques transforme un analyste.</p>
+        <p>Pour aller plus loin :</p>
+        <ol><li>Pratiquer sur les exercices PCAP de <strong>malware-traffic-analysis.net</strong> (un par semaine pendant trois mois).</li><li>Lire <strong>Practical Packet Analysis</strong> de Chris Sanders.</li><li>Construire son propre <strong>profil DFIR</strong> avec colonnes, filtres et règles de coloration personnalisés.</li><li>Automatiser les analyses récurrentes en <strong>tshark + scripts shell</strong>.</li></ol>
+        <p>Bonnes captures ! 🦈</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Wireshark — Analyse réseau et PCAP maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. BPF (capture) écrit moins de paquets sur disque (syntaxe BSD restrictive). Display filter (Wireshark) ne masque que l'affichage, le PCAP reste complet."
+             data-feedback-ko="✗ La bonne réponse : le filtre de capture (BPF) restreint l'écriture disque ; le filtre d'affichage ne fait que masquer dans l'interface. Les deux syntaxes sont distinctes.">
+          <div class="tuto-quiz-question-text">1. Quelle est la <strong>différence essentielle</strong> entre un filtre de capture (BPF) et un filtre d'affichage ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Le filtre de capture est plus expressif que le filtre d'affichage</button>
+            <button class="tuto-quiz-option" type="button">Le filtre de capture restreint ce qui est <strong>écrit sur disque</strong> ; le filtre d'affichage n'affecte que <strong>l'affichage</strong> du PCAP déjà capturé</button>
+            <button class="tuto-quiz-option" type="button">Les deux ont la même syntaxe mais s'appliquent à des moments différents</button>
+            <button class="tuto-quiz-option" type="button">Le filtre d'affichage modifie le PCAP, le filtre de capture le préserve</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>File → Export Objects → HTTP</code> liste tous les objets HTTP transmis avec leur taille et content-type, et permet de les sauvegarder en fichiers individuels."
+             data-feedback-ko="✗ La bonne réponse : <code>File → Export Objects → HTTP</code>. Wireshark sait reconstruire les objets HTTP/SMB/FTP transmis et les exporter.">
+          <div class="tuto-quiz-question-text">2. Tu suspectes une <em>exfiltration HTTP</em> et veux récupérer le fichier transmis dans un PCAP. Quel menu utilises-tu ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Statistics → Conversations</button>
+            <button class="tuto-quiz-option" type="button">Analyze → Decode As</button>
+            <button class="tuto-quiz-option" type="button">File → Export Objects → HTTP</button>
+            <button class="tuto-quiz-option" type="button">Edit → Find Packet</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="0"
+             data-feedback-ok="✓ Exact. <code>tshark -Y &quot;dns&quot; -T fields -e dns.qry.name | sort -u</code> est l'idiome standard. Combinable avec <code>awk/jq</code> pour pipeliner."
+             data-feedback-ko="✗ La bonne réponse utilise <code>-Y</code> (display filter), <code>-T fields</code> et <code>-e dns.qry.name</code> piped vers <code>sort -u</code>.">
+          <div class="tuto-quiz-question-text">3. Quelle commande <code>tshark</code> extrait les noms de domaines DNS uniques d'un PCAP ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">tshark -r capture.pcapng -Y "dns" -T fields -e dns.qry.name | sort -u</button>
+            <button class="tuto-quiz-option" type="button">tshark --extract-dns capture.pcapng > domains.txt</button>
+            <button class="tuto-quiz-option" type="button">tshark -r capture.pcapng --decode dns</button>
+            <button class="tuto-quiz-option" type="button">tshark -r capture.pcapng -z dns,unique</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. Avec ECDHE (forward secrecy), la clé RSA du serveur ne suffit plus. Il faut le fichier <code>SSLKEYLOGFILE</code> que client/curl/navigateur peuvent écrire au moment de la session."
+             data-feedback-ko="✗ La bonne réponse : <code>SSLKEYLOGFILE</code>. La clé privée RSA du serveur ne marche que pour les anciens cipher suites RSA (rares aujourd'hui). ECDHE impose les clés de session.">
+          <div class="tuto-quiz-question-text">4. Pour <strong>décrypter du TLS</strong> dans Wireshark, quelle méthode fonctionne avec le chiffrement <em>ECDHE</em> moderne ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Charger la clé privée RSA du serveur via Preferences → Protocols → TLS</button>
+            <button class="tuto-quiz-option" type="button">Activer un <em>brute force</em> sur la clé symétrique</button>
+            <button class="tuto-quiz-option" type="button">Utiliser un fichier <code>SSLKEYLOGFILE</code> contenant les clés de session écrites par le client</button>
+            <button class="tuto-quiz-option" type="button">Désactiver TLS dans les préférences Wireshark</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Règle d'or : <strong>capturer avec dumpcap/tshark</strong> (faible empreinte, pas de perte), <strong>analyser avec Wireshark GUI</strong>. La capture live dans la GUI peut perdre des paquets sur de longues sessions."
+             data-feedback-ko="✗ La bonne réponse : capturer avec <code>dumpcap</code> ou <code>tshark</code>, analyser dans Wireshark. La GUI consomme beaucoup de RAM et peut perdre des paquets en capture live longue.">
+          <div class="tuto-quiz-question-text">5. Dans un workflow DFIR sérieux, où captures-tu le trafic et où l'analyses-tu ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Capturer dans Wireshark GUI directement, analyser dans Wireshark GUI</button>
+            <button class="tuto-quiz-option" type="button">Capturer avec dumpcap ou tshark, analyser ensuite dans Wireshark</button>
+            <button class="tuto-quiz-option" type="button">Capturer avec Wireshark, analyser dans tshark uniquement</button>
+            <button class="tuto-quiz-option" type="button">Capturer et analyser dans la même fenêtre Wireshark live</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/wireshark.html" style="color:var(--cyan)">📚 Consulter la fiche Wireshark — Analyse réseau et PCAP</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Wireshark — Analyse réseau et PCAP v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

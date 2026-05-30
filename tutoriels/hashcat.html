@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Hashcat — Cassage de hash — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Hashcat — Cassage de hash : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">HASHCAT — CASSAGE DE HASH — PAS À PAS</span>
+  <a href="../fiches/hashcat.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="hashcat">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cadre légal et éthique</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Hashcat vs John the Ripper</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Cas d'usage DFIR typiques</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Prérequis matériel</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Installation sous Windows</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation sous Linux</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Vérifier que Hashcat voit ton GPU</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Comprendre les modes de hash</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Attaque par dictionnaire (mode -a 0</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Attaque par règles (rule-based)</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Attaque par combinaison (mode -a 1)</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Attaque par masque (mode -a 3)</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Attaque hybride (modes -a 6 et -a 7</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Casser un hash NTLM Windows</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Casser un fichier protégé (ZIP, Off</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Gérer les sessions longues</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Forces et faiblesses</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources utiles</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Hashcat — Cassage de hash</span>
+        </div>
+
+        <h1>🔓 Hashcat — Cassage de hash</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer Hashcat</strong> avec accélération GPU, identifier le bon <strong>mode -m</strong> pour un hash, lancer une attaque par <strong>dictionnaire + règles</strong> (best64, OneRule), maîtriser les attaques par <strong>masque</strong>, casser des hashs <strong>NTLM Windows</strong>, des fichiers protégés (KeePass, Office, ZIP, BitLocker, VeraCrypt), et gérer des <strong>sessions longues</strong> avec reprise.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~65 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Linux</span>
+          <span class="tuto-meta-badge "><span class="icon">🎮</span> GPU recommandé</span>
+          <span class="tuto-meta-badge "><span class="icon">⚖️</span> Cadre légal strict</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout warning">
+        <div class="tuto-callout-title">⚠️ Hashcat est un outil dual-use</div>
+        <div>Casser un hash est une opération <strong>réglementée</strong>. En Suisse : nécessite un mandat MP (art. 197 CPP) ou un cadre d'audit autorisé. Sanctions sérieuses en cas d'usage abusif (art. 143bis CP, jusqu'à 3 ans). Ce tutoriel suppose un cadre légal explicite — documenter l'autorité, le mandat et la finalité avant chaque session.<br><br>📦 <a href="https://hashcat.net/hashcat/" target="_blank" rel="noopener">hashcat.net</a> · Licence MIT</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Hashcat exploite la puissance des <strong>GPU modernes</strong> pour tester des milliards de candidats par seconde. Là où un CPU teste 50 millions de hash MD5/seconde, une RTX 4090 dépasse 150 milliards (×3000).</p>
+        <p><strong>Capacités principales</strong> :</p>
+        <ul><li><strong>300+ algorithmes</strong> supportés : MD5, SHA-1, SHA-256, SHA-512, NTLM, NetNTLMv2, Kerberos AS-REP, bcrypt, scrypt, Argon2, WPA-PBKDF2, BitLocker, VeraCrypt, LUKS, KeePass, 1Password, fichiers Office, PDF, archives, etc.</li><li><strong>5 modes d'attaque</strong> : dictionnaire, combinaison, masque, hybrides.</li><li><strong>Règles</strong> : transformations massives appliquées à un dictionnaire.</li><li><strong>Reprises</strong> : sauvegarde automatique de session.</li><li><strong>Distribution</strong> : peut tourner sur plusieurs GPU et machines simultanément.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cadre légal et éthique</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Casser un hash est une opération réglementée</strong>. En Suisse :</p>
+        <ul><li><strong>Avec mandat MP</strong> (art. 197 CPP) : autorisé pour les besoins de l'enquête.</li><li><strong>Sans mandat</strong> : uniquement sur des hashs <strong>dont tu es légitimement propriétaire</strong> (audit de ton propre AD, récupération de ton propre mot de passe).</li><li><strong>Jamais</strong> : casser le hash d'un tiers sans autorisation, même par curiosité.</li></ul>
+        <p>En entreprise :</p>
+        <ul><li><strong>Audit de mot de passe</strong> : autorisé si <strong>prévu dans la politique</strong> signée par les employés et coordonné avec le DPO et le service juridique.</li><li><strong>Récupération d'urgence</strong> : autorisé si <strong>propriétaire des données</strong> (poste d'entreprise, conteneur appartenant à la société).</li></ul>
+        <p><strong>Sanctions</strong> :</p>
+        <ul><li>Suisse : art. 143bis CP (accès illicite à un système informatique) — jusqu'à 3 ans.</li><li>France : art. 323-1 CP, RGPD.</li><li>États-Unis : Computer Fraud and Abuse Act (CFAA).</li></ul>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>avant chaque session Hashcat, <strong>documenter</strong> dans le rapport : autorité demandeuse, mandat, hash source, finalité, durée. Hashcat n'est pas un outil de curiosité.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Hashcat vs John the Ripper</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Caractéristique</th><th>Hashcat</th><th>John the Ripper</th></tr></thead><tbody><tr><td><strong>GPU</strong></td><td>✅ Excellent (CUDA + OpenCL)</td><td>⚠️ Partiel (JtR-jumbo)</td></tr><tr><td><strong>CPU</strong></td><td>✅ Oui</td><td>✅ Excellent</td></tr><tr><td><strong>Algorithmes</strong></td><td>300+</td><td>200+</td></tr><tr><td><strong>Règles</strong></td><td>Très puissantes</td><td>Équivalentes (compatibilité partielle)</td></tr><tr><td><strong>Communauté</strong></td><td>Très active</td><td>Très active</td></tr><tr><td><strong>Performance</strong></td><td>Le plus rapide sur GPU</td><td>Le plus polyvalent CPU</td></tr><tr><td><strong>Pédagogie</strong></td><td>Documentation excellente</td><td>Documentation excellente</td></tr></tbody></table>
+        <p><strong>Règle</strong> : John pour le scripting et les cas exotiques ; Hashcat pour la performance brute. Les deux outils sont complémentaires, beaucoup d'analystes les utilisent en parallèle.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Cas d'usage DFIR typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Cassage de SAM Windows</strong> : dump des hashs NTLM d'un poste compromis, identifier les comptes faibles.</li><li><strong>Cracking BitLocker</strong> : récupérer une clé sur un disque chiffré (parfois plus rapide que TPM bypass).</li><li><strong>Conteneur VeraCrypt / LUKS</strong> : si on suspecte un dictionnaire personnalisé du suspect.</li><li><strong>Fichier KeePass</strong> : récupérer le master password pour ouvrir la base.</li><li><strong>Office protégé</strong> : Word/Excel/PPT avec mot de passe.</li><li><strong>Archive ZIP/RAR/7z</strong> : preuves potentiellement chiffrées par le suspect.</li><li><strong>Audit Active Directory</strong> : DCSync, identifier les comptes avec mots de passe faibles.</li><li><strong>WPA / WPA2</strong> : analyse réseau Wi-Fi compromis (avec mandat).</li><li><strong>Hash leaké</strong> : confirmer si un hash dans une fuite correspond à un mot de passe utilisateur connu.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Prérequis matériel</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Configuration minimale</h3>
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th><th>Sérieux</th></tr></thead><tbody><tr><td><strong>GPU</strong></td><td>Aucune (CPU only)</td><td>GTX 1660 (6 Go VRAM)</td><td>RTX 4090 / 4080</td></tr><tr><td><strong>CPU</strong></td><td>4 cœurs</td><td>8 cœurs</td><td>16+ cœurs</td></tr><tr><td><strong>RAM</strong></td><td>8 Go</td><td>16 Go</td><td>32 Go</td></tr><tr><td><strong>Stockage</strong></td><td>5 Go (Hashcat + wordlists basiques)</td><td>50 Go (rockyou, weakpass, hashes.org)</td><td>500 Go (Have I Been Pwned 13Go etc.)</td></tr><tr><td><strong>OS</strong></td><td>Windows 10, Linux 64 bits, macOS</td><td>Linux 64 bits (drivers plus stables)</td><td>Linux dédié rack</td></tr></tbody></table>
+        <h3>Performances indicatives (MD5)</h3>
+        <table><thead><tr><th>GPU</th><th>H/s sur MD5</th></tr></thead><tbody><tr><td>Intel UHD intégré</td><td>~500 M/s</td></tr><tr><td>GTX 1660 Ti</td><td>~10 G/s</td></tr><tr><td>RTX 3060</td><td>~24 G/s</td></tr><tr><td>RTX 3090</td><td>~65 G/s</td></tr><tr><td>RTX 4090</td><td>~165 G/s</td></tr><tr><td>Cluster 8× 4090</td><td>~1.3 T/s</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>pour du DFIR opérationnel, une station avec <strong>RTX 4090</strong> suffit largement. Au-delà, c'est de la recherche ou du red team.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : drivers GPU</h3>
+        <p>Avant Hashcat, <strong>installer les drivers GPU à jour</strong> :</p>
+        <ul><li><strong>NVIDIA</strong> : <<a href="https://www.nvidia.com/Download/index.aspx" target="_blank" rel="noopener">https://www.nvidia.com/Download/index.aspx</a>></li><li><strong>AMD</strong> : <<a href="https://www.amd.com/en/support" target="_blank" rel="noopener">https://www.amd.com/en/support</a>></li><li><strong>Intel</strong> : <<a href="https://www.intel.com/content/www/us/en/download-center/home.html" target="_blank" rel="noopener">https://www.intel.com/content/www/us/en/download-center/home.html</a>></li></ul>
+        <p>Redémarrer après installation.</p>
+        <h3>Étape 2 : télécharger Hashcat</h3>
+        <ol><li>Va sur <<a href="https://hashcat.net/hashcat/" target="_blank" rel="noopener">https://hashcat.net/hashcat/</a>></li><li>Télécharge <strong>hashcat-x.y.z.7z</strong> (la dernière version).</li><li>Décompresse dans <code>C:\Tools\hashcat\</code>.</li></ol>
+        <h3>Étape 3 : vérifier</h3>
+        <p>Ouvre <strong>PowerShell</strong> ou <strong>cmd</strong> dans <code>C:\Tools\hashcat\</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>.\hashcat.exe --version
+.\hashcat.exe -I</code></pre></div>
+        <p><code>--version</code> affiche la version. <code>-I</code> (i majuscule) liste les <strong>devices détectés</strong> (GPU + CPU).</p>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Si l'antivirus alerte : Hashcat est légitime mais souvent flaggé. <strong>Autoriser</strong> dans Windows Defender (l'usage DFIR est légal). Documenter cette autorisation.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation sous Linux</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Debian / Ubuntu</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo apt update
+sudo apt install -y hashcat</code></pre></div>
+        <p>Version possiblement ancienne. Pour la dernière :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Drivers NVIDIA (si carte NVIDIA)
+sudo apt install -y nvidia-driver-535
+
+# Hashcat depuis le site officiel
+cd /opt
+sudo wget https://hashcat.net/files/hashcat-6.2.6.7z
+sudo apt install -y p7zip-full
+sudo 7z x hashcat-6.2.6.7z
+cd hashcat-6.2.6
+./hashcat.bin --version</code></pre></div>
+        <h3>Fedora / RHEL</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo dnf install -y hashcat</code></pre></div>
+        <h3>Arch</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo pacman -S hashcat</code></pre></div>
+        <h3>Vérification GPU</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -I</code></pre></div>
+        <p>Doit lister tes GPU avec leur VRAM. Si rien : drivers manquants.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sous Linux, les drivers NVIDIA proprios donnent généralement de meilleures performances que les drivers libres Nouveau pour Hashcat. Préférer le pilote propriétaire pour les usages sérieux.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Vérifier que Hashcat voit ton GPU</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Lister les devices</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -I</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat (v6.2.6) starting in benchmark mode
+
+CUDA API (CUDA 12.2)
+====================
+* Device #1: NVIDIA GeForce RTX 4090, 24096/24563 MB, 128MCU
+
+OpenCL API (OpenCL 3.0 CUDA 12.2.140) - Platform #1 [NVIDIA Corporation]
+========================================================================
+* Device #2: NVIDIA GeForce RTX 4090, skipped
+
+OpenCL API (OpenCL 2.1 LINUX) - Platform #2 [Intel(R) Corporation]
+==================================================================
+* Device #3: Intel(R) Core(TM) i9-13900K, 32228/64457 MB, 32MCU</code></pre></div>
+        <p>Le GPU doit être listé avec <strong>CUDA API</strong> (NVIDIA) ou <strong>OpenCL</strong> (AMD/Intel).</p>
+        <h3>Benchmark rapide</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -b -m 0</code></pre></div>
+        <p><code>-b</code> : mode benchmark, <code>-m 0</code> : MD5.</p>
+        <p>Vérifie que les performances sont cohérentes (cf. tableau §5). Si trop lent → drivers, throttling thermique, ou mauvais device sélectionné.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Comprendre les modes de hash</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Hashcat identifie chaque type de hash par un <strong>numéro de mode</strong> (<code>-m</code>).</p>
+        <h3>Modes essentiels en DFIR</h3>
+        <table><thead><tr><th><code>-m</code></th><th>Algorithme</th><th>Cas d'usage</th></tr></thead><tbody><tr><td><strong>0</strong></td><td>MD5</td><td>Hashs simples, leaks anciens</td></tr><tr><td><strong>100</strong></td><td>SHA1</td><td>Hashs Linux legacy, Git</td></tr><tr><td><strong>1000</strong></td><td>NTLM</td><td>Mots de passe Windows (SAM, AD)</td></tr><tr><td><strong>1100</strong></td><td>DCC (Domain Cached Credentials)</td><td>Credentials cachés Windows</td></tr><tr><td><strong>1400</strong></td><td>SHA2-256</td><td>Linux moderne, applis</td></tr><tr><td><strong>1700</strong></td><td>SHA2-512</td><td>Linux moderne</td></tr><tr><td><strong>3200</strong></td><td>bcrypt</td><td>Applis web modernes</td></tr><tr><td><strong>5500</strong></td><td>NetNTLMv1</td><td>Capture réseau Windows</td></tr><tr><td><strong>5600</strong></td><td>NetNTLMv2</td><td>Capture réseau Windows moderne</td></tr><tr><td><strong>13100</strong></td><td>Kerberos AS-REP roasting</td><td>AD compromis</td></tr><tr><td><strong>13400</strong></td><td>KeePass 1/2</td><td>Base KeePass</td></tr><tr><td><strong>9400-9700</strong></td><td>Office 2007-2013</td><td>Documents protégés</td></tr><tr><td><strong>17200-17225</strong></td><td>ZIP / RAR</td><td>Archives chiffrées</td></tr><tr><td><strong>22000</strong></td><td>WPA-PBKDF2-PMKID+EAPOL</td><td>Wi-Fi WPA2</td></tr><tr><td><strong>20100-20102</strong></td><td>iTunes Backup</td><td>Sauvegardes iOS</td></tr><tr><td><strong>22100</strong></td><td>BitLocker</td><td>Disque chiffré Windows</td></tr><tr><td><strong>13721-13743</strong></td><td>VeraCrypt</td><td>Conteneur chiffré</td></tr></tbody></table>
+        <h3>Comment trouver le mode pour un hash inconnu</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat --help | grep -i "votre_indice"
+hashcat --example-hashes | less</code></pre></div>
+        <p><code>--example-hashes</code> liste tous les modes avec un exemple de hash et un exemple de mot de passe → très pratique pour identifier visuellement le format.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>si tu hésites entre plusieurs modes, l'outil <code>hash-identifier</code> (Python) ou <code>hashid</code> (Ruby) peut suggérer le mode à partir du format du hash. Toujours valider avec <code>--example-hashes</code>.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Attaque par dictionnaire (mode -a 0)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'attaque la plus simple et la plus efficace en pratique : <strong>tester chaque ligne d'un dictionnaire</strong> contre le hash.</p>
+        <h3>Syntaxe de base</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 0 -m 1000 hash.txt rockyou.txt</code></pre></div>
+        <ul><li><code>-a 0</code> : mode <strong>attaque par dictionnaire</strong>.</li><li><code>-m 1000</code> : type de hash (NTLM ici).</li><li><code>hash.txt</code> : fichier contenant le ou les hashs à casser (un par ligne).</li><li><code>rockyou.txt</code> : le dictionnaire.</li></ul>
+        <h3>Dictionnaires de référence</h3>
+        <table><thead><tr><th>Dictionnaire</th><th>Taille</th><th>Source</th></tr></thead><tbody><tr><td><strong>rockyou.txt</strong></td><td>14 M lignes</td><td>Leak RockYou 2009, standard pédagogique</td></tr><tr><td><strong>rockyou2021.txt</strong></td><td>8.4 G lignes</td><td>Méga-leak 2021, à manier avec précaution</td></tr><tr><td><strong>HaveIBeenPwned</strong></td><td>850 M de hashs SHA-1</td><td>HIBP, format hash:count</td></tr><tr><td><strong>weakpass_3</strong></td><td>9 G lignes</td><td>weakpass.com, très qualifié</td></tr><tr><td><strong>CrackStation Human-Only</strong></td><td>65 M lignes</td><td>crackstation.net</td></tr><tr><td><strong>xato-net-10-million-passwords</strong></td><td>10 M lignes</td><td>xato.net</td></tr></tbody></table>
+        <h3>Stocker les hashs trouvés</h3>
+        <p>Hashcat écrit dans <code>hashcat.potfile</code> (dans son dossier) les couples hash:password déjà cassés. Cette base est <strong>réutilisée automatiquement</strong> entre sessions.</p>
+        <p>Pour voir les résultats :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -m 1000 hash.txt --show</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Attaque par règles (rule-based)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Les <strong>règles</strong> sont la fonction la plus puissante de Hashcat. Une règle est une transformation (capitalisation, ajout de chiffres, leetspeak) appliquée à chaque mot du dictionnaire.</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 0 -m 1000 hash.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <p><code>-r rules/best64.rule</code> : applique le pack de règles <code>best64.rule</code> (64 règles classiques).</p>
+        <h3>Règles fournies avec Hashcat</h3>
+        <table><thead><tr><th>Fichier</th><th>Nombre de règles</th><th>Usage</th></tr></thead><tbody><tr><td><strong>best64.rule</strong></td><td>64</td><td>Le standard, équilibré perf/résultats</td></tr><tr><td><strong>rockyou-30000.rule</strong></td><td>30000</td><td>Très large, généré par analyse statistique</td></tr><tr><td><strong>dive.rule</strong></td><td>100k+</td><td>Massif, lent</td></tr><tr><td><strong>leetspeak.rule</strong></td><td>~10</td><td>Conversions a→4, e→3</td></tr><tr><td><strong>toggles1.rule</strong> à <strong>toggles5.rule</strong></td><td>Variants de casse</td><td>Test toutes capitalisations</td></tr></tbody></table>
+        <h3>Exemples de transformations</h3>
+        <p>Mot de base : <code>password</code></p>
+        <table><thead><tr><th>Règle</th><th>Transformation</th><th>Résultat</th></tr></thead><tbody><tr><td><code>c</code></td><td>Capitalize</td><td><code>Password</code></td></tr><tr><td><code>$1</code></td><td>Append "1"</td><td><code>password1</code></td></tr><tr><td><code>^@</code></td><td>Prepend "@"</td><td><code>@password</code></td></tr><tr><td><code>sa@</code></td><td>Substitute a→@</td><td><code>p@ssword</code></td></tr><tr><td><code>sa@se3</code></td><td>Substitutions multiples</td><td><code>p@ssw3rd</code></td></tr><tr><td><code>c$2$0$2$3</code></td><td>Capitalize + append "2023"</td><td><code>Password2023</code></td></tr></tbody></table>
+        <h3>Combinaisons typiques</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Standard DFIR : rockyou + best64
+hashcat -a 0 -m 1000 hash.txt rockyou.txt -r rules/best64.rule
+
+# Cible utilisateur professionnel : OneRule
+hashcat -a 0 -m 1000 hash.txt company_wordlist.txt -r rules/OneRuleToRuleThemAll.rule</code></pre></div>
+        <p><code>OneRuleToRuleThemAll.rule</code> (~52k règles) est le pack de référence sur GitHub : <<a href="https://github.com/NotSoSecure/password_cracking_rules" target="_blank" rel="noopener">https://github.com/NotSoSecure/password_cracking_rules</a>></p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>commencer par <code>best64.rule</code> (rapide, 90% des résultats). Si rien, passer à <code>OneRuleToRuleThemAll.rule</code> (lent, exhaustif).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Attaque par combinaison (mode -a 1)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Combine deux dictionnaires : pour chaque mot de A, concatène chaque mot de B.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 1 -m 1000 hash.txt names.txt dates.txt</code></pre></div>
+        <p>Teste <code>alice2020</code>, <code>alice2021</code>, ..., <code>bob2020</code>, ... Très utile si l'organisation a un <strong>schéma de password</strong> prévisible (prénom + année).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Attaque par masque (mode -a 3)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'<strong>attaque par masque</strong> énumère méthodiquement un espace de candidats défini.</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 3 -m 1000 hash.txt ?u?l?l?l?d?d?d?d</code></pre></div>
+        <ul><li><code>?l</code> : lettre minuscule (a-z)</li><li><code>?u</code> : lettre majuscule (A-Z)</li><li><code>?d</code> : chiffre (0-9)</li><li><code>?s</code> : symbole (espace inclus)</li><li><code>?a</code> : tout caractère imprimable (l+u+d+s)</li><li><code>?b</code> : tout octet 0x00-0xff</li></ul>
+        <p>Le masque <code>?u?l?l?l?d?d?d?d</code> teste : <code>Abcd1234</code>, <code>Xyzw9999</code>, etc.</p>
+        <h3>Charsets personnalisés</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 3 -m 1000 hash.txt -1 ?d?u ?1?1?1?1?1?1</code></pre></div>
+        <p><code>-1 ?d?u</code> définit le charset 1 comme chiffres+majuscules. Le masque <code>?1?1?1?1?1?1</code> teste 6 caractères dans ce charset.</p>
+        <h3>Cas d'usage</h3>
+        <ul><li><strong>Mots de passe Wi-Fi</strong> prédictibles : <code>?l?l?l?l?l?l?l?l</code> (8 lettres minuscules)</li><li><strong>PIN</strong> : <code>?d?d?d?d?d?d</code> (6 chiffres)</li><li><strong>Patterns institutionnels</strong> : <code>?u?l?l?l?l?d?d?d?d</code></li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>un masque de 10 caractères en <code>?a</code> = 95^10 = 6 × 10^19 combinaisons. Hors d'atteinte. <strong>Ne jamais brute-force aveugle</strong> au-delà de 8-9 caractères, sauf algorithme rapide (MD5, NTLM).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Attaque hybride (modes -a 6 et -a 7)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Hybrides entre dictionnaire et masque.</p>
+        <h3>-a 6 : dictionnaire + masque (suffix)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 6 -m 1000 hash.txt rockyou.txt ?d?d?d?d</code></pre></div>
+        <p>Pour chaque mot du dictionnaire, ajoute 4 chiffres en suffix. Teste : <code>password0000</code>, <code>password0001</code>, ...</p>
+        <h3>-a 7 : masque + dictionnaire (prefix)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 7 -m 1000 hash.txt ?d?d?d?d rockyou.txt</code></pre></div>
+        <p>Préfixe 4 chiffres devant chaque mot. Teste : <code>0000password</code>, <code>0001password</code>, ...</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>un employé qui change son mot de passe tous les 90 jours en ajoutant le mois → <code>dictionnary.txt + ?d?d</code> (mois numérique) en suffixe attrape souvent le pattern.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Casser un hash NTLM Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le scénario classique : tu as un dump SAM ou des hashs AD.</p>
+        <h3>Extraire les hashs depuis SAM (poste compromis)</h3>
+        <p>Si tu as les fichiers SAM et SYSTEM (acquis avec KAPE ou FTK Imager) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avec impacket-secretsdump (Linux)
+impacket-secretsdump LOCAL -sam SAM -system SYSTEM</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+JohnDoe:1001:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c:::</code></pre></div>
+        <p>Format : <code>user:RID:LM:NT:::</code> — c'est la 4e colonne (NT) qui nous intéresse.</p>
+        <h3>Préparer pour Hashcat</h3>
+        <p>Crée <code>hashes.txt</code> avec <strong>uniquement les hashs NT</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>31d6cfe0d16ae931b73c59d7e0c089c0
+8846f7eaee8fb117ad06bdd830b7586c</code></pre></div>
+        <h3>Cracking</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 0 -m 1000 hashes.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <p>Le hash <code>31d6cfe0d16ae931b73c59d7e0c089c0</code> est le NTLM du <strong>mot de passe vide</strong> (à connaître par cœur, il revient souvent).</p>
+        <p><code>8846f7eaee8fb117ad06bdd830b7586c</code> est le NTLM de <code>password</code>.</p>
+        <h3>Résultats</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -m 1000 hashes.txt --show</code></pre></div>
+        <p>Affiche les paires hash:password trouvées.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Casser un fichier protégé (ZIP, Office, KeePass)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Hashcat ne casse pas directement un fichier — il casse son <strong>hash extrait</strong> par un outil dédié.</p>
+        <h3>KeePass</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Extraction avec keepass2john (de John the Ripper)
+keepass2john MyDatabase.kdbx &gt; kp_hash.txt
+
+# Cracking
+hashcat -a 0 -m 13400 kp_hash.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <h3>Office (Word/Excel/PPT)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>office2john document.docx &gt; office_hash.txt
+# Identifier la version dans le hash (Office 2007 → mode 9400, etc.)
+hashcat -a 0 -m 9600 office_hash.txt rockyou.txt</code></pre></div>
+        <h3>ZIP / RAR / 7z</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>zip2john archive.zip &gt; zip_hash.txt
+hashcat -a 0 -m 17220 zip_hash.txt rockyou.txt</code></pre></div>
+        <h3>PDF</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pdf2john.py protected.pdf &gt; pdf_hash.txt
+hashcat -a 0 -m 10500 pdf_hash.txt rockyou.txt</code></pre></div>
+        <h3>BitLocker</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avec bitlocker2hashcat (séparé)
+bitlocker2hashcat -i disk_image.raw -o bl_hash.txt
+hashcat -a 0 -m 22100 bl_hash.txt rockyou.txt</code></pre></div>
+        <h3>VeraCrypt</h3>
+        <p>Hashcat peut attaquer directement le conteneur :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -a 0 -m 13722 container.tc rockyou.txt</code></pre></div>
+        <p>Le mode dépend de l'algorithme (13721 pour AES, 13722 pour Serpent, etc.).</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div><code>*2john</code> scripts de John the Ripper ont une version Hashcat compatible. La documentation hashcat.net pour chaque mode donne la commande d'extraction exacte.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Gérer les sessions longues</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Un cracking sérieux dure des heures, parfois des jours. Hashcat sauvegarde automatiquement.</p>
+        <h3>Lancer une session nommée</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat --session enquete2026 -a 0 -m 1000 hashes.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <h3>Reprendre après interruption</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat --session enquete2026 --restore</code></pre></div>
+        <p>Hashcat reprend exactement où il s'était arrêté (Ctrl+C, panne, redémarrage).</p>
+        <h3>Suivre le statut</h3>
+        <p>Pendant le cracking, appuie sur <code>s</code> pour voir le <strong>status</strong> : vitesse, ETA, % progression.</p>
+        <p>Appuie sur <code>b</code> pour <strong>bypass</strong> (passer au suivant si plusieurs attaques en queue).</p>
+        <p>Appuie sur <code>c</code> pour faire un <strong>checkpoint</strong> propre puis <code>q</code> pour quitter.</p>
+        <h3>Distribution sur plusieurs GPU</h3>
+        <p>Hashcat utilise <strong>tous les GPU détectés</strong> automatiquement. Pour forcer un sous-ensemble :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hashcat -d 1,2 -a 0 -m 1000 hashes.txt rockyou.txt</code></pre></div>
+        <p><code>-d 1,2</code> : utiliser uniquement devices 1 et 2.</p>
+        <h3>Distribution sur plusieurs machines</h3>
+        <p>Hashcat supporte le mode brain server (cracking distribué) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Sur le serveur
+hashcat --brain-server
+
+# Sur les clients
+hashcat --brain-client --brain-host=server.ip</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Forces et faiblesses</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Le plus rapide au monde sur GPU</strong> — pas de débat.</p>
+        <p>✅ <strong>300+ algorithmes</strong> supportés — couvre tous les besoins DFIR courants.</p>
+        <p>✅ <strong>Règles très puissantes</strong> — transformations massives, leetspeak, capitalisation, suffixes.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : Windows, Linux, macOS.</p>
+        <p>✅ <strong>Multi-GPU et multi-machine</strong> : scalabilité horizontale.</p>
+        <p>✅ <strong>Reprise automatique</strong> : sessions persistantes.</p>
+        <p>✅ <strong>Potfile</strong> : base de mots de passe déjà cassés réutilisable.</p>
+        <p>✅ <strong>Documentation excellente</strong> : wiki, exemples, FAQ.</p>
+        <p>✅ <strong>Communauté très active</strong> : Discord, forum, GitHub issues.</p>
+        <p>✅ <strong>Open source MIT</strong> : auditable, sans dépendance fournisseur.</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>Courbe d'apprentissage</strong> : 5 modes d'attaque, 300+ types, syntaxe dense — prévoir 1-2 semaines.</p>
+        <p>❌ <strong>Pas de GUI officielle</strong> : tout en CLI (existences de wrappers GUI tiers mais non officiels).</p>
+        <p>❌ <strong>Antivirus alertes</strong> : faux positifs fréquents (outil flagué comme hacktool par défaut sur Windows Defender).</p>
+        <p>❌ <strong>Dépendance drivers GPU</strong> : configuration matérielle complexe, mises à jour drivers à gérer.</p>
+        <p>❌ <strong>Pas d'extraction de hash</strong> : il faut des outils externes (<code>*2john</code>, impacket, bitlocker2hashcat).</p>
+        <p>❌ <strong>Pas d'attaques en ligne</strong> : Hashcat est purement offline (par design, c'est une force aussi).</p>
+        <p>❌ <strong>Pas d'optimisation Apple Silicon</strong> : sur Mac M1/M2/M3, performances réduites (pas de Metal optimisé).</p>
+        <p>❌ <strong>Aspect éthique</strong> : outil dual-use, à manipuler avec discernement.</p>
+        <p>❌ <strong>Énergie</strong> : sessions longues sur multi-GPU = facture électrique sérieuse.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours documenter</strong> : autorité, mandat, hash source, finalité, durée — Hashcat se trace.</p>
+        <p>🔹 <strong>Travailler sur copie</strong> des hashs originaux. Conserver l'original avec hash de fichier.</p>
+        <p>🔹 <strong>Préférer dictionnaire + règles</strong> au brute force aveugle. Plus rapide, plus éthique (cible des humains, pas force brute).</p>
+        <p>🔹 <strong>Commencer par les classiques</strong> : rockyou + best64, puis seulement si rien → règles plus larges.</p>
+        <p>🔹 <strong>Cibler le contexte</strong> : dictionnaire personnalisé du suspect (CV LinkedIn, intérêts, ville, dates) souvent plus efficace que rockyou.</p>
+        <p>🔹 <strong>Vérifier le mode -m</strong> avec <code>--example-hashes</code> avant lancement (un mauvais mode → cracking impossible).</p>
+        <p>🔹 <strong>Mesurer le coût avant</strong> : un masque à 95^9 = 630 ans sur RTX 4090. Calculer avec <code>hashcat -b -m XX</code> pour estimer.</p>
+        <p>🔹 <strong>Pas de cracking sur poste analyste</strong> : station dédiée, isolée du réseau si possible, climatisation pour les longues sessions.</p>
+        <p>🔹 <strong>Conserver le potfile</strong> entre cas : effet cumulatif (chaque hash cassé enrichit la base).</p>
+        <p>🔹 <strong>Hash trouvés = données sensibles</strong> : stocker chiffré, ne jamais committer dans Git, ne pas partager hors équipe.</p>
+        <p>🔹 <strong>Croiser avec HaveIBeenPwned</strong> : si le hash est dans une fuite publique connue, c'est instantané (avant Hashcat).</p>
+        <p>🔹 <strong>Apprendre les règles</strong> : 80 % du gain perf vient des règles, pas du dictionnaire.</p>
+        <p>🔹 <strong>Surveiller la température GPU</strong> : <code>nvidia-smi -l 5</code> pour monitoring. Throttling thermique = perte de perf.</p>
+        <p>🔹 <strong>Mettre à jour régulièrement</strong> : Hashcat ajoute des modes (par exemple Argon2id récemment).</p>
+        <p>🔹 <strong>Ne JAMAIS</strong> lancer Hashcat sur des hashs <strong>non autorisés</strong> — sanctions pénales sérieuses.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Site officiel</strong> : <<a href="https://hashcat.net/hashcat/" target="_blank" rel="noopener">https://hashcat.net/hashcat/</a>></li><li>📚 <strong>Wiki</strong> : <<a href="https://hashcat.net/wiki/" target="_blank" rel="noopener">https://hashcat.net/wiki/</a>></li><li>📚 <strong>GitHub</strong> : <<a href="https://github.com/hashcat/hashcat" target="_blank" rel="noopener">https://github.com/hashcat/hashcat</a>></li><li>📚 <strong>Forum</strong> : <<a href="https://hashcat.net/forum/" target="_blank" rel="noopener">https://hashcat.net/forum/</a>></li><li>📚 <strong>Example hashes</strong> : <<a href="https://hashcat.net/wiki/doku.php?id=example_hashes" target="_blank" rel="noopener">https://hashcat.net/wiki/doku.php?id=example_hashes</a>></li><li>📚 <strong>Mask attack</strong> : <<a href="https://hashcat.net/wiki/doku.php?id=mask_attack" target="_blank" rel="noopener">https://hashcat.net/wiki/doku.php?id=mask_attack</a>></li><li>📚 <strong>Rule-based attack</strong> : <<a href="https://hashcat.net/wiki/doku.php?id=rule_based_attack" target="_blank" rel="noopener">https://hashcat.net/wiki/doku.php?id=rule_based_attack</a>></li><li>🎓 <strong>OneRuleToRuleThemAll</strong> : <<a href="https://github.com/NotSoSecure/password_cracking_rules" target="_blank" rel="noopener">https://github.com/NotSoSecure/password_cracking_rules</a>></li><li>🎓 <strong>HashKiller</strong> : <<a href="https://hashkiller.io/" target="_blank" rel="noopener">https://hashkiller.io/</a>> (recherche en ligne)</li><li>🎓 <strong>CrackStation</strong> : <<a href="https://crackstation.net/" target="_blank" rel="noopener">https://crackstation.net/</a>></li><li>🎓 <strong>Have I Been Pwned API</strong> : <<a href="https://haveibeenpwned.com/API/v3" target="_blank" rel="noopener">https://haveibeenpwned.com/API/v3</a>></li><li>🎓 <strong>SANS SEC560</strong> (Network Penetration Testing) : couvre Hashcat</li><li>💬 <strong>Discord Hashcat</strong> : invitation depuis le forum</li><li>📖 <strong>Dustin Heywood (EvilMog) — confs DEF CON sur Hashcat</strong> : <<a href="https://www.youtube.com/@evilmog" target="_blank" rel="noopener">https://www.youtube.com/@evilmog</a>></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Hashcat est l'<strong>outil de référence</strong> pour casser un hash en DFIR. Sa puissance brute (GPU), sa flexibilité (5 modes d'attaque, 300+ types, règles) et sa robustesse (sessions, potfile) en font l'incontournable de toute investigation impliquant un mot de passe à récupérer.</p>
+        <p>Sa manipulation exige <strong>rigueur éthique et juridique</strong> : un mauvais usage = sanctions pénales sérieuses. C'est un outil <strong>dual-use</strong> qui n'a sa place qu'en cadre légal explicite.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Configurer ta station GPU</strong> une fois pour toutes (drivers, OS, ventilation).</li><li><strong>Construire ta wordlist</strong> : rockyou + weakpass_3 + tes dictionnaires custom.</li><li><strong>Maîtriser les règles</strong> : OneRuleToRuleThemAll pour les cas costauds, best64 pour le quotidien.</li><li><strong>Tenir un journal</strong> de cracking : modes utilisés, durées, succès/échecs — pour reproductibilité juridique.</li><li><strong>Documenter chaque session</strong> : mandat associé, hashs traités, résultats, hashs détruits ensuite.</li></ol>
+        <p>Bons cassages <strong>dans le cadre légal</strong> ! 🔓</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Hashcat — Cassage de hash maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>-m 1000</code> = NTLM. C'est le mode le plus utilisé en DFIR Windows : SAM dump, AD DCSync, hashs de comptes locaux. Le hash <code>31d6cfe0d16ae931b73c59d7e0c089c0</code> est le NTLM du mot de passe vide — à connaître."
+             data-feedback-ko="✗ La bonne réponse : <code>-m 1000</code>. Connais par cœur les modes courants : 0 (MD5), 100 (SHA1), 1000 (NTLM), 1400 (SHA256), 5600 (NetNTLMv2), 22100 (BitLocker), 13400 (KeePass).">
+          <div class="tuto-quiz-question-text">1. Quel <strong>mode -m</strong> correspond au hash <strong>NTLM Windows</strong> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>-m 0</code> (MD5)</button>
+            <button class="tuto-quiz-option" type="button"><code>-m 100</code> (SHA1)</button>
+            <button class="tuto-quiz-option" type="button"><code>-m 1000</code> (NTLM)</button>
+            <button class="tuto-quiz-option" type="button"><code>-m 1400</code> (SHA-256)</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>rockyou + best64</strong> trouve 60-80% des mots de passe d'utilisateurs lambdas en quelques minutes. Brute force <code>?a*8</code> = 95^8 = 6.6 × 10^15 combinaisons (jours à semaines même sur RTX 4090). Toujours commencer par le simple et efficace."
+             data-feedback-ko="✗ La bonne réponse : <strong>rockyou + best64.rule</strong>. C'est l'attaque qui maximise les résultats pour le temps investi. Le brute force aveugle est à éviter sauf algorithme très rapide ET mot de passe court.">
+          <div class="tuto-quiz-question-text">2. Quelle est la <strong>combinaison la plus efficace</strong> pour une première attaque sur un hash réaliste ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Brute force avec masque <code>?a?a?a?a?a?a?a?a</code> (8 caractères, tous)</button>
+            <button class="tuto-quiz-option" type="button">Dictionnaire <strong>rockyou.txt + règles best64.rule</strong> (<code>-a 0 -r rules/best64.rule</code>)</button>
+            <button class="tuto-quiz-option" type="button">Attaque par combinaison de deux dictionnaires</button>
+            <button class="tuto-quiz-option" type="button">Attaque hybride masque + dictionnaire</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Masque : <code>?u</code> = majuscule, <code>?l</code> = minuscule, <code>?d</code> = chiffre, <code>?s</code> = symbole, <code>?a</code> = tout. <code>?u?l?l?l?d?d?d?d</code> = 26 × 26³ × 10⁴ ≈ 4.6 milliards de candidats. Faisable sur GPU moderne en minutes pour MD5/NTLM."
+             data-feedback-ko="✗ La bonne réponse : énumère <strong>1 majuscule + 3 minuscules + 4 chiffres</strong>. Les masques permettent un brute force ciblé sur un pattern connu (très efficace si le pattern est juste).">
+          <div class="tuto-quiz-question-text">3. Que fait le mode <strong>-a 3 avec le masque <code>?u?l?l?l?d?d?d?d</code></strong> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Cherche les hashs MD5 uniquement</button>
+            <button class="tuto-quiz-option" type="button">Énumère tous les candidats de la forme <strong>1 majuscule + 3 minuscules + 4 chiffres</strong> (ex: <code>Abcd1234</code>)</button>
+            <button class="tuto-quiz-option" type="button">Brute force aveugle sur 8 caractères</button>
+            <button class="tuto-quiz-option" type="button">Utilise un dictionnaire personnalisé</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Hashcat sauvegarde automatiquement chaque seconde. Si tu as lancé avec <code>--session NOM</code>, tu peux reprendre avec <code>hashcat --session NOM --restore</code>. Sans <code>--session</code>, une session par défaut existe et peut aussi être restored."
+             data-feedback-ko="✗ La bonne réponse : <code>--session NOM --restore</code>. Hashcat sauvegarde automatiquement. Ne JAMAIS tout recommencer — utiliser la fonction restore. Sessions nommées recommandées pour mieux gérer les cas parallèles.">
+          <div class="tuto-quiz-question-text">4. Tu lances Hashcat sur 1 million de hashs, mais ton PC redémarre après 12 h. Que faire ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Tout recommencer depuis le début</button>
+            <button class="tuto-quiz-option" type="button">Utiliser <strong><code>--session enquete --restore</code></strong> pour reprendre où Hashcat s'était arrêté</button>
+            <button class="tuto-quiz-option" type="button">Hashcat ne supporte pas la reprise</button>
+            <button class="tuto-quiz-option" type="button">Vider le potfile et relancer</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Hashcat ne lit pas les fichiers directement — il casse des <strong>hashs</strong>. Workflow : <code>keepass2john MyDB.kdbx > kp_hash.txt</code> (depuis John the Ripper jumbo) → <code>hashcat -a 0 -m 13400 kp_hash.txt rockyou.txt</code>. Idem pour Office (office2john), ZIP (zip2john), PDF (pdf2john)."
+             data-feedback-ko="✗ La bonne réponse : <code>keepass2john</code> + <code>hashcat -m 13400</code>. Hashcat ne lit pas les fichiers, il casse des hashs. Les scripts <code>*2john</code> de John the Ripper jumbo extraient le hash dans un format compatible.">
+          <div class="tuto-quiz-question-text">5. Pour casser un fichier <strong>KeePass</strong>, quel est le workflow correct ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Hashcat lit directement le <code>.kdbx</code></button>
+            <button class="tuto-quiz-option" type="button">Extraire le hash avec <strong><code>keepass2john</code></strong> puis cracker avec <code>hashcat -m 13400</code></button>
+            <button class="tuto-quiz-option" type="button">Il faut passer par John the Ripper uniquement</button>
+            <button class="tuto-quiz-option" type="button">Hashcat ne supporte pas KeePass</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/hashcat.html" style="color:var(--cyan)">📚 Consulter la fiche Hashcat — Cassage de hash</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Hashcat — Cassage de hash v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

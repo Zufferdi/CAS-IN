@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Plaso / log2timeline — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Plaso / log2timeline : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">PLASO / LOG2TIMELINE — PAS À PAS</span>
+  <a href="../fiches/plaso.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 23 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="plaso">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cas d'usage typiques</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Architecture : les 5 outils en lign</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Prérequis système</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Installation sous Ubuntu/Debian (GI</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Installation sous Fedora (GIFT COPR</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation via Docker (multiplate</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Installation sous Windows</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Installation via pip</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Premier workflow : super-timeline e</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. log2timeline : extraction des événe</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. psort : filtrage, tri et export</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. psteal : le raccourci tout-en-un</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. pinfo : inspecter un fichier .plaso</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. image_export : extraire des fichier</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Intégration avec Timesketch</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Filtres avancés et requêtes</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Forces de Plaso</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Faiblesses et limites</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Bonnes pratiques</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Ressources utiles</a></li>
+        <li><a href="#s22"><span class="check-marker"></span>22. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Plaso / log2timeline</span>
+        </div>
+
+        <h1>⏳ Plaso / log2timeline</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer Plaso</strong>, construire une <strong>super-timeline</strong> en 3 commandes (log2timeline → pinfo → psort), exporter en CSV / Elasticsearch, et <strong>filtrer par tags</strong> pour faire ressortir l'activité d'un attaquant.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~50 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Linux (recommandé)</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows</span>
+          <span class="tuto-meta-badge "><span class="icon">🐳</span> Docker</span>
+          <span class="tuto-meta-badge "><span class="icon">⏰</span> Timeline forensique</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de Plaso</div>
+        <div>Plaso (anciennement <strong>log2timeline</strong>) est <strong>l'outil de référence</strong> pour produire des super-timelines forensiques. Il extrait les événements de <strong>200+ types d'artefacts</strong> (registres Windows, EVTX, journaux Linux, plists macOS, navigateurs, applications) et les unifie dans une timeline chronologique exploitable.<br><br>📦 <a href="https://github.com/log2timeline/plaso" target="_blank" rel="noopener">github.com/log2timeline/plaso</a></div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Plaso n'est pas un outil d'analyse à interface graphique — c'est un <strong>framework Python en ligne de commande</strong> pensé pour la <strong>chaîne d'investigation forensique</strong>. Son rôle :</p>
+        <ol><li><strong>Parser</strong> automatiquement des centaines de formats de fichiers et de sources de données.</li><li><strong>Extraire</strong> tous les événements horodatés trouvés.</li><li><strong>Stocker</strong> ces événements dans un format normalisé (<code>.plaso</code>).</li><li><strong>Filtrer, trier et exporter</strong> ces événements vers un outil de visualisation (CSV, JSON, XLSX, KML, Elasticsearch/OpenSearch, <strong>Timesketch</strong>).</li></ol>
+        <p>Le résultat est ce qu'on appelle une <strong>super-timeline</strong> : une chronologie unifiée pouvant contenir des <strong>dizaines de millions d'événements</strong> issus d'un seul disque, mélangeant systèmes de fichiers, logs applicatifs, artefacts utilisateur et événements système.</p>
+        <p>C'est l'outil <strong>incontournable</strong> pour répondre à la question <strong>« que s'est-il passé sur ce système et à quel moment ? »</strong> — typiquement dans une <strong>réponse à incident</strong> ou une <strong>enquête sur intrusion</strong>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Réponse à incident</strong> : reconstituer la cinématique d'une intrusion (mouvement latéral, exfiltration, persistance).</li><li><strong>Investigation judiciaire</strong> : prouver une activité utilisateur à un moment précis.</li><li><strong>Threat hunting</strong> : corréler des événements à des indicateurs de compromission.</li><li><strong>Détection de timestomping</strong> : repérer les manipulations volontaires d'horodatages sur fichiers.</li><li><strong>Audit de sécurité</strong> : reconstruire l'historique d'utilisation d'un poste compromis.</li><li><strong>Analyse de malware</strong> : tracer l'exécution d'un binaire suspect dans le temps.</li><li><strong>Compliance et e-discovery</strong> : prouver qu'un fichier a été ouvert/modifié à une date donnée.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Architecture : les 5 outils en ligne de commande</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Plaso fournit <strong>5 binaires</strong> qui s'enchaînent naturellement :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>┌──────────────┐    ┌─────────────────┐    ┌──────────────┐
+│  Image E01   │───►│  log2timeline   │───►│  fichier     │
+│  ou dossier  │    │  (extraction)   │    │  .plaso      │
+└──────────────┘    └─────────────────┘    └──────┬───────┘
+                                                  │
+                                                  ▼
+                                          ┌──────────────┐
+                                          │    pinfo     │
+                                          │ (inspection) │
+                                          └──────────────┘
+                                                  │
+                                                  ▼
+                                          ┌──────────────┐
+                                          │    psort     │
+                                          │ (tri+export) │
+                                          └──────┬───────┘
+                                                 │
+                                                 ▼
+                                       CSV / JSON / XLSX /
+                                       KML / Timesketch</code></pre></div>
+        <table><thead><tr><th>Outil</th><th>Rôle</th></tr></thead><tbody><tr><td><strong><code>log2timeline</code></strong></td><td>Extrait tous les événements d'une source et produit un fichier <code>.plaso</code></td></tr><tr><td><strong><code>psort</code></strong></td><td>Post-traite le fichier <code>.plaso</code> : filtre, trie, exporte vers un format final</td></tr><tr><td><strong><code>psteal</code></strong></td><td>Combine <code>log2timeline</code> + <code>psort</code> en une seule commande (raccourci)</td></tr><tr><td><strong><code>pinfo</code></strong></td><td>Affiche des métadonnées sur un fichier <code>.plaso</code> (nombre d'événements, parsers utilisés, etc.)</td></tr><tr><td><strong><code>image_export</code></strong></td><td>Extrait des fichiers d'une image disque selon des critères (extension, date, signature)</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>La plupart des tutos en ligne mentionnent encore les suffixes <code>.py</code> (<code>log2timeline.py</code>, <code>psort.py</code>). Selon la méthode d'installation, le suffixe peut être présent ou absent. Les deux fonctionnent en général.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Prérequis système</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Matériel recommandé</h3>
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th></tr></thead><tbody><tr><td>RAM</td><td>8 Go</td><td><strong>16-32 Go</strong></td></tr><tr><td>CPU</td><td>4 cœurs</td><td><strong>8-16 cœurs</strong> (parallélisation forte)</td></tr><tr><td>Stockage</td><td>HDD 100 Go libres</td><td><strong>SSD 500 Go+</strong></td></tr><tr><td>OS</td><td>Ubuntu 22.04 / Fedora 38</td><td>Ubuntu 22.04 LTS officiellement supporté</td></tr></tbody></table>
+        <h3>Logiciels</h3>
+        <ul><li><strong>Python 3.8+</strong> (3.10+ recommandé)</li><li><strong>pip</strong> ou <strong>apt/dnf</strong> selon la méthode</li><li><strong>Docker</strong> (méthode alternative la plus simple)</li><li>Dépendances natives : <code>libewf</code> (E01), <code>libvmdk</code>, <code>libvhdi</code>, <code>libbde</code> (BitLocker), <code>libfsapfs</code> (APFS macOS), etc.</li></ul>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Plaso a <strong>beaucoup de dépendances natives complexes</strong>. C'est pour ça que les méthodes recommandées sont <strong>GIFT PPA</strong> sur Ubuntu, <strong>GIFT COPR</strong> sur Fedora, ou <strong>Docker</strong> partout — éviter <code>pip install plaso</code> direct sauf cas particuliers.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Installation sous Ubuntu/Debian (GIFT PPA)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Méthode recommandée</strong> sur Ubuntu <strong>22.04 LTS</strong> (les autres versions ne sont pas officiellement supportées). La PPA <strong>GIFT</strong> fournit toutes les dépendances pré-compilées.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># 1. Activer le dépôt universe
+sudo add-apt-repository universe
+sudo apt-get update
+
+# 2. Ajouter la PPA stable
+sudo add-apt-repository ppa:gift/stable
+sudo apt-get update
+
+# 3. Installer Plaso et tous les outils
+sudo apt-get install plaso-tools</code></pre></div>
+        <h3>Vérifier l'installation</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline --version
+psort --version
+psteal --version</code></pre></div>
+        <p>Tu dois voir quelque chose comme <code>plaso - log2timeline version 20260119</code>.</p>
+        <h3>Vérifier les dépendances</h3>
+        <p>Si tu rencontres des erreurs au lancement :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>wget https://raw.githubusercontent.com/log2timeline/plaso/main/utils/check_dependencies.py
+python3 check_dependencies.py</code></pre></div>
+        <p>Toutes les lignes doivent retourner <code>[OK]</code>. Si tu vois <code>[FAILURE]</code>, mets à jour la dépendance correspondante.</p>
+        <h3>Branche de développement (déconseillée en prod)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo add-apt-repository ppa:gift/dev
+sudo apt-get update
+sudo apt-get install plaso-tools</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Installation sous Fedora (GIFT COPR)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># 1. Activer dnf-plugins-core
+sudo dnf install dnf-plugins-core
+
+# 2. Activer le dépôt COPR stable
+sudo dnf copr enable @gift/stable
+
+# 3. Installer Plaso
+sudo dnf install plaso-tools</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation via Docker (multiplateforme)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>La méthode la plus simple et la plus portable.</strong> Fonctionne sous Linux, macOS et Windows.</p>
+        <h3>Étape 1 : tirer l'image officielle</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>docker pull log2timeline/plaso</code></pre></div>
+        <h3>Étape 2 : vérifier</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>docker run --rm log2timeline/plaso log2timeline --version</code></pre></div>
+        <h3>Étape 3 : utilisation typique</h3>
+        <p>L'image Docker expose <code>log2timeline</code>, <code>psort</code>, <code>psteal</code>, <code>pinfo</code> et <code>image_export</code> via un script <code>plaso-switch.sh</code>. On monte un volume contenant les preuves :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Extraction
+docker run --rm -v /data/:/data log2timeline/plaso \
+  log2timeline --storage-file /data/evidence.plaso /data/image.E01
+
+# Export en CSV
+docker run --rm -v /data/:/data log2timeline/plaso \
+  psort -w /data/timeline.csv /data/evidence.plaso</code></pre></div>
+        <p>Sous Windows PowerShell, le syntaxe <code>-v</code> devient <code>-v C:\data:/data</code> (chemin Windows à gauche, chemin conteneur à droite).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Plaso fournit des <strong>binaires natifs Windows</strong> depuis longtemps (via le projet <a href="https://github.com/log2timeline/l2tbinaries" target="_blank" rel="noopener">l2tbinaries</a>), mais le <strong>support Windows est moins prioritaire</strong> que Linux.</p>
+        <h3>Méthode 1 : binaires précompilés</h3>
+        <ol><li>Aller sur <<a href="https://github.com/log2timeline/plaso/releases" target="_blank" rel="noopener">https://github.com/log2timeline/plaso/releases</a>></li><li>Télécharger le ZIP <code>plaso-YYYYMMDD-amd64.zip</code></li><li>Décompresser dans <code>C:\plaso\</code></li><li>Ajouter <code>C:\plaso\</code> à la variable d'environnement <code>PATH</code></li><li>Ouvrir une <strong>invite de commande</strong> ou <strong>PowerShell</strong> :</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline.exe --version</code></pre></div>
+        <h3>Méthode 2 : Docker Desktop (recommandée)</h3>
+        <p>Installer <strong>Docker Desktop pour Windows</strong>, puis suivre la <a href="#7-installation-via-docker-multiplateforme" target="_blank" rel="noopener">section Docker</a>.</p>
+        <h3>Méthode 3 : WSL2</h3>
+        <p>Installer <strong>WSL2 + Ubuntu 22.04</strong>, puis suivre la <a href="#5-installation-sous-ubuntudebian-gift-ppa" target="_blank" rel="noopener">section Ubuntu</a>. <strong>Attention</strong> : WSL2 peut être nettement plus lent que natif sur de gros disques (overhead I/O).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Installation via pip</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Déconseillée en général</strong> car les dépendances natives ne s'installent pas via pip. Mais si tu veux développer ou tester :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Créer un venv
+python3 -m venv plaso_env
+source plaso_env/bin/activate
+
+# Installer Plaso
+pip install plaso
+
+# Pour les dépendances natives, il faut quand même :
+sudo apt-get install libewf-dev libvmdk-dev libvhdi-dev libbde-dev</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Pour le développement, préférer cloner le repo et installer en mode éditable : ``<code>bash git clone <a href="https://github.com/log2timeline/plaso.git" target="_blank" rel="noopener">https://github.com/log2timeline/plaso.git</a> cd plaso pip install -e . </code>``</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Premier workflow : super-timeline en 3 commandes</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le workflow standard se résume à <strong>3 étapes</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># 1. EXTRAIRE tous les événements de l'image vers un fichier .plaso
+log2timeline --storage-file /case/evidence.plaso /case/image.E01
+
+# 2. (optionnel) INSPECTER le contenu
+pinfo /case/evidence.plaso
+
+# 3. EXPORTER vers un CSV trié chronologiquement
+psort -w /case/timeline.csv /case/evidence.plaso</code></pre></div>
+        <p>Le <code>timeline.csv</code> est ensuite ouvrable dans LibreOffice/Excel ou importable dans <strong>Timesketch</strong> pour la visualisation.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> log2timeline : extraction des événements</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Syntaxe de base</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline [OPTIONS] --storage-file SORTIE.plaso ENTRÉE</code></pre></div>
+        <h3>Sources acceptées</h3>
+        <ul><li>Image disque : <code>.E01</code>, <code>.dd</code>, <code>.raw</code>, <code>.vmdk</code>, <code>.vhd</code>, <code>.vhdx</code>, <code>.qcow2</code></li><li>Dossier monté</li><li>Fichier individuel</li><li>Disque physique (Linux : <code>/dev/sda</code>)</li><li>Image avec volume <strong>BitLocker</strong> chiffré (prompt interactif pour la clé)</li></ul>
+        <h3>Exemples</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Image E01 simple
+log2timeline --storage-file case.plaso disk.E01
+
+# Forcer une partition spécifique (évite le prompt interactif)
+log2timeline --partitions 2 --storage-file case.plaso disk.E01
+
+# Traiter aussi les Volume Shadow Copies
+log2timeline --vss-stores all --storage-file case.plaso disk.E01
+
+# Spécifier un fuseau horaire
+log2timeline --timezone Europe/Paris --storage-file case.plaso disk.E01
+
+# Utiliser un preset de parsers (plus rapide)
+log2timeline --parsers win7 --storage-file case.plaso disk.E01
+
+# Lister tous les presets disponibles
+log2timeline --info</code></pre></div>
+        <h3>Presets de parsers utiles</h3>
+        <table><thead><tr><th>Preset</th><th>Cible</th></tr></thead><tbody><tr><td><code>win7</code></td><td>Windows 7+ (registre, EVTX, navigateurs, prefetch, etc.)</td></tr><tr><td><code>winxp</code></td><td>Windows XP</td></tr><tr><td><code>macosx</code></td><td>macOS (plist, asl, keychain, etc.)</td></tr><tr><td><code>linux</code></td><td>Linux (syslog, utmp, bash history, etc.)</td></tr><tr><td><code>android</code></td><td>Android (calls, sms, app usage)</td></tr><tr><td><code>webhist</code></td><td>Historiques navigateurs uniquement</td></tr></tbody></table>
+        <h3>Options importantes</h3>
+        <table><thead><tr><th>Option</th><th>Effet</th></tr></thead><tbody><tr><td><code>--storage-file FICHIER</code></td><td>Fichier <code>.plaso</code> de sortie (obligatoire)</td></tr><tr><td><code>--parsers LISTE</code></td><td>Limite aux parsers spécifiés (séparés par virgules)</td></tr><tr><td><code>--hashers md5,sha256</code></td><td>Calcule les hashes des fichiers traités</td></tr><tr><td><code>--workers N</code></td><td>Nombre de processus parallèles (défaut : auto)</td></tr><tr><td><code>--logfile FICHIER</code></td><td>Redirige les logs</td></tr><tr><td><code>--vss-stores all</code></td><td>Inclut les Volume Shadow Copies</td></tr><tr><td><code>--partitions N</code></td><td>Sélectionne une partition</td></tr><tr><td><code>--timezone TZ</code></td><td>Force le fuseau (utile pour FAT)</td></tr><tr><td><code>-d, --debug</code></td><td>Mode debug</td></tr></tbody></table>
+        <h3>Durée typique</h3>
+        <ul><li><strong>Image Windows 7 de 40 Go</strong> : 1 à 3 heures sur un poste moderne</li><li><strong>Image Windows 11 de 500 Go avec VSS</strong> : 12 à 36 heures</li><li><strong>Image serveur multi-To</strong> : plusieurs jours</li></ul>
+        <p>C'est <strong>lent</strong> parce que Plaso parse exhaustivement chaque artefact.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> psort : filtrage, tri et export</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>psort</code> lit le <code>.plaso</code> produit par <code>log2timeline</code> et <strong>génère le livrable final</strong> (CSV, JSON, XLSX, etc.).</p>
+        <h3>Syntaxe de base</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>psort -o FORMAT -w SORTIE FICHIER.plaso [FILTRE]</code></pre></div>
+        <h3>Formats de sortie courants</h3>
+        <table><thead><tr><th>Format <code>-o</code></th><th>Description</th></tr></thead><tbody><tr><td><code>dynamic</code></td><td>CSV moderne, recommandé par défaut</td></tr><tr><td><code>l2tcsv</code></td><td>CSV historique (héritage log2timeline Perl)</td></tr><tr><td><code>l2ttln</code></td><td>TLN (Timeline) format</td></tr><tr><td><code>json</code></td><td>JSON ligne par ligne</td></tr><tr><td><code>json_line</code></td><td>Idem, optimisé pour pipelines</td></tr><tr><td><code>xlsx</code></td><td>Excel (lent sur gros volumes)</td></tr><tr><td><code>kml</code></td><td>Google Earth (pour artefacts géolocalisés)</td></tr><tr><td><code>opensearch</code></td><td>Indexation directe Elasticsearch/OpenSearch</td></tr><tr><td><code>timesketch</code></td><td>Export direct vers Timesketch</td></tr><tr><td><code>null</code></td><td>Aucun output (utile pour analyse seule)</td></tr></tbody></table>
+        <h3>Exemples</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Export CSV simple (format dynamic = défaut)
+psort -w timeline.csv evidence.plaso
+
+# Format l2tcsv classique
+psort -o l2tcsv -w timeline.csv evidence.plaso
+
+# JSON
+psort -o json_line -w timeline.json evidence.plaso
+
+# Excel
+psort -o xlsx -w timeline.xlsx evidence.plaso
+
+# Spécifier le fuseau horaire de sortie
+psort --output-time-zone "Europe/Paris" -w timeline.csv evidence.plaso
+
+# Champs additionnels (uniquement formats dynamic, opensearch, xlsx)
+psort --additional_fields hash,sha256,filename -w timeline.csv evidence.plaso</code></pre></div>
+        <h3>Filtres temporels (très utiles)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>psort -w timeline.csv evidence.plaso \
+  "date &gt; '2026-01-15 00:00:00' AND date &lt; '2026-01-17 23:59:59'"</code></pre></div>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Récupère tout dans une fenêtre de ±5 minutes autour du timestamp
+psort --slice '2026-01-16T14:23:00+01:00' -w slice.csv evidence.plaso
+
+# Élargir la fenêtre à ±30 minutes
+psort --slice '2026-01-16T14:23:00+01:00' --slice_size 30 -w slice.csv evidence.plaso</code></pre></div>
+        <h3>Filtres par parser ou contenu</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Garder uniquement les événements du parser "winreg"
+psort -w timeline.csv evidence.plaso "parser is 'winreg'"
+
+# Garder uniquement le navigateur Chrome
+psort -w timeline.csv evidence.plaso "parser contains 'chrome'"
+
+# Combiner critères
+psort -w timeline.csv evidence.plaso \
+  "parser is 'winevtx' AND date &gt; '2026-01-15 00:00:00'"</code></pre></div>
+        <h3>Plugins d'analyse</h3>
+        <p><code>psort</code> peut lancer des <strong>plugins d'analyse</strong> sur les événements pendant l'export :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Tagger les événements selon un fichier de tags
+psort --analysis tagging --tagging-file tag_windows.txt \
+      -o dynamic -w timeline.csv evidence.plaso
+
+# Détecter des bruteforces sur logs Windows
+psort --analysis windows_services -w timeline.csv evidence.plaso
+
+# Lister tous les plugins disponibles
+psort --analysis list</code></pre></div>
+        <p>Plugins notables : <code>tagging</code>, <code>browser_search</code>, <code>chrome_extension</code>, <code>unique_domains_visited</code>, <code>windows_services</code>, <code>viper</code>, <code>virustotal</code>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> psteal : le raccourci tout-en-un</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>psteal</code> (acronyme : <em>Plaso SýndarheimsTímalína sem Er ALgjörlega sjálfvirk</em>) combine <code>log2timeline</code> et <code>psort</code> en <strong>une seule commande</strong> pour les cas simples :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>psteal --source /case/disk.E01 -w /case/timeline.csv</code></pre></div>
+        <p>Cela produit :</p>
+        <ul><li>Un fichier <code>.plaso</code> intermédiaire (nommé <code><TIMESTAMP>-disk.E01.plaso</code> dans le répertoire courant)</li><li>Un fichier CSV final trié chronologiquement</li></ul>
+        <h3>Quand utiliser psteal</h3>
+        <p>✅ Cas simples, image unique, paramètres par défaut acceptables, pas de filtres complexes.</p>
+        <h3>Quand préférer log2timeline + psort</h3>
+        <p>❌ Cas complexes nécessitant des filtres, des analyses, plusieurs exports différents du même <code>.plaso</code>, ou des optimisations fines.</p>
+        <p><strong>En pratique</strong>, les forensiques expérimentés utilisent toujours la séparation <code>log2timeline</code> → <code>psort</code> car :</p>
+        <ul><li>Le <code>.plaso</code> peut être ré-analysé plusieurs fois sans re-extraire.</li><li>Tu peux générer un CSV ET un JSON ET un export Timesketch à partir du même <code>.plaso</code>.</li><li>Tu peux appliquer différents filtres temporels successivement.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> pinfo : inspecter un fichier .plaso</h2>
+        </header>
+        <div class="tuto-section-content">
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pinfo /case/evidence.plaso</code></pre></div>
+        <p>Affiche :</p>
+        <ul><li>Nombre total d'événements</li><li>Liste des parsers utilisés et nombre d'événements par parser</li><li>Métadonnées de la session de collecte (date, hostname, version Plaso, paramètres)</li><li>Détection du système d'exploitation</li><li>Erreurs et warnings rencontrés pendant l'extraction</li><li>Tags appliqués (si pertinent)</li></ul>
+        <h3>Exemple de sortie</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>plaso - pinfo version 20260119
+
+Storage file: /case/evidence.plaso
+========================================
+Session start: 2026-04-15T08:23:14
+Session end:   2026-04-15T11:47:32
+Total events:  18 643 271
+
+Parsers used:
+  winreg            : 4 231 056 events
+  filestat          : 3 982 110 events
+  winevtx           : 2 145 332 events
+  chrome_history    : 1 023 887 events
+  ...</code></pre></div>
+        <p>Indispensable pour <strong>valider</strong> qu'un <code>.plaso</code> contient bien ce que tu espérais avant de lancer un long export.</p>
+        <h3>Comparer deux fichiers .plaso</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pinfo --compare /case/baseline.plaso /case/suspect.plaso</code></pre></div>
+        <p>Très utile pour repérer des différences entre un snapshot avant et après un événement suspect.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> image_export : extraire des fichiers</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>image_export</code> permet d'extraire <strong>les fichiers eux-mêmes</strong> d'une image disque, selon divers filtres. Ce n'est pas pour produire une timeline mais pour <strong>récupérer du contenu</strong>.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Extraire tous les fichiers .docx d'une image
+image_export -w /case/extracted --extensions docx /case/disk.E01
+
+# Extraire selon une liste de signatures
+image_export -w /case/extracted --signatures gzip,pdf,exe /case/disk.E01
+
+# Extraire les fichiers créés dans une fenêtre temporelle
+image_export -w /case/extracted \
+             --date-filter "ctime,2026-01-15T00:00:00,2026-01-16T00:00:00" \
+             /case/disk.E01
+
+# Filtre par chemin (yara-style)
+image_export -w /case/extracted -f /case/filter.yaml /case/disk.E01</code></pre></div>
+        <p>Utile pour faire du <strong>triage ciblé</strong> avant analyse plus poussée.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Intégration avec Timesketch</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><a href="https://timesketch.org" target="_blank" rel="noopener"><strong>Timesketch</strong></a> est l'outil de <strong>visualisation collaborative</strong> des super-timelines Plaso, développé par les mêmes équipes (Google + communauté). Il offre :</p>
+        <ul><li>Interface web pour parcourir les événements</li><li>Recherche full-text (Elasticsearch/OpenSearch)</li><li><strong>Sketches</strong> : collaboration multi-analystes sur une même timeline</li><li><strong>Tagging</strong> et <strong>stories</strong> (narratifs)</li><li><strong>Sigma rules</strong> intégrées pour détection automatique</li><li>API REST pour automatisation</li></ul>
+        <h3>Workflow Plaso → Timesketch</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>tsctl import --name "Cas-2026-001" --file /case/evidence.plaso</code></pre></div>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Export Plaso au format JSONL
+psort -o json_line -w timeline.jsonl evidence.plaso
+
+# Import via tsctl ou interface web</code></pre></div>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>psort -o timesketch \
+      --timesketch-url http://localhost:5000 \
+      --timesketch-username admin \
+      --timesketch-password ******* \
+      --timesketch-sketch-id 1 \
+      evidence.plaso</code></pre></div>
+        <h3>Installation rapide de Timesketch</h3>
+        <p>Via Docker Compose (méthode officielle recommandée) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>curl -O https://raw.githubusercontent.com/google/timesketch/master/docker/release/docker-compose.yml
+curl -O https://raw.githubusercontent.com/google/timesketch/master/docker/release/config.env
+docker compose up -d</code></pre></div>
+        <p>Interface accessible sur <code>http://localhost</code>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Filtres avancés et requêtes</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Plaso utilise une <strong>syntaxe de filtre type SQL</strong> dans <code>psort</code>. Quelques exemples :</p>
+        <h3>Par champ</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Événements impliquant un utilisateur spécifique
+"username == 'jdupont'"
+
+# Événements sur un fichier précis
+"filename contains 'invoice.docx'"
+
+# Événements avec MFT entry number &gt; X
+"inode &gt; 100000"
+
+# Combinaison
+"username == 'jdupont' AND parser is 'winevtx' AND date &gt; '2026-01-15'"</code></pre></div>
+        <h3>Opérateurs supportés</h3>
+        <ul><li>Comparaison : <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code><=</code>, <code>>=</code></li><li>Logique : <code>AND</code>, <code>OR</code>, <code>NOT</code></li><li>Texte : <code>contains</code>, <code>iregexp</code> (insensible à la casse)</li><li>Inclusion : <code>in</code>, <code>is</code></li></ul>
+        <h3>Filtres par tag</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Garder seulement les événements taggés "malware"
+"tag contains 'malware'"</code></pre></div>
+        <p>Le tagging se fait via le plugin <code>tagging</code> avec un fichier de règles texte (format simple <code>tag_name: filter_expression</code>).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Forces de Plaso</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>✅ <strong>Couverture exhaustive</strong> : <strong>plus de 200 parsers</strong> intégrés. Aucun autre outil open source ne couvre autant de formats d'artefacts forensiques.</p>
+        <p>✅ <strong>Format <code>.plaso</code> réutilisable</strong> : extraction une fois, exports multiples (CSV, JSON, Timesketch, Excel…) sans relancer le parsing long.</p>
+        <p>✅ <strong>Standard de facto</strong> : utilisé dans toute la communauté DFIR (SANS, Google, FireEye/Mandiant, CERT-FR, etc.). C'est <strong>le</strong> moteur de timeline pour les pros.</p>
+        <p>✅ <strong>Open source Apache 2.0</strong>, gratuit, sans licence à acheter.</p>
+        <p>✅ <strong>Excellente intégration avec Timesketch</strong> pour la visualisation et la collaboration.</p>
+        <p>✅ <strong>Parallélisme natif</strong> : exploite tous les cœurs CPU disponibles.</p>
+        <p>✅ <strong>Multi-source</strong> : un seul <code>.plaso</code> peut combiner plusieurs images, dossiers, exports volatility, etc.</p>
+        <p>✅ <strong>Support de formats complexes</strong> : E01, VMDK, VHDX, <strong>BitLocker chiffré</strong>, <strong>APFS</strong> (macOS), <strong>Volume Shadow Copies</strong> Windows.</p>
+        <p>✅ <strong>Filtres SQL-like puissants</strong> pour cibler exactement ce qui intéresse.</p>
+        <p>✅ <strong>Documentation Read the Docs</strong> complète : <<a href="https://plaso.readthedocs.io" target="_blank" rel="noopener">https://plaso.readthedocs.io</a>>.</p>
+        <p>✅ <strong>Communauté DFIR active</strong> : Slack Open Source DFIR, mailing lists, releases mensuelles régulières (modèle <em>rolling release</em> daté <code>YYYYMMDD</code>).</p>
+        <p>✅ <strong>Inclus par défaut</strong> dans la <strong>SIFT Workstation</strong> (SANS), <strong>REMnux</strong>, <strong>PiRogue Tool Suite</strong>, <strong>Tsurugi Linux</strong>, etc.</p>
+        <p>✅ <strong>Pinfo --compare</strong> pour différentiel entre deux extractions (avant/après incident).</p>
+        <p>✅ <strong>Plugins d'analyse intégrés</strong> : tagging Sigma-like, détection de patterns, corrélation avec VirusTotal.</p>
+        <p>✅ <strong>Image_export</strong> comme outil bonus pour extraction ciblée de fichiers.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Lent</strong> : extraire une image Windows 11 de 500 Go peut prendre <strong>plus d'une journée</strong>. Pas adapté pour du <em>quick triage</em> — préférer <strong>KAPE</strong> pour ça.</p>
+        <p>❌ <strong>Très gourmand en RAM</strong> : peut consommer 8-16 Go en pointe sur de gros workers parallèles.</p>
+        <p>❌ <strong>Aucune interface graphique</strong> : entièrement CLI. Les non-techniciens sont perdus.</p>
+        <p>❌ <strong>Courbe d'apprentissage forte</strong> sur les filtres et options avancées : <code>psort</code> a des dizaines d'options, la syntaxe des filtres est documentée mais peu intuitive.</p>
+        <p>❌ <strong>Faux positifs et bruit énorme</strong> : une super-timeline brute contient des millions d'événements, dont 99 % sont sans intérêt. Le <strong>vrai travail commence après l'export</strong> : il faut savoir filtrer, ce qui demande de l'expérience.</p>
+        <p>❌ <strong>Dépendances natives complexes</strong> : <code>pip install plaso</code> direct échoue souvent. Il faut passer par GIFT PPA, GIFT COPR ou Docker — pas trivial à comprendre pour un débutant.</p>
+        <p>❌ <strong>Support Ubuntu limité aux LTS</strong> : officiellement seul <strong>Ubuntu 22.04 LTS</strong> est supporté. Les autres versions peuvent fonctionner mais sans garantie.</p>
+        <p>❌ <strong>Pas de Windows natif vraiment soutenu</strong> : les binaires <code>l2tbinaries</code> existent mais le développement est centré Linux.</p>
+        <p>❌ <strong>Pas de timeline RAM directe</strong> : ne parse pas les dumps mémoire. Il faut passer par <strong>Volatility 3</strong> d'abord, puis injecter le body file dans Plaso (et il y a des incompatibilités de format à corriger manuellement).</p>
+        <p>❌ <strong>Pas d'extraction native</strong> : Plaso analyse une image, il ne l'<strong>acquiert</strong> pas. Il faut un outil tiers (FTK Imager, dd, Cellebrite, KAPE, AndroidQF, idevicebackup2…) pour produire la source.</p>
+        <p>❌ <strong>Format <code>.plaso</code> propriétaire</strong> (basé sur SQLite + zstd) : difficile à lire sans les outils Plaso, ce qui crée une dépendance.</p>
+        <p>❌ <strong>Bugs occasionnels sur parsers exotiques</strong> : certains parsers (anciens iOS, vieux Linux) sont moins maintenus et peuvent crasher sur des artefacts corrompus.</p>
+        <p>❌ <strong>Mise à jour fréquente cassante</strong> : modèle <em>rolling release</em>, les datations <code>YYYYMMDD</code> font qu'une version peut casser un script qui marchait avec la précédente. Il faut <strong>pinner la version</strong> en prod.</p>
+        <p>❌ <strong>Documentation technique parfois ardue</strong> pour les concepts internes (parser plugins, analysis plugins, artifacts).</p>
+        <p>❌ <strong>Pas de support officiel des forces de l'ordre</strong> comme un EnCase ou Cellebrite : pas de support 24/7, pas de certification judiciaire formelle dans tous les pays.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Bonnes pratiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours travailler sur une copie</strong> de l'image disque, jamais sur l'original.</p>
+        <p>🔹 <strong>Calculer le hash SHA-256</strong> de l'image avant traitement et le documenter avec le <code>.plaso</code>.</p>
+        <p>🔹 <strong>Spécifier explicitement le fuseau horaire</strong> avec <code>--timezone</code>, surtout pour les systèmes FAT.</p>
+        <p>🔹 <strong>Utiliser des presets de parsers</strong> si tu connais le système :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline --parsers win7 ...   # 3 à 5× plus rapide que tous les parsers</code></pre></div>
+        <p>🔹 <strong>Activer les Volume Shadow Copies</strong> sur les images Windows quand l'enquête le justifie :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline --vss-stores all ...</code></pre></div>
+        <p>🔹 <strong>Conserver le fichier <code>.plaso</code></strong> ! C'est l'artefact intermédiaire le plus précieux : tu peux re-générer 50 exports différents sans relancer l'extraction de 12 heures.</p>
+        <p>🔹 <strong>Filtrer dès <code>psort</code></strong> plutôt que de balancer 18 millions d'événements dans Excel — qui plantera.</p>
+        <p>🔹 <strong>Toujours commencer par <code>pinfo</code></strong> pour vérifier ce qui a été extrait avant de paniquer sur des événements absents.</p>
+        <p>🔹 <strong>Préférer JSON_LINE ou Timesketch</strong> sur des cas réels — <code>xlsx</code> plante au-delà du million d'événements, <code>l2tcsv</code> a une structure dépréciée.</p>
+        <p>🔹 <strong>Combiner avec Timesketch</strong> dès qu'il y a plus de 100 000 événements — l'interface web est indispensable pour explorer efficacement.</p>
+        <p>🔹 <strong>Documenter chaque étape</strong> : commande exacte, version de Plaso (<code>log2timeline --version</code>), hashes des entrées et sorties.</p>
+        <p>🔹 <strong>Augmenter le nombre de workers</strong> sur les gros CPU :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline --workers 16 ...</code></pre></div>
+        <p>Mais attention à la RAM — chaque worker consomme ~1-2 Go.</p>
+        <p>🔹 <strong>Pinner une version de Plaso</strong> en production avec Docker :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>docker pull log2timeline/plaso:20260119</code></pre></div>
+        <p>🔹 <strong>Combiner Plaso avec Volatility 3</strong> pour une timeline complète disque + mémoire :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Générer body file depuis dump mémoire
+vol -f mem.raw windows.timeliner --output csv &gt; mem_body.csv
+# Concaténer avec timeline disque (nécessite reformatage manuel)</code></pre></div>
+        <p>🔹 <strong>Tester ses filtres sur petit échantillon</strong> avant d'attendre 4 h un export complet pour découvrir une erreur de syntaxe.</p>
+        <p>🔹 <strong>Utiliser <code>--analysis tagging</code> avec un fichier de tags</strong> pour pré-classifier les événements suspects.</p>
+        <p>🔹 <strong>Sigma rules dans Timesketch</strong> : pour automatiser la détection d'IOCs et de comportements suspects après import.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Officielles</h3>
+        <ul><li>📚 <strong>Dépôt GitHub</strong> : <<a href="https://github.com/log2timeline/plaso" target="_blank" rel="noopener">https://github.com/log2timeline/plaso</a>></li><li>📚 <strong>Documentation Read the Docs</strong> : <<a href="https://plaso.readthedocs.io" target="_blank" rel="noopener">https://plaso.readthedocs.io</a>></li><li>📚 <strong>Releases</strong> : <<a href="https://github.com/log2timeline/plaso/releases" target="_blank" rel="noopener">https://github.com/log2timeline/plaso/releases</a>></li><li>📚 <strong>DeepWiki Plaso</strong> : <<a href="https://deepwiki.com/log2timeline/plaso" target="_blank" rel="noopener">https://deepwiki.com/log2timeline/plaso</a>></li><li>📚 <strong>GIFT PPA Launchpad</strong> : <<a href="https://launchpad.net/~gift" target="_blank" rel="noopener">https://launchpad.net/~gift</a>></li><li>🐳 <strong>Docker Hub</strong> : <<a href="https://hub.docker.com/r/log2timeline/plaso" target="_blank" rel="noopener">https://hub.docker.com/r/log2timeline/plaso</a>></li></ul>
+        <h3>Timesketch (visualisation)</h3>
+        <ul><li>🌐 <strong>Site officiel</strong> : <<a href="https://timesketch.org" target="_blank" rel="noopener">https://timesketch.org</a>></li><li>📚 <strong>Dépôt GitHub</strong> : <<a href="https://github.com/google/timesketch" target="_blank" rel="noopener">https://github.com/google/timesketch</a>></li><li>📚 <strong>Sigma rules pour Timesketch</strong> : <<a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noopener">https://github.com/SigmaHQ/sigma</a>></li></ul>
+        <h3>Communauté DFIR</h3>
+        <ul><li>💬 <strong>Open Source DFIR Slack</strong> : <<a href="https://github.com/open-source-dfir/slack" target="_blank" rel="noopener">https://github.com/open-source-dfir/slack</a>></li><li>💬 <strong>Mailing list log2timeline-discuss</strong> : <<a href="https://groups.google.com/g/log2timeline-discuss" target="_blank" rel="noopener">https://groups.google.com/g/log2timeline-discuss</a>></li><li>💬 <strong>Mailing list log2timeline-dev</strong> : <<a href="https://groups.google.com/g/log2timeline-dev" target="_blank" rel="noopener">https://groups.google.com/g/log2timeline-dev</a>></li></ul>
+        <h3>Distributions intégrant Plaso</h3>
+        <ul><li>🐧 <strong>SIFT Workstation (SANS)</strong> : <<a href="https://www.sans.org/tools/sift-workstation/" target="_blank" rel="noopener">https://www.sans.org/tools/sift-workstation/</a>></li><li>🐧 <strong>REMnux</strong> : <<a href="https://remnux.org" target="_blank" rel="noopener">https://remnux.org</a>></li><li>🐧 <strong>Tsurugi Linux</strong> : <<a href="https://tsurugi-linux.org" target="_blank" rel="noopener">https://tsurugi-linux.org</a>></li><li>🐧 <strong>PiRogue Tool Suite</strong> : <<a href="https://pts-project.org" target="_blank" rel="noopener">https://pts-project.org</a>></li></ul>
+        <h3>Tutoriels recommandés</h3>
+        <ul><li>📰 <strong>Blog officiel Plaso</strong> : <<a href="https://blog.kiddaland.net" target="_blank" rel="noopener">https://blog.kiddaland.net</a>></li><li>📰 <strong>« Plaso Super Timelines with Docker »</strong> (dfir-kev) : <<a href="https://dfir-kev.medium.com/plaso-super-timelines-with-docker-5fabfcdbd314" target="_blank" rel="noopener">https://dfir-kev.medium.com/plaso-super-timelines-with-docker-5fabfcdbd314</a>></li><li>📰 <strong>SANS DFIR Posters</strong> : <<a href="https://www.sans.org/posters/?focus-area=digital-forensics" target="_blank" rel="noopener">https://www.sans.org/posters/?focus-area=digital-forensics</a>></li><li>🎓 <strong>SANS FOR508</strong> : formation officielle qui utilise abondamment Plaso</li></ul>
+        <h3>Outils complémentaires</h3>
+        <ul><li>🔧 <strong>KAPE</strong> (acquisition rapide) : <<a href="https://www.kroll.com/kape" target="_blank" rel="noopener">https://www.kroll.com/kape</a>></li><li>🔧 <strong>Volatility 3</strong> (RAM) : <<a href="https://github.com/volatilityfoundation/volatility3" target="_blank" rel="noopener">https://github.com/volatilityfoundation/volatility3</a>></li><li>🔧 <strong>Autopsy</strong> (interface graphique disque) : <<a href="https://www.autopsy.com" target="_blank" rel="noopener">https://www.autopsy.com</a>></li><li>🔧 <strong>IPED</strong> (parsing alternatif gros volumes) : <<a href="https://github.com/sepinf-inc/IPED" target="_blank" rel="noopener">https://github.com/sepinf-inc/IPED</a>></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s22" data-section-id="s22">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">22</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Plaso est sans conteste <strong>la référence open source de la création de super-timelines</strong>. C'est l'outil que les pros de la réponse à incident sortent quand il faut <strong>reconstituer minute par minute</strong> ce qui s'est passé sur un système, en agrégeant des centaines de sources d'artefacts en une seule chronologie cohérente.</p>
+        <p>Son point fort — et son point faible — est sa <strong>philosophie « tout extraire d'abord, filtrer ensuite »</strong>. Tu obtiens une couverture forensique <strong>inégalée</strong>, mais au prix d'une <strong>lenteur d'extraction</strong> et d'un <strong>volume d'événements écrasant</strong> qu'il faut savoir maîtriser. C'est un <strong>outil d'expert</strong>, pas un <em>quick win</em>.</p>
+        <p>L'écosystème <strong>Plaso + Timesketch</strong> forme une <strong>stack DFIR open source de niveau professionnel</strong>, parfaitement adaptée :</p>
+        <ul><li>aux <strong>CERT et CSIRT</strong> pour la réponse à incident,</li><li>aux <strong>chercheurs en threat intelligence</strong>,</li><li>aux <strong>unités d'enquête judiciaire</strong> travaillant sans budget commercial,</li><li>à la <strong>formation universitaire</strong> en forensique numérique.</li></ul>
+        <p>Pour bien démarrer, je recommande de :</p>
+        <ol><li>Installer Plaso via <strong>Docker</strong> (le plus simple, le plus reproductible).</li><li>T'entraîner sur une <strong>image de test NIST CFReDS</strong> : <<a href="https://cfreds.nist.gov" target="_blank" rel="noopener">https://cfreds.nist.gov</a>></li><li>Faire ton premier <code>psteal</code> complet pour comprendre le workflow.</li><li>Installer <strong>Timesketch</strong> en parallèle dès que la timeline dépasse 100 000 événements.</li><li>Lire le <strong>poster SANS FOR508</strong> sur la timeline analysis pour comprendre les artefacts Windows.</li><li>Maîtriser les <strong>filtres psort</strong> : c'est là que se joue 80 % de l'efficacité réelle.</li><li>Combiner avec <strong>Volatility 3</strong> pour les analyses mémoire et <strong>KAPE</strong> pour le triage rapide.</li></ol>
+        <p>Tu as maintenant la pièce manquante du puzzle DFIR open source. Avec <strong>IPED/Autopsy</strong> pour le disque, <strong>MVT</strong> pour le mobile spyware, et <strong>Plaso + Timesketch</strong> pour la timeline, tu disposes d'une <strong>chaîne complète</strong> rivalisant avec les solutions commerciales à plusieurs dizaines de milliers d'euros la licence.</p>
+        <p>Bonnes investigations chronologiques ! 🔍⏱️</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Plaso / log2timeline maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>log2timeline.py</code> est l'extracteur — il produit un fichier <code>.plaso</code> contenant tous les événements."
+             data-feedback-ko="✗ La bonne réponse : <code>log2timeline.py</code>. C'est l'extracteur principal qui produit le fichier .plaso intermédiaire.">
+          <div class="tuto-quiz-question-text">1. Quel est l'<strong>outil principal</strong> de Plaso pour extraire les événements depuis une image ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">psort.py</button>
+            <button class="tuto-quiz-option" type="button">pinfo.py</button>
+            <button class="tuto-quiz-option" type="button">log2timeline.py</button>
+            <button class="tuto-quiz-option" type="button">plaso-extract</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>psort.py</code> est l'<em>output engine</em> de Plaso — il convertit le .plaso vers le format de sortie (l2tcsv, dynamic, json, elastic, etc.)."
+             data-feedback-ko="✗ La bonne réponse : trier / filtrer / exporter le fichier .plaso vers le format final (CSV, Elastic, JSON).">
+          <div class="tuto-quiz-question-text">2. À quoi sert <code>psort.py</code> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">À ranger les fichiers d'un disque par ordre alphabétique</button>
+            <button class="tuto-quiz-option" type="button">À trier, filtrer et exporter les événements depuis le fichier .plaso vers CSV / Elasticsearch / JSON</button>
+            <button class="tuto-quiz-option" type="button">À surveiller l'avancement du traitement en temps réel</button>
+            <button class="tuto-quiz-option" type="button">À installer Plaso depuis pypi</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="3"
+             data-feedback-ok="✓ Exact. Le format <code>elastic</code> envoie directement les événements vers Elasticsearch, ce que Timesketch utilise comme backend."
+             data-feedback-ko="✗ La bonne réponse : <code>elastic</code>. Timesketch utilise Elasticsearch comme backend, c'est donc le format le plus direct.">
+          <div class="tuto-quiz-question-text">3. Quel format de sortie est <strong>recommandé</strong> pour analyser une timeline dans Timesketch ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">l2tcsv (CSV legacy)</button>
+            <button class="tuto-quiz-option" type="button">json_line (JSON lines)</button>
+            <button class="tuto-quiz-option" type="button">dynamic (CSV personnalisé)</button>
+            <button class="tuto-quiz-option" type="button">elastic (Elasticsearch direct)</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Les <em>tags</em> sont des étiquettes automatiques appliquées par des règles (fichier <code>tag_*.txt</code>) — utiles pour filtrer (ex : <code>psort.py -t &quot;tag contains 'browser_search'&quot;</code>)."
+             data-feedback-ko="✗ La bonne réponse : une étiquette automatique basée sur des règles, qui permet de filtrer et corréler la timeline.">
+          <div class="tuto-quiz-question-text">4. Qu'est-ce qu'un <em>tag</em> appliqué par Plaso ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Un commentaire libre laissé par l'analyste sur un événement</button>
+            <button class="tuto-quiz-option" type="button">Une étiquette automatique (<em>browser_search</em>, <em>file_download</em>, etc.) basée sur des règles, qui sert à filtrer / corréler la timeline</button>
+            <button class="tuto-quiz-option" type="button">Un hash MD5 attaché à chaque ligne</button>
+            <button class="tuto-quiz-option" type="button">Une catégorie d'IoC venant de MISP</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Restreindre les parsers (<code>--parsers &quot;win7,winreg,evtx&quot;</code>) et tester sur un échantillon évite des heures de traitement inutile. Le parsing exhaustif peut prendre 20× plus de temps."
+             data-feedback-ko="✗ La bonne réponse : restreindre les parsers et tester sur un échantillon. Toujours valider la durée estimée avant un long traitement.">
+          <div class="tuto-quiz-question-text">5. Quelle bonne pratique <strong>avant</strong> de lancer log2timeline sur une grosse image ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Désactiver le filesystem pour économiser des cycles CPU</button>
+            <button class="tuto-quiz-option" type="button">Restreindre les <em>parsers</em> avec <code>--parsers</code> et tester sur un échantillon pour estimer la durée</button>
+            <button class="tuto-quiz-option" type="button">Modifier l'image disque pour supprimer les fichiers non pertinents</button>
+            <button class="tuto-quiz-option" type="button">Convertir l'image en DD avant tout</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/plaso.html" style="color:var(--cyan)">📚 Consulter la fiche Plaso / log2timeline</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Plaso / log2timeline v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

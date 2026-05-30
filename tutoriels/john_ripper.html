@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>John the Ripper — Cassage de hash multi-format — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas John the Ripper — Cassage de hash multi-format : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">JOHN THE RIPPER — CASSAGE DE HASH MULTI-FORMAT — PAS À PAS</span>
+  <a href="../fiches/john_ripper.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="john_ripper">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cadre légal et éthique</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. John vs Hashcat — complémentarité</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Versions : Core vs Jumbo vs Pro</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Cas d'usage DFIR typiques</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Prérequis</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation sous Linux</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Installation sous Windows</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Format de hash et identification</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Le mode "single crack"</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Mode dictionnaire (wordlist)</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Mode incremental (brute force)</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Mode external et règles</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Les scripts *2john — extraction uni</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Casser un hash NTLM, ZIP, Office, K</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Gestion des sessions et reprise</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Performances et parallélisation</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Forces et faiblesses</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Bonnes pratiques DFIR</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources utiles</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">John the Ripper — Cassage de hash multi-format</span>
+        </div>
+
+        <h1>🔑 John the Ripper — Cassage de hash multi-format</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer John the Ripper (jumbo)</strong>, identifier le bon <code>--format</code> pour un hash, exploiter le <strong>mode single crack</strong> unique à John (basé sur le login/GECOS), utiliser les modes <strong>wordlist + rules</strong> et <strong>incremental</strong>, et surtout maîtriser les <strong>scripts *2john</strong> (zip2john, office2john, keepass2john, pdf2john, bitlocker2john) qui sont incontournables même quand on crack avec Hashcat. Workflow combiné John + Hashcat.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~60 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Linux</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows</span>
+          <span class="tuto-meta-badge "><span class="icon">🔧</span> CPU optimisé</span>
+          <span class="tuto-meta-badge "><span class="icon">⚖️</span> Cadre légal strict</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout warning">
+        <div class="tuto-callout-title">⚠️ Cadre légal identique à Hashcat</div>
+        <div>John the Ripper est un outil de cassage de hash <strong>dual-use réglementé</strong>. En Suisse : mandat MP (art. 197 CPP) ou audit autorisé. Sanctions : art. 143bis CP (jusqu'à 3 ans), RGPD, CFAA. <strong>Toujours documenter</strong> autorité, mandat, finalité, durée. Ce tutoriel suppose le tutoriel <strong>Hashcat (v127)</strong> en prérequis — les concepts de hash et de modes d'attaque y sont introduits.<br><br>📦 <a href="https://github.com/openwall/john" target="_blank" rel="noopener">github.com/openwall/john</a> · Licence GPLv2 · Auteur historique : Solar Designer</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>John the Ripper est le <strong>patriarche</strong> du cassage de hash. Sa philosophie diffère de Hashcat :</p>
+        <table><thead><tr><th>Aspect</th><th>Hashcat</th><th>John the Ripper</th></tr></thead><tbody><tr><td>Optimisation</td><td><strong>GPU avant tout</strong></td><td><strong>CPU avant tout</strong> (jumbo a un support GPU partiel)</td></tr><tr><td>Force</td><td>Brute computation</td><td>Polyvalence + intelligence (mode "single")</td></tr><tr><td>Communauté</td><td>50k+ stars</td><td>Plus modeste, mais experts pointus</td></tr><tr><td>Configurabilité</td><td>Très bonne</td><td><strong>Excellente</strong> (fichier <code>john.conf</code> riche)</td></tr><tr><td>Scripting</td><td>Plugins limités</td><td><strong>Mode external</strong> (langage C-like intégré)</td></tr></tbody></table>
+        <p><strong>Particularités</strong> :</p>
+        <ul><li>400+ formats supportés</li><li><strong>Mode "single crack"</strong> unique : exploite les <strong>infos contextuelles</strong> (login, GECOS) pour deviner les passwords</li><li>**Scripts *2john<strong> : standard de facto pour extraire un hash depuis Office, KeePass, ZIP, RAR, BitLocker, etc. — </strong>utilisés y compris par Hashcat**</li><li><strong>Règles compatibles</strong> avec Hashcat (mais syntaxe étendue)</li><li><strong>Pot file</strong> : base de mots cassés réutilisable entre sessions</li><li><strong>Multi-plateforme</strong> : Linux, macOS, Windows, BSD, Solaris</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cadre légal et éthique</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Identique à Hashcat (v127) — relire la section §2 de ce tutoriel.</p>
+        <p><strong>Rappel rapide</strong> :</p>
+        <ul><li>En Suisse : casser un hash nécessite un <strong>mandat MP</strong> (art. 197 CPP) ou un cadre d'audit autorisé.</li><li><strong>Sanctions</strong> : art. 143bis CP (jusqu'à 3 ans), RGPD, CFAA.</li><li><strong>Toujours documenter</strong> : autorité, mandat, finalité, durée.</li></ul>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>John est un outil dual-use réglementé. Comme Hashcat, il n'a sa place qu'en cadre légal explicite.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> John vs Hashcat — complémentarité</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Ne pas opposer John et Hashcat : <strong>les utiliser ensemble</strong>.</p>
+        <h3>Quand préférer John</h3>
+        <ul><li>Cracking <strong>CPU</strong> uniquement (serveur sans GPU)</li><li>Mode <strong>"single crack"</strong> : pour AD avec colonne <code>GECOS</code> riche (nom, mail, fonction)</li><li>Formats <strong>exotiques</strong> (PDF, ZIP, Office, KeePass, BitLocker, Mozilla, DMG, ...) — l'extraction <code>*2john</code> est ici <strong>incontournable</strong></li><li>Cas où la <strong>vitesse pure</strong> n'est pas critique (~50-100M h/s CPU vs 100G+ h/s GPU pour MD5)</li><li>Cracking sur SSH d'un serveur distant sans capacité GPU</li></ul>
+        <h3>Quand préférer Hashcat</h3>
+        <ul><li>Volume <strong>massif</strong> de hashs simples (NTLM en masse)</li><li>Algorithmes <strong>rapides</strong> où le GPU explose le CPU (MD5, NTLM, SHA1)</li><li>Brute force aveugle (uniquement si justifié)</li></ul>
+        <h3>Workflow combiné typique</h3>
+        <ol><li><strong>Identifier</strong> le hash : <code>hashid</code> ou <code>--example-hashes</code> (Hashcat)</li><li><strong>Extraire</strong> le hash : scripts <code>*2john</code> (John, même si on utilisera Hashcat)</li><li><strong>Cracker</strong> : Hashcat sur GPU si format pris en charge ; sinon John</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Exemple complet : KeePass avec John, puis avec Hashcat
+keepass2john MyDB.kdbx &gt; kp_hash.txt
+
+# Option A — John CPU
+john --wordlist=rockyou.txt --rules kp_hash.txt
+john --show kp_hash.txt
+
+# Option B — Hashcat GPU
+hashcat -a 0 -m 13400 kp_hash.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <p>Les scripts <code>*2john</code> de John sont <strong>toujours nécessaires</strong> pour préparer le hash. C'est pour cette raison qu'on installe <strong>les deux outils</strong> en parallèle.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Versions : Core vs Jumbo vs Pro</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Version</th><th>Description</th></tr></thead><tbody><tr><td><strong>Core</strong></td><td>Version officielle stable, peu de formats (~30)</td></tr><tr><td><strong>Jumbo</strong></td><td>Fork communautaire <strong>maintenu par John Team</strong>, <strong>400+ formats</strong>, scripts <code>*2john</code>. <strong>C'est celle qu'on utilise en DFIR.</strong></td></tr><tr><td><strong>Pro</strong></td><td>Version commerciale d'Openwall : optimisations avancées, support payant. Rare en DFIR public.</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>. Sans elle, pas de KeePass, pas d'Office, pas de BitLocker, pas de ZIP, etc.</div></div>
+        <p>Le repository GitHub officiel <code>openwall/john</code> est <strong>directement la version jumbo</strong>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Cas d'usage DFIR typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Cracking NTLM</strong> sur serveur sans GPU (cf. workflow Hashcat §15, transposable)</li><li><strong>Audit d'AD</strong> par mode "single crack" : exploite les noms réels des comptes</li><li><strong>KeePass</strong> : récupérer le master password d'une base saisie</li><li><strong>Office</strong> : déverrouiller un document Word/Excel/PPT protégé</li><li><strong>PDF</strong> : déverrouiller un PDF avec mot de passe utilisateur</li><li><strong>ZIP, RAR, 7z</strong> : archives chiffrées suspectes</li><li><strong>BitLocker</strong> : récupération de clé de volume chiffré</li><li><strong>KeyChain macOS</strong> : déverrouiller un trousseau Apple</li><li><strong>iTunes Backup</strong> : sauvegarde iOS protégée</li><li><strong>DMG</strong> : image disque macOS chiffrée</li><li><strong>Mozilla Master Password</strong> : récupérer les mots de passe Firefox</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Prérequis</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th></tr></thead><tbody><tr><td>OS</td><td>Linux, macOS, Windows</td><td>Linux 64 bits</td></tr><tr><td>CPU</td><td>4 cœurs</td><td>8-16 cœurs</td></tr><tr><td>RAM</td><td>4 Go</td><td>16 Go</td></tr><tr><td>Stockage</td><td>1 Go (John seul)</td><td>50 Go (wordlists)</td></tr><tr><td>GPU</td><td>non requis</td><td>optionnel (jumbo a un support OpenCL)</td></tr></tbody></table>
+        <h3>Connaissances</h3>
+        <ul><li>Bases CLI (tutoriel <strong>Bases CLI</strong> v127)</li><li><strong>Tutoriel Hashcat</strong> (v127) recommandé en prérequis (les concepts de hash, de modes d'attaque, de dictionnaires sont déjà acquis)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation sous Linux</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Option A : depuis le paquet de la distribution (rapide mais souvent ancien)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Debian/Ubuntu
+sudo apt update
+sudo apt install -y john
+
+# Fedora
+sudo dnf install -y john
+
+# Arch
+sudo pacman -S john</code></pre></div>
+        <p>Vérifier que c'est la version <strong>jumbo</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --list=formats | wc -l</code></pre></div>
+        <p>Si moins de 200, c'est la version core — passer à l'option B pour avoir jumbo.</p>
+        <h3>Option B : compiler depuis les sources (recommandé pour DFIR)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Dépendances
+sudo apt install -y build-essential libssl-dev zlib1g-dev yasm pkg-config \
+                    libgmp-dev libpcap-dev libbz2-dev libsqlite3-dev
+
+# Récupérer
+cd /opt
+sudo git clone https://github.com/openwall/john.git
+cd john/src
+
+# Configurer et compiler
+sudo ./configure
+sudo make -s clean &amp;&amp; sudo make -sj4
+
+# Le binaire est dans ../run/
+cd ../run
+./john --version
+./john --list=formats | wc -l   # doit afficher 400+</code></pre></div>
+        <h3>Tester</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>cd /opt/john/run
+
+# Liste des formats
+./john --list=formats | head -n 30
+
+# Hash NTLM exemple
+echo 'admin:31d6cfe0d16ae931b73c59d7e0c089c0' &gt; test.txt
+./john --format=NT test.txt</code></pre></div>
+        <h3>Ajouter au PATH</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>echo 'export PATH="/opt/john/run:$PATH"' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : télécharger Jumbo</h3>
+        <ol><li>Aller sur <<a href="https://www.openwall.com/john/" target="_blank" rel="noopener">https://www.openwall.com/john/</a>></li><li>Télécharger <strong>john-1.9.0-jumbo-1-win64.7z</strong> (ou la dernière version Windows binaire)</li><li>Décompresser dans <code>C:\Tools\john\</code></li></ol>
+        <h3>Étape 2 : tester</h3>
+        <p>Ouvre <strong>PowerShell</strong> ou <strong>cmd</strong> dans <code>C:\Tools\john\run\</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>.\john.exe --version
+.\john.exe --list=formats | Measure-Object -Line</code></pre></div>
+        <h3>Étape 3 : antivirus</h3>
+        <p>Comme Hashcat, John est souvent <strong>flagué</strong> par Defender. Autoriser dans Windows Defender en documentant la décision.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Format de hash et identification</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Identifier un hash inconnu</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avec hashid (Python)
+pip install hashid
+echo "5f4dcc3b5aa765d61d8327deb882cf99" | hashid
+# Réponse : MD5</code></pre></div>
+        <p>Avec John, on précise le format avec <code>--format=</code>. La liste est dans :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --list=formats</code></pre></div>
+        <h3>Formats DFIR essentiels</h3>
+        <table><thead><tr><th>Format John</th><th>Algorithme / Source</th></tr></thead><tbody><tr><td><code>--format=NT</code></td><td>NTLM Windows</td></tr><tr><td><code>--format=Raw-MD5</code></td><td>MD5 simple</td></tr><tr><td><code>--format=Raw-SHA1</code></td><td>SHA-1</td></tr><tr><td><code>--format=Raw-SHA256</code></td><td>SHA-256</td></tr><tr><td><code>--format=bcrypt</code></td><td>bcrypt</td></tr><tr><td><code>--format=sha512crypt</code></td><td>Hashs Linux modernes (<code>/etc/shadow</code>)</td></tr><tr><td><code>--format=krb5pa-md5</code></td><td>Kerberos pré-auth</td></tr><tr><td><code>--format=KeePass</code></td><td>Base KeePass</td></tr><tr><td><code>--format=office</code></td><td>Office 2007+</td></tr><tr><td><code>--format=ZIP</code></td><td>ZIP chiffré</td></tr><tr><td><code>--format=RAR</code></td><td>RAR chiffré</td></tr><tr><td><code>--format=BitLocker</code></td><td>Disque BitLocker</td></tr><tr><td><code>--format=pdf</code></td><td>PDF protégé</td></tr><tr><td><code>--format=mozilla</code></td><td>Mozilla master password</td></tr></tbody></table>
+        <h3>Auto-détection</h3>
+        <p>Si tu omets <code>--format=</code>, John essaie de détecter automatiquement. Mais en cas d'ambiguïté (deux formats compatibles), il faut spécifier explicitement.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Le mode "single crack"</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Le mode signature de John</strong>. Il combine :</p>
+        <ul><li>Le <strong>login</strong> de chaque compte</li><li>Les champs <strong>GECOS</strong> (nom complet, bureau, téléphone) si disponibles</li><li>Une <strong>mutation par règles</strong> (variations classiques : <code>1</code>, <code>!</code>, casse, etc.)</li></ul>
+        <p>C'est très efficace sur des dumps de <code>/etc/shadow</code> ou d'AD où on a le login en clair.</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --single hash.txt</code></pre></div>
+        <h3>Exemple</h3>
+        <p>Fichier <code>shadow_dump.txt</code> (format Unix shadow) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john_doe:$6$xyz...
+admin:$6$abc...</code></pre></div>
+        <p>John génère et teste automatiquement : <code>johndoe</code>, <code>JohnDoe</code>, <code>john_doe1</code>, <code>john_doe!</code>, <code>J0hndoe</code>, <code>doe1234</code>, etc.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --single shadow_dump.txt</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur un dump avec logins en clair. Souvent, 30-50 % des comptes tombent en quelques secondes — sans même charger de dictionnaire.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Mode dictionnaire (wordlist)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Identique conceptuellement à Hashcat <code>-a 0</code>.</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --wordlist=rockyou.txt hash.txt
+john --wordlist=rockyou.txt --rules hash.txt</code></pre></div>
+        <p><code>--rules</code> applique les transformations standards (capitalize, append digit, leet speak basique). Le pack par défaut est riche.</p>
+        <h3>Personnaliser les règles</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --wordlist=rockyou.txt --rules=Single hash.txt
+john --wordlist=rockyou.txt --rules=Wordlist hash.txt
+john --wordlist=rockyou.txt --rules=Jumbo hash.txt</code></pre></div>
+        <p>Les packs sont définis dans <code>john.conf</code> (section <code>[List.Rules:Xxx]</code>).</p>
+        <h3>Format des wordlists</h3>
+        <p>John lit les wordlists ligne par ligne, comme Hashcat. <strong>Tous tes dictionnaires Hashcat sont réutilisables</strong>.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Récupérer un dictionnaire référence
+wget https://github.com/danielmiessler/SecLists/raw/master/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt
+
+john --wordlist=10-million-password-list-top-1000000.txt --rules hash.txt</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Mode incremental (brute force)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Brute force "intelligent" basé sur des <strong>modèles statistiques</strong> (qui sont plus efficaces qu'un brute force naïf).</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --incremental hash.txt
+john --incremental=ASCII hash.txt
+john --incremental=Alpha hash.txt
+john --incremental=Digits hash.txt</code></pre></div>
+        <p>Les modes définissent l'<strong>alphabet</strong> : <code>Alpha</code> = lettres, <code>Digits</code> = chiffres, <code>Alnum</code> = alphanumérique, etc.</p>
+        <h3>Limiter</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --incremental --max-length=8 hash.txt
+john --incremental --min-length=6 --max-length=8 hash.txt</code></pre></div>
+        <p>Sans limite, John bouclera potentiellement très longtemps. En pratique, <strong>incremental est rarement utilisé seul</strong> — préférer dictionnaire + règles.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Mode external et règles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Mode external</h3>
+        <p>John permet d'écrire des modes de génération en <strong>langage C-like</strong> dans <code>john.conf</code>. Section <code>[List.External:NomMode]</code>.</p>
+        <p>Exemple : générer des mots commençant par majuscule + 4 chiffres :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>[List.External:MyMode]
+void filter() {
+    word[0] = word[0] - 32;   // majuscule sur 1re lettre
+}
+
+void generate() {
+    // ... logique custom ...
+}</code></pre></div>
+        <p>C'est avancé — la plupart des analystes utilisent les règles standards.</p>
+        <h3>Règles personnalisées</h3>
+        <p>Dans <code>john.conf</code>, section <code>[List.Rules:MyCustom]</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Capitalize
+c
+# Append digit 0-9
+$[0-9]
+# Append year 2020-2026
+$2$0$2$[0-6]</code></pre></div>
+        <p>Puis :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --wordlist=base.txt --rules=MyCustom hash.txt</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>les règles John sont <strong>fortement inspirées</strong> du même langage. Beaucoup de règles Hashcat fonctionnent dans John (et inversement). Conversion souvent triviale.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Les scripts *2john — extraction universelle</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>La vraie superpuissance de John</strong>. Le repo <code>openwall/john</code> contient des dizaines de scripts d'extraction qui transforment un fichier chiffré en hash compatible <strong>John ET Hashcat</strong>.</p>
+        <h3>Liste des principaux scripts (dans <code>john/run/</code>)</h3>
+        <table><thead><tr><th>Script</th><th>Source</th><th>Format de sortie</th></tr></thead><tbody><tr><td><code>zip2john</code></td><td>ZIP chiffré</td><td><code>--format=ZIP</code> (John) ou <code>-m 17220</code> (Hashcat)</td></tr><tr><td><code>rar2john</code></td><td>RAR3 ou RAR5 chiffré</td><td><code>--format=rar5</code></td></tr><tr><td><code>7z2john.pl</code></td><td>7z chiffré</td><td><code>--format=7z</code></td></tr><tr><td><code>office2john.py</code></td><td>DOCX, XLSX, PPTX, MDB, etc.</td><td><code>--format=office</code> ou <code>-m 9400/9500/9600/9700/9800/9900</code></td></tr><tr><td><code>keepass2john</code></td><td>KDBX (KeePass 2)</td><td><code>--format=KeePass</code> ou <code>-m 13400</code></td></tr><tr><td><code>pdf2john.pl</code></td><td>PDF protégé</td><td><code>--format=pdf</code> ou <code>-m 10500</code></td></tr><tr><td><code>bitlocker2john</code></td><td>Volume BitLocker</td><td><code>--format=BitLocker</code> ou <code>-m 22100</code></td></tr><tr><td><code>truecrypt_volume2john.sh</code></td><td>Volume TrueCrypt/VeraCrypt</td><td><code>--format=tc_aes_xts</code></td></tr><tr><td><code>keychain2john.py</code></td><td>macOS KeyChain</td><td><code>--format=keychain</code></td></tr><tr><td><code>dmg2john</code></td><td>Image DMG</td><td><code>--format=dmg</code></td></tr><tr><td><code>itunes_backup2john.pl</code></td><td>Backup iTunes</td><td><code>--format=itunes-backup</code></td></tr><tr><td><code>gpg2john</code></td><td>Clé GPG protégée</td><td><code>--format=gpg</code></td></tr><tr><td><code>ssh2john.py</code></td><td>Clé privée SSH</td><td><code>--format=SSH</code></td></tr><tr><td><code>mozilla2john.py</code></td><td>Master password Firefox</td><td><code>--format=mozilla</code></td></tr><tr><td><code>wpa2john</code></td><td>Capture WPA handshake</td><td><code>--format=wpapsk</code> ou <code>-m 22000</code></td></tr></tbody></table>
+        <h3>Exemple : casser un PDF protégé</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Extraction du hash
+pdf2john.pl document_protege.pdf &gt; pdf_hash.txt
+
+# Inspection
+cat pdf_hash.txt
+# document.pdf:$pdf$2*3*128*-1028*1*16*...
+
+# Cracking avec John
+john --wordlist=rockyou.txt pdf_hash.txt
+
+# Ou avec Hashcat
+hashcat -a 0 -m 10500 pdf_hash.txt rockyou.txt -r rules/best64.rule</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>les scripts <code>*2john</code> sont <strong>incontournables</strong> pour préparer le hash.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Casser un hash NTLM, ZIP, Office, KeePass, PDF</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>NTLM (Windows)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hash NTLM dans hashes.txt (1 par ligne)
+echo "31d6cfe0d16ae931b73c59d7e0c089c0" &gt; hashes.txt
+echo "8846f7eaee8fb117ad06bdd830b7586c" &gt;&gt; hashes.txt
+
+john --format=NT --wordlist=rockyou.txt --rules hashes.txt
+john --show --format=NT hashes.txt</code></pre></div>
+        <h3>ZIP</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>zip2john archive_protege.zip &gt; zip_hash.txt
+john --wordlist=rockyou.txt --rules zip_hash.txt
+john --show zip_hash.txt</code></pre></div>
+        <h3>Office (Word, Excel)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>office2john.py document.docx &gt; office_hash.txt
+john --wordlist=rockyou.txt office_hash.txt
+john --show office_hash.txt</code></pre></div>
+        <h3>KeePass</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>keepass2john MyDB.kdbx &gt; kp_hash.txt
+john --wordlist=rockyou.txt --rules kp_hash.txt
+john --show kp_hash.txt</code></pre></div>
+        <h3>PDF</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pdf2john.pl document.pdf &gt; pdf_hash.txt
+john --wordlist=rockyou.txt pdf_hash.txt
+john --show pdf_hash.txt</code></pre></div>
+        <h3>Clé SSH privée protégée</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ssh2john.py id_rsa_protegee &gt; ssh_hash.txt
+john --wordlist=rockyou.txt ssh_hash.txt
+john --show ssh_hash.txt</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div><code>john --show</code> affiche les mots de passe déjà cassés depuis le pot file. Inutile de relancer un cracking.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Gestion des sessions et reprise</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>John supporte la <strong>reprise automatique</strong> comme Hashcat.</p>
+        <h3>Lancer une session nommée</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --session=enquete2026 --wordlist=rockyou.txt --rules hash.txt</code></pre></div>
+        <h3>Suivre l'avancement</h3>
+        <p>Pendant le cracking, appuie sur <strong>n'importe quelle touche</strong> pour voir le statut. Ou depuis un autre terminal :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --status=enquete2026</code></pre></div>
+        <h3>Mettre en pause (Ctrl+C) et reprendre</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --restore=enquete2026</code></pre></div>
+        <h3>Le pot file</h3>
+        <p><code>john.pot</code> (dans le dossier <code>~/.john/</code> ou <code>/opt/john/run/</code>) stocke <strong>tous les hashs déjà cassés</strong>. Réutilisé automatiquement entre sessions.</p>
+        <p>Pour voir les résultats :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --show hash.txt</code></pre></div>
+        <p><strong>Astuce DFIR</strong> : conserver et archiver le <code>john.pot</code> entre cas — il s'enrichit progressivement.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Performances et parallélisation</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Voir les perfs</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --test</code></pre></div>
+        <p>Benchmark de tous les formats avec <strong>vitesse en c/s</strong> (candidates per second).</p>
+        <p>Sur un i9-13900K (24 cœurs) :</p>
+        <ul><li>NTLM : ~1.2 G c/s</li><li>MD5 : ~600 M c/s</li><li>bcrypt : ~10 k c/s</li><li>KeePass : ~200 c/s</li></ul>
+        <h3>Multi-cœur (OpenMP)</h3>
+        <p>John jumbo est compilé avec OpenMP. Pour exploiter tous les cœurs :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --fork=16 --wordlist=rockyou.txt hash.txt</code></pre></div>
+        <p><code>--fork=16</code> lance 16 processus parallèles.</p>
+        <h3>Distribution sur plusieurs machines</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Sur la machine 1 (de 4)
+john --node=1/4 --fork=8 --wordlist=rockyou.txt hash.txt
+
+# Sur la machine 2
+john --node=2/4 --fork=8 --wordlist=rockyou.txt hash.txt
+
+# Etc.</code></pre></div>
+        <p>Chaque nœud traite <strong>1/4 de l'espace de recherche</strong>. Combiné avec <code>--fork</code> pour le multi-cœur local, et tu as une distribution simple sans MPI.</p>
+        <h3>Support GPU (limité)</h3>
+        <p>Avec John jumbo compilé avec OpenCL :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>john --list=opencl-devices
+john --format=NT-opencl --wordlist=rockyou.txt hash.txt</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>. John en GPU est correct mais Hashcat est mieux optimisé.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Forces et faiblesses</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Le standard historique</strong> : 30 ans de maturité.</p>
+        <p>✅ <strong>Polyvalence inégalée</strong> : 400+ formats supportés (jumbo).</p>
+        <p>✅ <strong>Mode "single crack"</strong> : intelligence basée sur le contexte (login, GECOS).</p>
+        <p>✅ **Scripts <code>*2john</code><strong> : </strong>incontournables**, même quand on crack avec Hashcat.</p>
+        <p>✅ <strong>Modes external</strong> : langage C-like pour règles très avancées.</p>
+        <p>✅ <strong>Open source GPLv2</strong> : auditable, modifiable, sans dépendance commerciale.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : Linux, macOS, Windows, BSD, Solaris.</p>
+        <p>✅ <strong>Pot file persistant</strong> : réutilisation entre sessions et cas.</p>
+        <p>✅ <strong>Communauté experts</strong> : moins de bruit que Hashcat, mais analystes pointus.</p>
+        <p>✅ <strong>Distribution simple</strong> : <code>--node=X/N --fork=K</code> sans MPI.</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>Plus lent que Hashcat sur GPU</strong> : par design (CPU first).</p>
+        <p>❌ <strong>Documentation parfois sèche</strong> : doc historique, certaines options peu commentées.</p>
+        <p>❌ <strong>Compilation parfois nécessaire</strong> : la jumbo des distros est souvent en retard.</p>
+        <p>❌ <strong>Syntaxe légèrement différente</strong> de Hashcat — courbe d'apprentissage si on vient de l'autre.</p>
+        <p>❌ <strong>Moins d'aide automatique</strong> : <code>--example-hashes</code> n'existe pas en équivalent direct.</p>
+        <p>❌ <strong>Communauté plus restreinte</strong> : moins de tutoriels modernes que Hashcat.</p>
+        <p>❌ <strong>Aspect dual-use</strong> : à manipuler avec discernement (cadre légal).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Bonnes pratiques DFIR</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Toujours installer John ET Hashcat</strong> : les deux sont complémentaires, jamais concurrents.</p>
+        <p>🔹 <strong>Démarrer par <code>--single</code></strong> sur tout dump avec logins en clair. 30-50 % de comptes tombent en quelques secondes.</p>
+        <p>🔹 <strong>Construire ta wordlist</strong> : rockyou + weakpass + dictionnaire métier custom (CV, intérêts, dates) du suspect.</p>
+        <p>🔹 <strong>Tester <code>--show</code> avant relancer</strong> : le pot file peut déjà contenir la réponse.</p>
+        <p>🔹 <strong>Documenter chaque session</strong> : <code>--session=nom_explicite</code> qui rappelle le cas.</p>
+        <p>🔹 <strong>Conserver le pot file</strong> entre cas (effet cumulatif, base de mots cassés qui s'enrichit).</p>
+        <p>🔹 <strong>Préférer dictionnaire + règles</strong> au brute force aveugle.</p>
+        <p>🔹 <strong>Mesurer avant lancer</strong> : <code>john --test --format=XX</code> pour estimer la faisabilité.</p>
+        <p>🔹 <strong>Pour formats exotiques</strong> (BitLocker, KeePass, Office, PDF) : <code>*2john</code> puis John ou Hashcat selon ce qui va vite.</p>
+        <p>🔹 <strong>Cracking sur machine dédiée</strong> : pas sur le poste analyste, jamais sur preuve directe.</p>
+        <p>🔹 <strong>Mises à jour régulières</strong> : <code>git pull && make</code> ajoute des formats fréquemment.</p>
+        <p>🔹 <strong>Audit légal préalable</strong> : mandat, cadre, finalité documentés avant chaque session.</p>
+        <p>🔹 <strong>Effacer les hashs</strong> une fois l'enquête close (sauf si pièce de procédure formalisée).</p>
+        <p>🔹 <strong>Apprendre <code>john.conf</code></strong> : pour personnaliser règles et modes external.</p>
+        <p>🔹 <strong>Comprendre le <code>--node</code></strong> : pour distribuer sur plusieurs machines sans complexité.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>📚 <strong>Site officiel</strong> : <<a href="https://www.openwall.com/john/" target="_blank" rel="noopener">https://www.openwall.com/john/</a>></li><li>📚 <strong>GitHub jumbo</strong> : <<a href="https://github.com/openwall/john" target="_blank" rel="noopener">https://github.com/openwall/john</a>></li><li>📚 <strong>Documentation officielle</strong> : <<a href="https://www.openwall.com/john/doc/" target="_blank" rel="noopener">https://www.openwall.com/john/doc/</a>></li><li>📚 <strong><code>john.conf</code> documentation</strong> : section <code>[Options]</code>, <code>[List.Rules:<em>]</code>, <code>[List.External:</em>]</code></li><li>🎓 <strong>Openwall wiki</strong> : <<a href="https://openwall.info/wiki/john" target="_blank" rel="noopener">https://openwall.info/wiki/john</a>></li><li>🎓 <strong>John community community</strong> : forums et mailing list openwall</li><li>🎓 <strong>HackTricks JtR cheatsheet</strong> : <<a href="https://book.hacktricks.xyz/cryptography/cracking-hashes" target="_blank" rel="noopener">https://book.hacktricks.xyz/cryptography/cracking-hashes</a>></li><li>🔧 <strong>hashid</strong> (identification) : <<a href="https://github.com/psypanda/hashID" target="_blank" rel="noopener">https://github.com/psypanda/hashID</a>></li><li>🔧 <strong>name-that-hash</strong> : <<a href="https://github.com/HashPals/Name-That-Hash" target="_blank" rel="noopener">https://github.com/HashPals/Name-That-Hash</a>></li><li>🔧 <strong>Hashcat</strong> (à utiliser en complément) : <<a href="https://hashcat.net/hashcat/" target="_blank" rel="noopener">https://hashcat.net/hashcat/</a>></li><li>📖 <strong>Dustin Heywood (EvilMog)</strong> : conférences DEF CON couvrant souvent JtR</li><li>📖 <strong>Brian Kernighan — UNIX programming</strong> (contexte historique de John)</li><li>💬 <strong>john-users mailing list</strong> : <<a href="https://www.openwall.com/lists/john-users/" target="_blank" rel="noopener">https://www.openwall.com/lists/john-users/</a>></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>John the Ripper reste un <strong>incontournable du DFIR</strong>, malgré la montée en puissance de Hashcat. Son <strong>mode "single crack"</strong>, ses **scripts <code>*2john</code><strong> et sa </strong>polyvalence inégalée** sur les formats exotiques en font le complément naturel — pas le concurrent — de Hashcat.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Installer la version jumbo</strong> systématiquement (paquet distro souvent insuffisant).</li><li><strong>Maîtriser <code>--single</code></strong> : c'est le différenciateur de John face à Hashcat.</li><li>**Connaître les scripts <code>*2john</code>** : tu les utiliseras pour Hashcat aussi.</li><li><strong>Construire un workflow hybride</strong> : John pour l'extraction et les formats exotiques, Hashcat pour la puissance brute GPU.</li><li><strong>Conserver les pot files</strong> entre enquêtes — effet cumulatif considérable.</li><li><strong>Documenter chaque session</strong> — discipline juridique identique à Hashcat.</li></ol>
+        <p>John est l'outil qui a inventé une discipline. <strong>Le respecter, c'est respecter l'histoire du DFIR</strong>. 🔑</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« John the Ripper — Cassage de hash multi-format maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Le mode <code>--single</code> est le différenciateur de John : il utilise le login et le champ GECOS (nom complet, etc.) pour générer des variations (johndoe, JohnDoe, john_doe1, J0hndoe...). Sur un dump avec logins en clair, <strong>30-50 % des comptes tombent en quelques secondes</strong> sans même charger de dictionnaire. Hashcat n'a pas d'équivalent natif."
+             data-feedback-ko="✗ La bonne réponse : <strong>le mode single crack</strong>. John est <strong>moins rapide</strong> que Hashcat sur GPU (par design CPU-first). Mais le mode <code>--single</code> est l'arme secrète de John : intelligence basée sur le contexte plutôt que force brute.">
+          <div class="tuto-quiz-question-text">1. Quelle est la <strong>spécificité unique</strong> de John the Ripper par rapport à Hashcat ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Il est plus rapide sur GPU</button>
+            <button class="tuto-quiz-option" type="button">Le <strong>mode single crack</strong> qui exploite les infos contextuelles (login, GECOS) pour générer des candidats intelligents</button>
+            <button class="tuto-quiz-option" type="button">Il supporte plus de formats que Hashcat</button>
+            <button class="tuto-quiz-option" type="button">Il a une interface graphique</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Hashcat <strong>ne lit pas les fichiers</strong> (.docx, .kdbx, .zip, .pdf, conteneurs BitLocker) — il casse des hashs. Les scripts <code>*2john</code> de la version jumbo de John sont <strong>le standard de facto</strong> pour extraire le hash dans un format compatible Hashcat. Workflow : <code>keepass2john MyDB.kdbx</code> → hash → <code>hashcat -m 13400</code>."
+             data-feedback-ko="✗ La bonne réponse : <strong>les scripts *2john sont indispensables</strong>. Sans eux, pas de cracking de KeePass, Office, ZIP, PDF, BitLocker, etc. C'est pour ça qu'on installe les deux outils en parallèle, jamais l'un contre l'autre.">
+          <div class="tuto-quiz-question-text">2. Pourquoi installer John même si on prévoit de cracker avec Hashcat ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Pour avoir deux outils en cas de panne</button>
+            <button class="tuto-quiz-option" type="button">Parce que les <strong>scripts *2john</strong> (zip2john, keepass2john, office2john, etc.) sont incontournables pour extraire le hash depuis un fichier protégé, y compris pour Hashcat</button>
+            <button class="tuto-quiz-option" type="button">John est plus précis sur NTLM</button>
+            <button class="tuto-quiz-option" type="button">Pas nécessaire, Hashcat suffit</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>--format=NT</code> spécifie le format NTLM, <code>--wordlist=</code> le dictionnaire, <code>--rules</code> applique les transformations par défaut (capitalize, append digit, leet, etc.). Pattern typique pour casser un dump SAM Windows."
+             data-feedback-ko="✗ La bonne réponse : <code>john --format=NT --wordlist=rockyou.txt --rules hash.txt</code>. Spécifier <code>--format=</code> est important si le format est ambigu. Voir <code>john --list=formats</code> pour la liste complète des formats supportés.">
+          <div class="tuto-quiz-question-text">3. Quelle commande pour <strong>casser un hash NTLM</strong> avec John ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>john --ntlm hash.txt</code></button>
+            <button class="tuto-quiz-option" type="button"><code>john --format=NT --wordlist=rockyou.txt --rules hash.txt</code></button>
+            <button class="tuto-quiz-option" type="button"><code>john --windows hash.txt</code></button>
+            <button class="tuto-quiz-option" type="button"><code>john --crack ntlm hash.txt</code></button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. John sauvegarde automatiquement chaque seconde. <code>john --session=enquete2026 --wordlist=...</code> puis <code>john --restore=enquete2026</code> pour reprendre. Sessions nommées recommandées pour gérer plusieurs cas en parallèle. Le pot file (<code>john.pot</code>) garde aussi tous les hashs cassés — <code>john --show hash.txt</code> les affiche."
+             data-feedback-ko="✗ La bonne réponse : <code>--session=NOM</code> + <code>--restore=NOM</code>. Même mécanisme que Hashcat. Ne JAMAIS recommencer un cracking long depuis zéro.">
+          <div class="tuto-quiz-question-text">4. Tu lances un cracking John, tu fais Ctrl+C par erreur. Comment reprendre ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Relancer la commande complète</button>
+            <button class="tuto-quiz-option" type="button">Utiliser <code>john --restore=NOM_SESSION</code> (si tu avais lancé avec <code>--session=NOM_SESSION</code>)</button>
+            <button class="tuto-quiz-option" type="button">John ne supporte pas la reprise</button>
+            <button class="tuto-quiz-option" type="button">Effacer le pot file et recommencer</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>pdf2john.pl</code> de la version jumbo extrait le hash. C'est le pattern universel : <code>FORMAT2john script</code> → hash → John ou Hashcat. Tous les scripts <code>*2john</code> sont dans <code>john/run/</code> après installation jumbo."
+             data-feedback-ko="✗ La bonne réponse : <strong>pdf2john.pl</strong> extrait le hash dans un format compatible. Ensuite tu choisis : John (<code>--format=pdf</code>) ou Hashcat (<code>-m 10500</code>) selon ta préférence (CPU vs GPU). Pattern identique pour ZIP (zip2john), Office (office2john), KeePass (keepass2john), BitLocker (bitlocker2john).">
+          <div class="tuto-quiz-question-text">5. Pour <strong>extraire un hash depuis un PDF protégé</strong> en vue d'un cracking, quelle commande ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button"><code>john document.pdf</code></button>
+            <button class="tuto-quiz-option" type="button"><code>pdfcrack document.pdf</code></button>
+            <button class="tuto-quiz-option" type="button"><code>pdf2john.pl document.pdf > pdf_hash.txt</code>, puis cracker avec John ou Hashcat (-m 10500)</button>
+            <button class="tuto-quiz-option" type="button">John lit directement les PDF</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/john_ripper.html" style="color:var(--cyan)">📚 Consulter la fiche John the Ripper — Cassage de hash multi-format</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel John the Ripper — Cassage de hash multi-format v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

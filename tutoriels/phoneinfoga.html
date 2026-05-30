@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PhoneInfoga — OSINT téléphone — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas PhoneInfoga — OSINT téléphone : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">PHONEINFOGA — OSINT TÉLÉPHONE — PAS À PAS</span>
+  <a href="../fiches/phoneinfoga.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 26 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="phoneinfoga">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Cadre légal — OSINT téléphone très </a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. PhoneInfoga vs GHunt phone vs autre</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Architecture et scanners</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Cas d'usage typiques</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Prérequis</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation via binaire</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Installation via Docker</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Installation depuis sources Go</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Première utilisation en CLI</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Comprendre les scanners</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Interface web (REST API + GUI)</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Export JSON et exploitation</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. APIs externes (numverify, Google)</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Limites et faux positifs</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Workflow OSINT téléphone complet</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Validation</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Recherches</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Résultats</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Manifest</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Sécurité opérationnelle</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Intégration avec Sherlock, Maigret,</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Forces, faiblesses et limites</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources et bonnes pratiques</a></li>
+        <li><a href="#s25"><span class="check-marker"></span>25. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">PhoneInfoga — OSINT téléphone</span>
+        </div>
+
+        <h1>📞 PhoneInfoga — OSINT téléphone</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras utiliser <strong>PhoneInfoga</strong> pour valider un numéro de téléphone (format E.164, pays, opérateur, type de ligne), lancer ses <strong>scanners</strong> (local libphonenumber, NumVerify, OVH, Google dorks), exploiter l'<strong>API REST et GUI web</strong>, intégrer dans un workflow OSINT téléphone complet (PhoneInfoga + GHunt phone + Yandex + HIBP), et orchestrer le <strong>quatuor OSINT</strong> Sherlock + Maigret + Holehe + GHunt + PhoneInfoga sur les 4 IoCs fondamentaux.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~45 min</span>
+          <span class="tuto-meta-badge "><span class="icon">📞</span> OSINT téléphone</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Linux / Docker</span>
+          <span class="tuto-meta-badge "><span class="icon">🌐</span> GUI web + API REST</span>
+          <span class="tuto-meta-badge "><span class="icon">⚠️</span> Sensibilité légale max</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout warning">
+        <div class="tuto-callout-title">⚠️ OSINT téléphone parmi les plus sensibles légalement</div>
+        <div>Le numéro de téléphone est un <strong>identifiant fortement personnel</strong>. PhoneInfoga ne révèle pas magiquement le propriétaire (réservé aux autorités via opérateurs avec mandat) mais aide à trouver les <strong>traces publiques</strong> du numéro. Cadre légal strict : nLPD (Suisse), RGPD, art. 179 CP (atteinte sphère privée), art. 179 quater CP (harcèlement obsessionnel). <strong>Mandat ou autorisation explicite obligatoire</strong>. Stalking et doxxing = sanctions pénales. Pendant phone de GHunt (v130).<br><br>📦 <a href="https://github.com/sundowndev/phoneinfoga" target="_blank" rel="noopener">github.com/sundowndev/phoneinfoga</a> · Auteur : sundowndev · Licence GPLv3</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>PhoneInfoga est un outil <strong>Go</strong> (anciennement Python) qui automatise l'OSINT sur les numéros de téléphone.</p>
+        <h3>Ce qu'il fait</h3>
+        <ol><li><strong>Valide</strong> le numéro (format E.164 international)</li><li><strong>Identifie</strong> : pays, opérateur, type de ligne (mobile, fixe, VoIP)</li><li><strong>Lance des scanners</strong> :</li></ol>
+        <ul><li><strong>Google dorks</strong> : cherche le numéro dans Google avec requêtes ciblées</li><li><strong>NumVerify</strong> : API de validation (gratuite avec inscription)</li><li><strong>OVH</strong> : retourne carrier info</li><li><strong>Custom scanners</strong> : extensibles</li></ul>
+        <ol><li><strong>Vérifie la présence</strong> sur réseaux : WhatsApp, Telegram, etc.</li></ol>
+        <h3>Spécificités</h3>
+        <ul><li><strong>Open source GPLv3</strong></li><li><strong>Go binary</strong> : multi-plateforme, pas de dépendances</li><li><strong>GUI web</strong> ET CLI</li><li><strong>REST API</strong> : intégrable dans pipelines</li><li><strong>Maintenu activement</strong> par sundowndev</li></ul>
+        <h3>Limites importantes</h3>
+        <p>❌ Aucun outil <strong>n'identifie directement le propriétaire</strong> d'un numéro (réservé aux autorités via opérateurs avec mandat). PhoneInfoga aide à <strong>trouver des traces publiques</strong> du numéro, pas à l'identifier de force.</p>
+        <p>❌ Les fonctions <strong>WhatsApp / Telegram check</strong> ont été retirées récemment pour cause de violation TOS — vérifier la version actuelle.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Cadre légal — OSINT téléphone très sensible</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'OSINT téléphone est <strong>parmi les plus sensibles</strong> des OSINT :</p>
+        <ul><li>Le numéro est un <strong>identifiant fortement personnel</strong></li><li>En Suisse / EU : numéros = <strong>données personnelles directes</strong> (nLPD, RGPD)</li><li>L'usage non autorisé peut constituer <strong>stalking</strong> ou <strong>harcèlement</strong></li></ul>
+        <h3>Ce qui est autorisé</h3>
+        <ul><li><strong>Mandat MP</strong> (art. 197 CPP en Suisse) — autorité judiciaire</li><li><strong>Audit interne</strong> sur numéros de son organisation</li><li><strong>Vérification de cohérence</strong> d'un partenaire commercial (anti-fraude, due diligence)</li><li><strong>Investigation cyberharcèlement</strong> : retrouver le harceleur si son numéro a été divulgué publiquement</li><li><strong>Recherche personnelle</strong> sur son propre numéro</li></ul>
+        <h3>Ce qui est interdit / réglementé</h3>
+        <ul><li><strong>Identification d'une personne</strong> par son numéro sans cadre légal : violation grave de la sphère privée</li><li><strong>Stalking via numéro</strong> : art. 179 quater CP (Suisse), art. 222-33-2-2 CP (France)</li><li><strong>Vente / partage</strong> : strictement interdit</li><li><strong>Phishing préparé</strong> : utilisation du numéro pour phishing/smishing = aggravation pénale</li></ul>
+        <h3>Sanctions</h3>
+        <ul><li>Suisse : art. 179 CP (atteinte à la sphère privée), nLPD</li><li>France : art. 226-1 CP, RGPD</li><li>USA : TCPA, état-spécifique stalking laws</li></ul>
+        <div class="tuto-callout danger"><div class="tuto-callout-title">🚨 Critique</div><div>à n'utiliser <strong>que</strong> sur son propre numéro ou avec consentement explicite écrit de la personne. Sinon : exposition légale réelle.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> PhoneInfoga vs GHunt phone vs autres</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Outil</th><th>Approche</th><th>Force</th><th>Limite</th></tr></thead><tbody><tr><td><strong>PhoneInfoga</strong></td><td>Multi-scanners (Google, NumVerify, OVH)</td><td>Vue globale rapide</td><td>Ne révèle pas le propriétaire</td></tr><tr><td><strong>GHunt phone</strong></td><td>API Google interne</td><td>Si compte Google associé</td><td>Très limité par masques Google</td></tr><tr><td><strong>truecaller</strong></td><td>Crowdsourced spam database</td><td>Identification effective (parfois)</td><td>Commercial, données discutables</td></tr><tr><td><strong>Numlookup</strong></td><td>Bases de données commerciales</td><td>Identification (USA)</td><td>Payant</td></tr><tr><td><strong>HIBP phone search</strong></td><td>Fuites de données</td><td>Si numéro dans une fuite</td><td>Limité aux fuites publiques</td></tr><tr><td><strong>Have I Been Sold?</strong></td><td>Marketing databases</td><td>Présence dans bases commerciales</td><td>Localisé US</td></tr></tbody></table>
+        <h3>Workflow complémentaire</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Numéro inconnu : +41 79 123 45 67
+    │
+    ├─→ PhoneInfoga          → carrier, country, traces Google, fuites
+    │
+    ├─→ GHunt phone          → si compte Google associé
+    │
+    ├─→ HIBP (numbers)       → fuites publiques connues
+    │
+    ├─→ Truecaller manuel    → si nom utilisateur reporté (à vérifier)
+    │
+    └─→ Recherche manuelle Google + DuckDuckGo + Yandex</code></pre></div>
+        <p>Aucun outil seul ne suffit. <strong>Combinaison</strong> = OSINT téléphone sérieux.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Architecture et scanners</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Architecture</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>┌─────────────────────────────────┐
+│         CLI / Web GUI           │
+├─────────────────────────────────┤
+│         Validation libphonenumber│
+│  (Google's E.164 parser)        │
+├─────────────────────────────────┤
+│         Scanners pipeline       │
+│  - LocalScanner                 │
+│  - NumVerifyScanner             │
+│  - OVHScanner                   │
+│  - GoogleSearchScanner          │
+│  - (autres custom)              │
+└─────────────────────────────────┘</code></pre></div>
+        <h3>LocalScanner</h3>
+        <p>Validation <strong>offline</strong> via libphonenumber (Google) :</p>
+        <ul><li>Format E.164 valide ?</li><li>Pays</li><li>Type de ligne (mobile, fixe, VoIP, premium, gratuit)</li><li>Opérateur connu</li></ul>
+        <p>C'est l'étape <strong>toujours disponible</strong>, sans clé API ni Internet.</p>
+        <h3>NumVerifyScanner</h3>
+        <p>API externe <strong>numverify.com</strong> :</p>
+        <ul><li>Inscription gratuite : 100 requêtes/mois</li><li>Retourne : valid, country, location, carrier, line_type</li></ul>
+        <p>Clé API à configurer.</p>
+        <h3>OVHScanner</h3>
+        <p>API publique OVH (limitée mais sans clé) :</p>
+        <ul><li>Carrier info pour numéros français + quelques autres pays</li></ul>
+        <h3>GoogleSearchScanner</h3>
+        <p>Génère et lance des <strong>Google dorks</strong> sur le numéro :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>"+41 79 123 45 67"
+"+41 79 123 45 67" site:linkedin.com
+"+41 79 123 45 67" site:facebook.com
+"+41 79 123 45 67" filetype:pdf
+"0041 79 123 45 67"
+"079 123 45 67"</code></pre></div>
+        <p>Et plusieurs variantes de formats.</p>
+        <p><strong>Limitation</strong> : Google rate-limit rapidement → captcha. À enchaîner manuellement plutôt qu'automatiquement.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Anti-fraude</strong> : valider un numéro avant transaction (cohérence pays/opérateur)</li><li><strong>Due diligence</strong> : vérifier la présence en ligne d'un numéro pro</li><li><strong>Investigation cyberharcèlement</strong> : si harceleur a divulgué son numéro publiquement</li><li><strong>Threat intelligence</strong> : tracer un opérateur de groupe cybercriminel via numéro leaké</li><li><strong>Journalisme</strong> : vérifier une source qui se présente avec un numéro</li><li><strong>Sécurité personnelle</strong> : audit de son propre numéro pour voir où il apparaît publiquement</li><li><strong>Investigation pénale</strong> : assister une enquête formelle (mandat)</li><li><strong>Trace Labs</strong> : OSINT pour personnes disparues (cadre éthique CTF)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Prérequis</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Composant</th><th>Minimum</th></tr></thead><tbody><tr><td>OS</td><td>Linux / macOS / Windows</td></tr><tr><td>Go</td><td>optionnel (binaire pré-compilé dispo)</td></tr><tr><td>Docker</td><td>optionnel (méthode recommandée)</td></tr><tr><td>RAM</td><td>512 Mo</td></tr><tr><td>Réseau</td><td>Internet sortant</td></tr><tr><td><strong>Clés API</strong></td><td>optionnelles (NumVerify)</td></tr></tbody></table>
+        <h3>Connaissances</h3>
+        <ul><li>Bases CLI (tutoriel <strong>Bases CLI</strong> v127)</li><li>Tutoriel <strong>GHunt débutant</strong> (v130) recommandé en prérequis (contexte OSINT IoC)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation via binaire</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Téléchargement direct</h3>
+        <ol><li>Aller sur <<a href="https://github.com/sundowndev/phoneinfoga/releases" target="_blank" rel="noopener">https://github.com/sundowndev/phoneinfoga/releases</a>></li><li>Télécharger le binaire pour ton OS :</li></ol>
+        <ul><li><code>phoneinfoga_Linux_x86_64.tar.gz</code></li><li><code>phoneinfoga_Windows_x86_64.zip</code></li><li><code>phoneinfoga_Darwin_x86_64.tar.gz</code></li></ul>
+        <h3>Linux / macOS</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Téléchargement
+cd /tmp
+wget https://github.com/sundowndev/phoneinfoga/releases/latest/download/phoneinfoga_Linux_x86_64.tar.gz
+
+# Extraction
+tar -xzf phoneinfoga_Linux_x86_64.tar.gz
+
+# Déplacement
+sudo mv phoneinfoga /usr/local/bin/
+
+# Permission
+sudo chmod +x /usr/local/bin/phoneinfoga
+
+# Test
+phoneinfoga version</code></pre></div>
+        <h3>Windows</h3>
+        <ol><li>Décompresser le ZIP dans <code>C:\Tools\phoneinfoga\</code></li><li>Ajouter au PATH via System Properties</li><li>Tester dans PowerShell :</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga version</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Installation via Docker</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Méthode <strong>recommandée</strong> pour isolation.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Pull image
+docker pull sundowndev/phoneinfoga:latest
+
+# Test
+docker run --rm sundowndev/phoneinfoga scan -n "+41791234567"</code></pre></div>
+        <h3>Alias pratique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>alias phoneinfoga='docker run --rm -it sundowndev/phoneinfoga'
+
+phoneinfoga scan -n "+41791234567"</code></pre></div>
+        <h3>Persister la config</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>mkdir -p ~/.phoneinfoga
+docker run --rm -v ~/.phoneinfoga:/root/.phoneinfoga sundowndev/phoneinfoga scan -n "+41791234567"</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Installation depuis sources Go</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Pour la dernière version dev.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Pré-requis : Go 1.20+
+sudo apt install -y golang-go
+
+# Cloner et compiler
+git clone https://github.com/sundowndev/phoneinfoga.git
+cd phoneinfoga
+make build
+
+# Binaire dans ./build/
+./build/phoneinfoga version</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Première utilisation en CLI</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Scan basique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scan -n "+41 79 123 45 67"</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Running 4 scanners...
+
+╭─────────────────────────────────────────────────────────╮
+│  Number information                                     │
+╰─────────────────────────────────────────────────────────╯
+
+Raw local: 0791234567
+Local: 079 123 45 67
+E164: +41791234567
+International: 41 79 123 45 67
+Country: CH (Switzerland)
+Carrier: Swisscom
+Line type: MOBILE
+
+╭─────────────────────────────────────────────────────────╮
+│  numverify scanner                                      │
+╰─────────────────────────────────────────────────────────╯
+
+Valid: true
+Country: Switzerland
+Location: Switzerland
+Carrier: Swisscom (Switzerland) Ltd
+Line type: mobile
+
+╭─────────────────────────────────────────────────────────╮
+│  googlesearch scanner                                   │
+╰─────────────────────────────────────────────────────────╯
+
+Found 5 dorks to inspect manually:
+  https://www.google.com/search?q=%22%2B41791234567%22
+  https://www.google.com/search?q=%22%2B41791234567%22+site%3Alinkedin.com
+  https://www.google.com/search?q=%22%2B41791234567%22+filetype%3Apdf
+  ...</code></pre></div>
+        <h3>Note sur Google dorks</h3>
+        <p>PhoneInfoga <strong>n'exécute pas</strong> lui-même les dorks (Google bloque). Il <strong>génère les URLs</strong> à ouvrir manuellement. Tu cliques, vérifies les résultats.</p>
+        <h3>Aide</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga --help
+phoneinfoga scan --help</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Comprendre les scanners</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Lister les scanners disponibles</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scanners</code></pre></div>
+        <p>Affiche : local, numverify, googlesearch, OVH, etc.</p>
+        <h3>Exécuter des scanners spécifiques</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Uniquement local et numverify
+phoneinfoga scan -n "+41791234567" --scanner local --scanner numverify</code></pre></div>
+        <h3>Désactiver des scanners</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Tout sauf googlesearch
+phoneinfoga scan -n "+41791234567" --disable-scanner googlesearch</code></pre></div>
+        <h3>Personnaliser via plugins</h3>
+        <p>PhoneInfoga supporte des <strong>plugins custom</strong> (Go).</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scan -n "+41791234567" --plugin /path/to/myplugin.so</code></pre></div>
+        <p>Permet d'ajouter ses propres scanners (par exemple : interrogation de bases internes).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Interface web (REST API + GUI)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>PhoneInfoga propose une <strong>GUI web</strong> + API REST.</p>
+        <h3>Lancer le serveur</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga serve</code></pre></div>
+        <p>Par défaut : <code>http://localhost:5000/</code></p>
+        <h3>GUI</h3>
+        <p>Ouvrir <<a href="http://localhost:5000/" target="_blank" rel="noopener">http://localhost:5000/</a>> dans le navigateur. Interface simple :</p>
+        <ol><li>Entrer le numéro</li><li>Choisir les scanners</li><li>Lancer</li><li>Voir les résultats structurés</li></ol>
+        <h3>API REST</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lister scanners
+curl http://localhost:5000/api/scanners
+
+# Scan
+curl -X GET "http://localhost:5000/api/numbers/+41791234567/scan"</code></pre></div>
+        <p>Réponse JSON exploitable.</p>
+        <h3>Sécurité du serveur</h3>
+        <p>⚠️ <strong>Ne pas exposer le serveur sur Internet</strong> sans authentification. Par défaut, pas d'auth → quiconque atteignant ton IP peut faire des scans à ton nom (et utiliser ta clé API NumVerify).</p>
+        <p>Bonne pratique : binder sur localhost uniquement :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga serve --listen 127.0.0.1:5000</code></pre></div>
+        <p>Ou derrière un reverse proxy avec auth.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Export JSON et exploitation</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Sortie JSON</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scan -n "+41791234567" --output json &gt; results.json</code></pre></div>
+        <p>Ou en CLI parsable :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scan -n "+41791234567" --output json | jq</code></pre></div>
+        <h3>Exploitation Python</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/usr/bin/env python3
+"""Wrapper PhoneInfoga"""
+
+import json
+import subprocess
+import sys
+
+def scan(number):
+    result = subprocess.run(
+        ['phoneinfoga', 'scan', '-n', number, '--output', 'json'],
+        capture_output=True, text=True
+    )
+    return json.loads(result.stdout)
+
+if __name__ == '__main__':
+    number = sys.argv[1]
+    data = scan(number)
+
+    # Extraction
+    local = data.get('results', {}).get('local', {})
+    print(f"Pays : {local.get('country')}")
+    print(f"Carrier : {local.get('carrier')}")
+    print(f"Type : {local.get('line_type')}")
+
+    # Dorks à ouvrir
+    google = data.get('results', {}).get('googlesearch', {})
+    for dork in google.get('dorks', []):
+        print(f"  - {dork['url']}")</code></pre></div>
+        <h3>Batch processing</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+# scan_batch.sh : scan une liste de numéros
+
+while IFS= read -r number; do
+    safe=$(echo "$number" | tr -d '+ ')
+    echo "Scanning $number..."
+    phoneinfoga scan -n "$number" --output json &gt; "results_${safe}.json"
+    sleep 10   # rate limit
+done &lt; numbers.txt
+
+# Manifest
+sha256sum results_*.json &gt; MANIFEST.txt</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> APIs externes (numverify, Google)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>NumVerify (recommandé)</h3>
+        <p><<a href="https://numverify.com/" target="_blank" rel="noopener">https://numverify.com/</a>></p>
+        <ol><li>Créer un compte gratuit</li><li>Récupérer la clé API</li><li>Configurer dans PhoneInfoga :</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>export NUMVERIFY_API_KEY="your_api_key_here"
+phoneinfoga scan -n "+41791234567"</code></pre></div>
+        <p>Quota gratuit : <strong>100 requêtes/mois</strong>. Payant au-delà.</p>
+        <h3>Google Custom Search (optionnel)</h3>
+        <p>Pour automatiser les dorks (avec quota) :</p>
+        <ol><li>Créer un Custom Search Engine sur <<a href="https://programmablesearchengine.google.com/" target="_blank" rel="noopener">https://programmablesearchengine.google.com/</a>></li><li>Récupérer la clé API + CSE ID</li><li>Configurer :</li></ol>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>export GOOGLECSE_CX="your_cse_id"
+export GOOGLECSE_API_KEY="your_api_key"</code></pre></div>
+        <p>Quota gratuit : <strong>100 requêtes/jour</strong>. Faible mais utile pour batchs raisonnables.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Pour éviter les quotas : utiliser la sortie de PhoneInfoga (liste de dorks URLs) et ouvrir manuellement dans navigateur OSINT (avec VPN).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Limites et faux positifs</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>PhoneInfoga ne révèle pas le propriétaire</strong> : sauf si trouvé dans une page indexée par Google.</p>
+        <p>❌ <strong>Carrier info pas toujours à jour</strong> : portabilité des numéros (changement d'opérateur) pas toujours reflétée.</p>
+        <p>❌ <strong>NumVerify gratuit limité</strong> : 100 requêtes/mois. À gérer avec parcimonie.</p>
+        <p>❌ <strong>Google rate-limit</strong> : si tu fais trop de dorks, captcha → arrêt.</p>
+        <p>❌ <strong>Faux positifs Google</strong> : un numéro peut apparaître sur une page sans rapport avec son propriétaire (forum, scam list, etc.).</p>
+        <p>❌ <strong>VoIP indistinguable</strong> : PhoneInfoga ne sait pas toujours différencier mobile et VoIP (Google Voice, Skype, etc.).</p>
+        <p>❌ <strong>Numéros virtuels</strong> : SimSimi, TextNow, Hushed → carrier info inutile, jamais retrouvable de cette manière.</p>
+        <p>❌ <strong>Numéros pro masqués</strong> : si un numéro pro est avec masquage (PABX), PhoneInfoga voit le numéro public, pas l'utilisateur.</p>
+        <p>❌ <strong>Pas de DB téléphones globale</strong> : aucun service ne couvre tous les pays. Bonne couverture US/UE, faible pour Asie/Afrique.</p>
+        <p>❌ <strong>WhatsApp / Telegram retirés</strong> : versions récentes ont retiré ces scanners pour conformité TOS.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Workflow OSINT téléphone complet</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Exemple : enquête à partir d'un numéro reçu suspect.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>NUMBER="+41 79 123 45 67"
+SAFE=$(echo "$NUMBER" | tr -d '+ ')
+DIR="case_phone_${SAFE}_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$DIR"
+cd "$DIR"</code></pre></div>
+        <h3>Étape 1 — PhoneInfoga</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>phoneinfoga scan -n "$NUMBER" --output json &gt; phoneinfoga.json
+cat phoneinfoga.json | jq</code></pre></div>
+        <p>→ Validation, carrier, country, dorks Google.</p>
+        <h3>Étape 2 — Ouvrir manuellement les Google dorks</h3>
+        <p>Avec <strong>navigateur OSINT + VPN</strong> (cf. tutos GHunt v130, Holehe v129) :</p>
+        <ul><li>Cliquer chaque URL retournée</li><li>Capture d'écran + Wayback Machine si résultat pertinent</li><li>Documenter</li></ul>
+        <h3>Étape 3 — Recherche Yandex et DuckDuckGo</h3>
+        <p>Souvent <strong>résultats différents</strong> de Google :</p>
+        <ul><li><<a href="https://yandex.com/search/?text=%22+41791234567%22" target="_blank" rel="noopener">https://yandex.com/search/?text=%22+41791234567%22</a>></li><li><<a href="https://duckduckgo.com/?q=%22%2B41791234567%22" target="_blank" rel="noopener">https://duckduckgo.com/?q=%22%2B41791234567%22</a>></li></ul>
+        <h3>Étape 4 — GHunt phone (si compte Google associé)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt phone "$NUMBER"</code></pre></div>
+        <p>→ Si compte Google trouvé : nom partiel, Gaia ID.</p>
+        <h3>Étape 5 — HIBP (Have I Been Pwned) — fuites</h3>
+        <p>HIBP support partiel des numéros (Facebook leak 2021 notamment) :</p>
+        <ul><li>Recherche manuelle sur <<a href="https://haveibeenpwned.com/" target="_blank" rel="noopener">https://haveibeenpwned.com/</a>></li></ul>
+        <h3>Étape 6 — Truecaller (manuel)</h3>
+        <p>Visite manuelle de <<a href="https://www.truecaller.com/" target="_blank" rel="noopener">https://www.truecaller.com/</a>> avec recherche du numéro. Données crowdsourced — à prendre avec recul.</p>
+        <h3>Étape 7 — WhatsApp web (manuel, prudent)</h3>
+        <p>Ouvrir WhatsApp Web, créer un contact temporaire avec ce numéro → si associé à un compte, photo de profil et statut visibles.</p>
+        <p>⚠️ <strong>WhatsApp peut notifier la personne</strong> si elle a configuré sa privacy ainsi (rare). Mais cette action est <strong>tracée côté WhatsApp</strong>. À utiliser avec discernement.</p>
+        <h3>Étape 8 — Telegram (manuel)</h3>
+        <p>Idem WhatsApp : créer un contact temporaire dans Telegram avec le numéro → username, photo de profil si publique.</p>
+        <h3>Étape 9 — Recherche réseaux sociaux</h3>
+        <p>Recherche directe sur Facebook, Instagram, LinkedIn, X/Twitter avec le numéro entre guillemets (souvent moins efficace que la recherche par nom).</p>
+        <h3>Étape 10 — Archivage et synthèse</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Hash de toutes les preuves
+sha256sum *.json *.png *.html &gt; MANIFEST.txt
+
+# Synthèse
+cat &gt; rapport_synthese.md &lt;&lt;EOF
+# Investigation OSINT téléphone — $NUMBER
+
+**Date :** $(date -Iseconds)
+**Autorité :** [mandat]
+**Analyste :** [nom]
+</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Validation</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>Pays : ...</li><li>Carrier : ...</li><li>Type : ...</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Recherches</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>PhoneInfoga : voir phoneinfoga.json</li><li>Google dorks ouverts manuellement : voir screenshots/</li><li>Yandex / DuckDuckGo : voir screenshots/</li><li>GHunt phone : voir ghunt_phone.json</li><li>HIBP : voir hibp_phone.txt</li><li>WhatsApp : voir whatsapp_screenshot.png (si applicable)</li><li>Telegram : voir telegram_screenshot.png (si applicable)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Résultats</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>...</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Manifest</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>$(cat MANIFEST.txt) EOF</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>
+Tu obtiens un **dossier OSINT téléphone complet** avec traçabilité.
+
+---
+</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Sécurité opérationnelle</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Environnement isolé</h3>
+        <p>🛡️ <strong>VM OSINT dédiée</strong> (Tails / Whonix / VM custom)</p>
+        <p>🛡️ <strong>VPN OSINT dédié</strong> : Mullvad, ProtonVPN, etc.</p>
+        <p>🛡️ <strong>Navigateur OSINT</strong> distinct du perso</p>
+        <p>🛡️ <strong>Comptes burner</strong> Google / WhatsApp / Telegram pour les vérifications manuelles</p>
+        <h3>Rate limit</h3>
+        <ul><li>Maximum <strong>10-20 numéros par jour</strong> par instance pour éviter détection Google</li><li>Rotation IP via VPN si besoin</li><li>Espacement minimum 10 secondes entre scans</li></ul>
+        <h3>Anonymat</h3>
+        <ul><li>Ne <strong>pas</strong> utiliser ton propre WhatsApp pour vérifier un numéro suspect (apparition dans son journal)</li><li>Compte burner avec numéro temporaire (e-SIM, MVNO sans identification)</li></ul>
+        <h3>Données collectées</h3>
+        <p>🛡️ <strong>Stockage chiffré</strong> : VeraCrypt, LUKS, BitLocker pour les rapports</p>
+        <p>🛡️ <strong>Durée limitée</strong> : effacer post-enquête selon délai légal</p>
+        <p>🛡️ <strong>Pas de partage</strong> non autorisé</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Intégration avec Sherlock, Maigret, Holehe, GHunt</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'arsenal OSINT personnes complet :</p>
+        <table><thead><tr><th>Outil</th><th>IoC</th><th>Couverture</th></tr></thead><tbody><tr><td><strong>Sherlock</strong></td><td>username</td><td>400+ sites publics</td></tr><tr><td><strong>Maigret</strong></td><td>username/email/téléphone/nom</td><td>3000+ sites + métadonnées</td></tr><tr><td><strong>Holehe</strong></td><td>email</td><td>120+ services (forgot-password)</td></tr><tr><td><strong>GHunt</strong></td><td>email/Gaia/téléphone</td><td>Google ecosystem</td></tr><tr><td><strong>PhoneInfoga</strong></td><td>téléphone</td><td>Carrier + dorks + APIs</td></tr></tbody></table>
+        <h3>Workflow combiné (à partir d'un numéro)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>NUMBER="+41 79 123 45 67"
+
+# 1. PhoneInfoga : carrier + dorks
+phoneinfoga scan -n "$NUMBER" --output json &gt; phoneinfoga.json
+
+# 2. GHunt phone : compte Google associé
+ghunt phone "$NUMBER" &gt; ghunt_phone.txt 2&gt;&amp;1 || true
+
+# 3. Maigret accepte le téléphone comme IoC
+maigret "$NUMBER" --html --folderoutput maigret_phone/
+
+# 4. Si nom récupéré (étape 2 ou 3) → enchaîner sur l'identité
+#    avec Sherlock, Holehe, GHunt email...</code></pre></div>
+        <h3>Workflow combiné (à partir d'un email)</h3>
+        <p>Une fois identité partielle obtenue (nom via GHunt) + téléphone trouvé sur LinkedIn ou autre :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Compléter avec PhoneInfoga sur le téléphone trouvé
+phoneinfoga scan -n "$PHONE_FROM_LINKEDIN"</code></pre></div>
+        <p>Vérifie la cohérence : si email Gmail dit "John Doe en Suisse" et téléphone trouvé est carrier US → incohérence à investiguer.</p>
+        <h3>Corroboration</h3>
+        <p>Comme toujours : <strong>3+ sources cohérentes</strong> = forte présomption.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Forces, faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Multi-scanners</strong> : approche complète (carrier + APIs + dorks).</p>
+        <p>✅ <strong>Open source GPLv3</strong> : auditable, modifiable.</p>
+        <p>✅ <strong>CLI + GUI web + API REST</strong> : flexibilité d'usage.</p>
+        <p>✅ <strong>Go binary</strong> : déploiement simple, pas de dépendances.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : Linux / Windows / macOS / Docker.</p>
+        <p>✅ <strong>Plugins extensibles</strong> : ajouter des scanners custom.</p>
+        <p>✅ <strong>Validation libphonenumber</strong> : précis sur format E.164.</p>
+        <p>✅ <strong>Sortie JSON</strong> : intégrable dans workflows automatisés.</p>
+        <p>✅ <strong>Maintenu activement</strong> par sundowndev.</p>
+        <p>✅ <strong>Couverture mondiale</strong> (avec quelques limites par région).</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>Ne révèle pas le propriétaire</strong> : sauf si trouvé sur page indexée Google.</p>
+        <p>❌ <strong>Google rate-limit</strong> : dorks à ouvrir manuellement.</p>
+        <p>❌ <strong>NumVerify gratuit limité</strong> : 100/mois.</p>
+        <p>❌ <strong>WhatsApp/Telegram retirés</strong> : versions récentes.</p>
+        <p>❌ <strong>Numéros VoIP/virtuels</strong> : difficile à exploiter.</p>
+        <p>❌ <strong>Portabilité</strong> : carrier info parfois obsolète.</p>
+        <p>❌ <strong>Pas de DB universelle</strong> : couverture variable par pays.</p>
+        <p>❌ <strong>Faux positifs</strong> : numéro sur scam list != propriétaire identifié.</p>
+        <p>❌ <strong>Sensibilité légale max</strong> : OSINT téléphone est parmi les plus réglementés.</p>
+        <p>❌ <strong>Pas d'identification automatique</strong> : tout le travail d'interprétation reste manuel.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources et bonnes pratiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Bonnes pratiques OSINT téléphone</h3>
+        <p>🔹 <strong>Cadre légal documenté</strong> avant chaque enquête (mandat, autorisation).</p>
+        <p>🔹 <strong>VM + VPN OSINT dédiés</strong>.</p>
+        <p>🔹 <strong>Comptes burner</strong> pour vérifications manuelles (WhatsApp, Telegram).</p>
+        <p>🔹 <strong>Rate limit</strong> : 10-20 numéros/jour max.</p>
+        <p>🔹 <strong>Multi-sources</strong> : PhoneInfoga + GHunt + recherches manuelles.</p>
+        <p>🔹 <strong>Yandex + DuckDuckGo + Google</strong> : trois moteurs, résultats différents.</p>
+        <p>🔹 <strong>Documentation rigoureuse</strong> : autorité, finalité, période, outils, screenshots.</p>
+        <p>🔹 <strong>Hash systématique</strong> des rapports.</p>
+        <p>🔹 <strong>Archivage immédiat</strong> : Wayback Machine + screenshots horodatés.</p>
+        <p>🔹 <strong>Corroboration 3+ sources</strong> avant conclure.</p>
+        <p>🔹 <strong>Mise à jour PhoneInfoga</strong> : <code>git pull</code> ou redownload binaire trimestriel.</p>
+        <p>🔹 <strong>Stockage chiffré</strong> : noms + numéros = données personnelles.</p>
+        <p>🔹 <strong>Durée de conservation limitée</strong>.</p>
+        <p>🔹 <strong>Pas d'usage perso</strong> : compte burner systématique.</p>
+        <p>🔹 <strong>Tester sur soi-même</strong> d'abord : connaître ce que tu exposes.</p>
+        <p>🔹 <strong>Lire Bazzell</strong> : <em>Open Source Intelligence Techniques</em> — référence du domaine.</p>
+        <h3>Documentation officielle</h3>
+        <ul><li>📚 <strong>GitHub PhoneInfoga</strong> : <<a href="https://github.com/sundowndev/phoneinfoga" target="_blank" rel="noopener">https://github.com/sundowndev/phoneinfoga</a>></li><li>📚 <strong>Doc officielle</strong> : <<a href="https://sundowndev.github.io/phoneinfoga/" target="_blank" rel="noopener">https://sundowndev.github.io/phoneinfoga/</a>></li><li>📚 <strong>sundowndev</strong> sur Twitter</li></ul>
+        <h3>Outils complémentaires</h3>
+        <ul><li>🔧 <strong>GHunt phone</strong> : <<a href="https://github.com/mxrch/GHunt" target="_blank" rel="noopener">https://github.com/mxrch/GHunt</a>> (cf. tuto v130)</li><li>🔧 <strong>Sherlock + Maigret + Holehe</strong> (cf. v128, v129)</li><li>🔧 <strong>HIBP</strong> : <<a href="https://haveibeenpwned.com/" target="_blank" rel="noopener">https://haveibeenpwned.com/</a>></li><li>🔧 <strong>Truecaller</strong> (commercial)</li><li>🔧 <strong>Numlookup</strong> (commercial)</li><li>🔧 <strong>Spiderfoot</strong> : <<a href="https://www.spiderfoot.net/" target="_blank" rel="noopener">https://www.spiderfoot.net/</a>> (intègre PhoneInfoga)</li><li>🔧 <strong>Maltego</strong> (transforms phone)</li></ul>
+        <h3>Formations / CTFs</h3>
+        <ul><li>🎓 <strong>Trace Labs OSINT</strong> : pratique en cadre éthique</li><li>🎓 <strong>SANS SEC487</strong> : Open-Source Intelligence Gathering</li><li>🎓 <strong>OSINT Combine</strong> : formations</li></ul>
+        <h3>Cadre légal</h3>
+        <ul><li>⚖️ <strong>PFPDT</strong> (Suisse) : <<a href="https://www.edoeb.admin.ch/" target="_blank" rel="noopener">https://www.edoeb.admin.ch/</a>></li><li>⚖️ <strong>CNIL</strong> (France) : <<a href="https://www.cnil.fr/" target="_blank" rel="noopener">https://www.cnil.fr/</a>></li><li>⚖️ <strong>EDPB</strong> (UE)</li></ul>
+        <h3>Livres</h3>
+        <ul><li>📖 **Michael Bazzell — *Open Source Intelligence Techniques*** (la référence)</li><li>📖 **Nihad Hassan — *Open Source Intelligence Methods and Tools***</li></ul>
+        <h3>Communauté</h3>
+        <ul><li>💬 <strong>OSINT Curious</strong> Discord</li><li>💬 <strong>r/OSINT</strong> Reddit</li><li>💬 <strong>DFIR.training</strong></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s25" data-section-id="s25">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">25</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>PhoneInfoga complète l'arsenal OSINT par <strong>l'angle téléphone</strong>, là où GHunt couvre le Google et Sherlock/Maigret/Holehe les services en ligne. Son approche multi-scanners (carrier + APIs + dorks Google) donne une <strong>vue 360°</strong> d'un numéro en quelques secondes.</p>
+        <p>Mais <strong>PhoneInfoga n'identifie pas magiquement le propriétaire</strong> d'un numéro — c'est techniquement impossible sans accès aux registres des opérateurs (réservé aux autorités avec mandat). PhoneInfoga aide à <strong>trouver les traces publiques</strong> que le numéro a laissées : sites où il apparaît, fuites, services associés.</p>
+        <p>L'OSINT téléphone est <strong>parmi les plus sensibles</strong> légalement. Discipline impérative :</p>
+        <ul><li>Cadre légal documenté (mandat)</li><li>VM + VPN OSINT dédiés</li><li>Comptes burner pour vérifications</li><li>Multi-sources et corroboration</li><li>Stockage chiffré, durée limitée</li><li>Pas de stalking, pas de doxxing</li></ul>
+        <p>Combiné avec <strong>Sherlock + Maigret + Holehe + GHunt</strong>, tu disposes désormais d'un <strong>arsenal OSINT personnes professionnel complet</strong> sur les <strong>quatre IoCs fondamentaux</strong> : username, email, téléphone, compte Google.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Configurer ta VM OSINT</strong> avec tous les outils OSINT en parallèle.</li><li><strong>Obtenir une clé NumVerify gratuite</strong> (100/mois) pour les enquêtes ciblées.</li><li><strong>Construire ton script orchestrateur</strong> OSINT téléphone (cf. §16).</li><li><strong>Pratiquer sur Trace Labs CTFs</strong> pour rester dans un cadre éthique.</li><li><strong>Lire Bazzell</strong> intégralement.</li><li><strong>Mettre à jour PhoneInfoga</strong> trimestriellement.</li><li><strong>Documenter chaque enquête</strong> : pour audit interne et défense en cas de contestation.</li></ol>
+        <p>L'OSINT téléphone est puissant et sensible. À manier avec <strong>conscience, rigueur et cadre légal</strong>. 📞</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« PhoneInfoga — OSINT téléphone maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>Aucun outil OSINT</strong> n'identifie le propriétaire d'un numéro de façon directe — c'est une donnée commerciale chez les opérateurs, accessible uniquement avec mandat. PhoneInfoga aide à : (1) valider le format/pays/carrier, (2) trouver des traces publiques (Google dorks, fuites, réseaux sociaux), (3) corroborer avec autres OSINT. Si tu trouves le propriétaire, c'est <strong>parce qu'il est exposé publiquement</strong>, pas grâce à un bypass."
+             data-feedback-ko="✗ La bonne réponse : <strong>PhoneInfoga ne révèle pas directement le propriétaire</strong>. C'est une attente erronée fréquente. PhoneInfoga est un agrégateur OSINT, pas un service d'opérateur. Identification réelle = mandat + opérateur.">
+          <div class="tuto-quiz-question-text">1. Quelle est <strong>la principale limite</strong> à comprendre AVANT d'utiliser PhoneInfoga ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Il est commercial</button>
+            <button class="tuto-quiz-option" type="button"><strong>PhoneInfoga ne révèle pas le propriétaire</strong> d'un numéro (réservé aux autorités via opérateurs avec mandat) — il aide à trouver les <strong>traces publiques</strong> du numéro (carrier, pays, dorks Google, fuites)</button>
+            <button class="tuto-quiz-option" type="button">Il ne fonctionne que sur les numéros US</button>
+            <button class="tuto-quiz-option" type="button">Il faut une licence payante</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Architecture multi-scanners : (1) <strong>Local</strong> via libphonenumber (toujours dispo, offline), (2) <strong>NumVerify</strong> API externe (100 requêtes/mois gratuit), (3) <strong>OVH</strong> public, (4) <strong>Google Search</strong> qui génère des dorks à ouvrir manuellement (Google bloque l'auto). Note : scanners WhatsApp/Telegram <strong>retirés</strong> des versions récentes pour conformité TOS."
+             data-feedback-ko="✗ La bonne réponse : <strong>Local + NumVerify + OVH + Google Dorks</strong>. Approche multi-sources qui permet une vue 360°. Configurer la clé NumVerify (gratuit avec inscription) pour exploiter le scanner principal.">
+          <div class="tuto-quiz-question-text">2. PhoneInfoga propose plusieurs <strong>scanners</strong>. Lesquels sont les principaux ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Uniquement Google search</button>
+            <button class="tuto-quiz-option" type="button"><strong>Local (libphonenumber pour validation E.164) + NumVerify (API gratuite limitée) + OVH (gratuit, limité) + Google Search Dorks (URLs à ouvrir manuellement)</strong></button>
+            <button class="tuto-quiz-option" type="button">Seulement Telegram et WhatsApp</button>
+            <button class="tuto-quiz-option" type="button">Un seul scanner universel</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Google rate-limit/captcha bloque l'automatisation. PhoneInfoga prépare les <strong>dorks intelligents</strong> (différents formats du numéro : +41791234567, 41791234567, 079 123 45 67, etc. × sites ciblés comme linkedin.com, facebook.com, etc.) → tu cliques manuellement, observe les résultats, capture les pertinents (Wayback Machine + screenshots). Utiliser <strong>navigateur OSINT + VPN dédié</strong> pour ne pas exposer ton IP perso."
+             data-feedback-ko="✗ La bonne réponse : <strong>ouverture manuelle dans navigateur OSINT</strong>. Google bloque l'auto. PhoneInfoga te facilite le travail en générant les dorks ciblés mais l'exécution est manuelle. Avec VPN OSINT pour anonymat.">
+          <div class="tuto-quiz-question-text">3. Les <strong>Google dorks</strong> générés par PhoneInfoga, comment les utiliser ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">PhoneInfoga les exécute automatiquement et donne les résultats</button>
+            <button class="tuto-quiz-option" type="button"><strong>PhoneInfoga génère les URLs de recherche (différents formats du numéro avec dorks ciblés) ; tu les ouvres MANUELLEMENT dans navigateur OSINT avec VPN</strong> — Google bloque l'auto-scrap</button>
+            <button class="tuto-quiz-option" type="button">Il faut payer Google pour les utiliser</button>
+            <button class="tuto-quiz-option" type="button">Ils ne servent à rien</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Workflow OSINT téléphone professionnel : (1) <strong>PhoneInfoga</strong> = vue technique + dorks, (2) <strong>GHunt phone</strong> = si compte Google associé (rare mais précieux), (3) <strong>Maigret</strong> = accepte le téléphone comme IoC parmi ses 3000+ sites, (4) <strong>HIBP</strong> = fuites contenant le numéro (notamment Facebook leak 2021), (5) <strong>Yandex/DuckDuckGo</strong> = moteurs avec résultats différents, (6) recherche manuelle sur réseaux, (7) archivage immédiat. Cadre légal documenté en amont."
+             data-feedback-ko="✗ La bonne réponse : <strong>workflow combiné multi-outils</strong>. PhoneInfoga seul ne suffit pas. La force vient de la combinaison de toutes les sources, suivi de corroboration manuelle. À documenter rigoureusement pour traçabilité juridique.">
+          <div class="tuto-quiz-question-text">4. Tu veux faire l'<strong>OSINT complet</strong> d'un numéro suspect. Quel workflow combiné ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Lancer juste PhoneInfoga</button>
+            <button class="tuto-quiz-option" type="button"><strong>PhoneInfoga (carrier + dorks) → GHunt phone (si compte Google associé) → Maigret (accepte téléphone comme IoC) → HIBP (fuites contenant le numéro) → Yandex + DuckDuckGo (résultats différents de Google) → recherche manuelle réseaux sociaux → archivage Wayback + hashs</strong></button>
+            <button class="tuto-quiz-option" type="button">Appeler le numéro directement</button>
+            <button class="tuto-quiz-option" type="button">Demander à l'opérateur</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>Quintet OSINT personnes complet</strong> sur les IoCs fondamentaux : Sherlock (username, 400+ sites publics), Maigret (3000+ sites + métadonnées, accepte username/email/téléphone/nom), Holehe (email via API forgot-password, 120+ services), GHunt (Google ecosystem en profondeur), PhoneInfoga (téléphone multi-scanners). À utiliser <strong>en parallèle</strong> + corroboration manuelle. C'est l'arsenal OSINT pro standard désormais couvert par CAS-IN."
+             data-feedback-ko="✗ La bonne réponse : <strong>5 outils complémentaires</strong> couvrant tous les IoCs. Chaque outil = un angle. Workflow professionnel = combinaison + corroboration. Lire Bazzell — <em>Open Source Intelligence Techniques</em> — pour la méthodologie complète.">
+          <div class="tuto-quiz-question-text">5. Quel est le <strong>quatuor OSINT personnes</strong> complet une fois PhoneInfoga ajouté ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Juste PhoneInfoga</button>
+            <button class="tuto-quiz-option" type="button"><strong>Sherlock (username) + Maigret (multi-IoC) + Holehe (email) + GHunt (Google) + PhoneInfoga (téléphone)</strong> — couvre les 4 IoCs fondamentaux : username, email, téléphone, compte Google</button>
+            <button class="tuto-quiz-option" type="button">Seuls Sherlock et Holehe suffisent</button>
+            <button class="tuto-quiz-option" type="button">Aucune combinaison n'existe</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/phoneinfoga.html" style="color:var(--cyan)">📚 Consulter la fiche PhoneInfoga — OSINT téléphone</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel PhoneInfoga — OSINT téléphone v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

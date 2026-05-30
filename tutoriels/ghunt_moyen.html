@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GHunt moyen — Phone OSINT, Drive enumeration, scripting — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas GHunt moyen — Phone OSINT, Drive enumeration, scripting : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">GHUNT MOYEN — PHONE OSINT, DRIVE ENUMERATION, SCRIPTING — PAS À PAS</span>
+  <a href="../fiches/ghunt_moyen.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 25 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="ghunt_moyen">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Prérequis et positionnement</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Architecture interne GHunt</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Recherche par numéro de téléphone</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Limites Phone OSINT</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Drive enumeration — partages public</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. YouTube channel deep-dive</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Maps reviews — géolocalisation indi</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Download automatisé photo et avatar</a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Reverse image search depuis photo G</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Scripting Python avec l'API GHunt</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Workflow orchestré multi-outils</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Identité présumée</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Sources</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Manifest</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Pivoter avec Gaia ID entre comptes</a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Détection et contournement des limi</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Gestion de plusieurs comptes burner</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Mise à jour et débogage GHunt</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Cas pratique : retracer un compte G</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Intégration avec Spiderfoot, Recon-</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Bonnes pratiques renforcées</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Forces, faiblesses et limites</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources et étapes suivantes</a></li>
+        <li><a href="#s24"><span class="check-marker"></span>24. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">GHunt moyen — Phone OSINT, Drive enumeration, scripting</span>
+        </div>
+
+        <h1>🔭 GHunt moyen — Phone OSINT, Drive enumeration, scripting</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras exploiter les fonctions avancées de GHunt : <strong>Phone OSINT</strong> (avec ses limites Google), <strong>énumération Drive partages publics</strong>, <strong>YouTube channel deep-dive</strong>, <strong>Maps reviews</strong> pour géolocalisation indirecte, <strong>download automatisé photo</strong>, <strong>reverse image search</strong> (Yandex), <strong>scripting Python</strong> sur l'API GHunt, <strong>orchestration multi-outils</strong> et <strong>rotation de comptes burner</strong> avec gestion du rate limit.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-intermediaire"><span class="icon">🎯</span> Niveau intermédiaire</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~60 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🔭</span> Phone OSINT + Drive</span>
+          <span class="tuto-meta-badge "><span class="icon">🐍</span> Scripting Python</span>
+          <span class="tuto-meta-badge "><span class="icon">🔄</span> Rotation burners</span>
+          <span class="tuto-meta-badge "><span class="icon">⚠️</span> Sensibilité légale max</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout warning">
+        <div class="tuto-callout-title">⚠️ Prérequis : GHunt débutant (v130) — discipline opérationnelle renforcée</div>
+        <div>Niveau intermédiaire : tu maîtrises GHunt de base. Place aux techniques avancées sur des données <strong>très personnelles</strong> (Phone OSINT, Drive partages, Maps géolocalisation). Discipline obligatoire : VM OSINT isolée, VPN dédié, 3+ comptes burner en rotation, limite 10-20 requêtes/jour/burner, stockage chiffré, archivage Wayback Machine immédiat, hashs systématiques. Cadre légal documenté avant chaque enquête.</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Prérequis et positionnement</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Prérequis</strong> :</p>
+        <ul><li>Tutoriel <strong>GHunt débutant</strong> (v130) : tu sais installer, authentifier, faire une recherche email.</li><li>Tutoriel <strong>Sherlock</strong> (v128), <strong>Maigret</strong> (v128), <strong>Holehe</strong> (v129) : tu connais le contexte OSINT et l'éthique associée.</li><li>Bases CLI (v127) + CLI intermédiaire (v128) — pour le scripting.</li><li>Notions Python.</li></ul>
+        <p><strong>Ce que tu sauras à la fin</strong> :</p>
+        <ul><li>Exploiter le <strong>Phone OSINT</strong> de GHunt (et comprendre ses limites)</li><li>Énumérer les <strong>partages Drive publics</strong> d'une cible</li><li><strong>Scripter</strong> GHunt en Python via son API interne</li><li>Orchestrer un <strong>workflow multi-outils</strong> automatisé</li><li>Gérer une <strong>rotation de comptes burner</strong></li><li>Pivoter avec <strong>Gaia ID</strong> entre comptes liés</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Architecture interne GHunt</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Comprendre l'architecture aide à scripter et déboguer.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>┌────────────────────────────────────┐
+│         CLI ghunt                  │
+├────────────────────────────────────┤
+│   Modules : email, gaia, phone,    │
+│   drive, youtube                   │
+├────────────────────────────────────┤
+│   API GHunt (asyncio + httpx)      │
+├────────────────────────────────────┤
+│   Cookies session Google           │
+│  (SID, HSID, SSID, APISID, ...)    │
+├────────────────────────────────────┤
+│   Endpoints internes Google :       │
+│   - PeopleAPI (profil, identité)   │
+│   - Maps API (reviews, photos)     │
+│   - Drive API (partages publics)   │
+│   - YouTube Data API               │
+│   - Calendar API                   │
+└────────────────────────────────────┘</code></pre></div>
+        <h3>Points clés</h3>
+        <ul><li><strong>Asyncio</strong> : GHunt est asynchrone → rapide (plusieurs requêtes parallèles)</li><li><strong>httpx</strong> : remplace requests, gère HTTP/2 et reuse de connexions</li><li><strong>Cookies session</strong> : sauvegardés dans <code>~/.ghunt/</code></li><li><strong>Pas d'API officielle</strong> : Google peut casser à tout moment</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Recherche par numéro de téléphone</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>GHunt peut chercher par <strong>numéro de téléphone</strong>, mais avec <strong>limites majeures</strong>.</p>
+        <h3>Comment ça marche</h3>
+        <p>Google associe parfois un numéro à un compte (notamment via le composant "Google Account Recovery" ou "Phone-based login"). GHunt cherche cette association.</p>
+        <h3>Syntaxe</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt phone "+41 79 123 45 67"</code></pre></div>
+        <p>Format international avec <strong>+</strong> obligatoire.</p>
+        <h3>Ce que GHunt peut retourner (si disponible)</h3>
+        <ul><li><strong>Nom partiel</strong> : "J<em><strong>n D</strong></em>" (Google masque)</li><li><strong>Photo de profil</strong> (parfois)</li><li><strong>Confirmation</strong> : compte Google existe avec ce numéro</li></ul>
+        <h3>Ce que GHunt <strong>ne peut pas</strong> retourner</h3>
+        <ul><li>Email complet</li><li>Nom complet</li><li>Localisation</li><li>Activité</li></ul>
+        <p>Google <strong>masque délibérément</strong> ces informations dans les retours phone, pour limiter le stalking.</p>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ <strong>Cadre légal renforcé</strong> : utiliser GHunt phone pour identifier une personne par son numéro = traitement de données très sensible. Mandat indispensable.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Limites Phone OSINT</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>❌ <strong>Beaucoup de numéros</strong> ne sont pas associés à un compte Google trouvable.</p>
+        <p>❌ <strong>Information très limitée</strong> : nom masqué.</p>
+        <p>❌ <strong>Google peut bloquer</strong> la fonction sans préavis.</p>
+        <p>❌ <strong>Sensibilité légale max</strong> : associer un numéro à une identité = traitement très réglementé.</p>
+        <h3>Alternative : PhoneInfoga</h3>
+        <p><strong>PhoneInfoga</strong> (cf. tutoriel PhoneInfoga v130) est complémentaire :</p>
+        <ul><li>Vérifie le <strong>format du numéro</strong> (carrier, country)</li><li>Cherche dans les <strong>fuites de données publiques</strong></li><li>Cherche sur <strong>réseaux sociaux</strong> (Telegram, WhatsApp)</li><li>Plus efficace que GHunt phone pour la plupart des cas</li></ul>
+        <p><strong>Workflow</strong> :</p>
+        <ol><li><strong>PhoneInfoga</strong> : info de base (carrier, region, présence WhatsApp/Telegram)</li><li><strong>GHunt phone</strong> : si compte Google associé (rare)</li><li><strong>HIBP</strong> : si le numéro apparaît dans des fuites</li></ol>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Drive enumeration — partages publics</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>GHunt peut <strong>énumérer les partages Google Drive publics</strong> d'un compte.</p>
+        <h3>Comportement</h3>
+        <p>Quand quelqu'un partage un fichier ou dossier Google Drive en mode "Anyone with the link can view", ce partage devient accessible via une URL publique. GHunt cherche ces partages associés au compte.</p>
+        <h3>Syntaxe</h3>
+        <p>Selon version GHunt :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt drive --email john@gmail.com</code></pre></div>
+        <p>ou intégré dans la commande email :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt email john@gmail.com --drive</code></pre></div>
+        <h3>Ce qui peut être trouvé</h3>
+        <ul><li><strong>Documents partagés</strong> : Word, Sheets, Slides en partage public</li><li><strong>Photos partagées</strong> : albums Google Photos publics</li><li><strong>Vidéos</strong> : si stockées Drive et partagées</li></ul>
+        <h3>Cas DFIR concret</h3>
+        <p>Cible : suspect lance un projet personnel. Souvent, il partage par mégarde des documents Drive en public :</p>
+        <ul><li>Liste de mots de passe (terriblement fréquent)</li><li>Brouillons de communications</li><li>Notes personnelles</li><li>Photos privées</li></ul>
+        <p>GHunt révèle ces fuites accidentelles.</p>
+        <h3>Précautions</h3>
+        <p>⚠️ Si tu trouves des documents Drive privés exposés par erreur : <strong>ne pas télécharger</strong> sans cadre légal. Documenter la trouvaille, signaler à l'autorité compétente, archiver l'URL pour preuve.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> YouTube channel deep-dive</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Si la cible a une chaîne YouTube associée à son compte Google :</p>
+        <h3>Information disponible</h3>
+        <ul><li>Nom de la chaîne</li><li>Nombre d'abonnés</li><li>Date de création</li><li>Liens vidéos publiques</li><li>Description et liens externes (souvent vers Twitter, Twitch, etc.)</li></ul>
+        <h3>Analyse vidéo</h3>
+        <p>Une fois la chaîne identifiée :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># yt-dlp pour télécharger métadonnées (légal)
+yt-dlp --skip-download --write-info-json --write-thumbnail \
+    "https://www.youtube.com/channel/UCxxx"</code></pre></div>
+        <p>Tu obtiens un <strong>JSON</strong> par vidéo avec : titre, description, date, tags, vues, commentaires.</p>
+        <h3>Pivots</h3>
+        <ul><li><strong>Vidéo de vacances</strong> → géolocalisation indirecte</li><li><strong>Voix dans les vidéos</strong> → identification audio</li><li><strong>Personnes apparaissant</strong> → relations sociales</li><li><strong>Liens dans descriptions</strong> → réseaux liés</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Maps reviews — géolocalisation indirecte</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Les <strong>reviews Google Maps publiques</strong> sont une mine d'or DFIR.</p>
+        <h3>Extraction enrichie</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt email john@gmail.com --json - | jq '.maps.reviews[]'</code></pre></div>
+        <p>Pour chaque review : lieu, date, note, texte du commentaire.</p>
+        <h3>Analyse géographique</h3>
+        <p>Concentration des reviews → <strong>zone de vie probable</strong> de la cible.</p>
+        <p>Workflow Python :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>import json
+import folium
+from collections import Counter
+
+with open('ghunt_results.json') as f:
+    data = json.load(f)
+
+reviews = data.get('maps', {}).get('reviews', [])
+
+# Lieux et fréquences
+places = Counter()
+for r in reviews:
+    places[r['place']] += 1
+
+# Si géo dispo (lat/lng) — carte Folium
+m = folium.Map(location=[46.0, 6.0], zoom_start=10)
+for review in reviews:
+    if 'lat' in review and 'lng' in review:
+        folium.Marker(
+            location=[review['lat'], review['lng']],
+            popup=review['place']
+        ).add_to(m)
+m.save('cible_carte.html')</code></pre></div>
+        <p>Tu obtiens une <strong>carte interactive</strong> des lieux fréquentés.</p>
+        <h3>Photo en review</h3>
+        <p>Si la cible a posté des <strong>photos</strong> dans ses reviews :</p>
+        <ul><li>Métadonnées EXIF parfois préservées (date, GPS exact)</li><li>Visages → reconnaissance (à éviter sans cadre légal)</li><li>Plaques d'immatriculation, intérieurs → données très personnelles</li></ul>
+        <p>⚠️ Analyse photo = traitement de données sensibles. Cadre légal strict.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Download automatisé photo et avatar</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Pour archiver les photos de profil :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Récupérer l'URL de la photo via GHunt JSON
+PHOTO_URL=$(ghunt email john@gmail.com --json - | jq -r '.profile_picture_url')
+
+# Télécharger avec curl
+curl -s "$PHOTO_URL" -o "john_profile.jpg"
+
+# Hash pour preuve
+sha256sum john_profile.jpg &gt;&gt; manifest.txt</code></pre></div>
+        <h3>Batch sur plusieurs emails</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+# Pour une liste d'emails
+
+while read email; do
+    safe_name="${email//@/_at_}"
+    ghunt email "$email" --json "results/${safe_name}.json"
+
+    photo_url=$(jq -r '.profile_picture_url // empty' "results/${safe_name}.json")
+    if [ -n "$photo_url" ]; then
+        curl -s "$photo_url" -o "photos/${safe_name}.jpg"
+    fi
+
+    sleep 10   # Rate limit
+done &lt; emails.txt
+
+# Manifest
+sha256sum photos/*.jpg &gt; photos/MANIFEST.txt</code></pre></div>
+        <p>⚠️ Stocker les photos téléchargées <strong>chiffrées</strong> (VeraCrypt, LUKS) — données personnelles.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Reverse image search depuis photo GHunt</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Une fois la photo de profil obtenue : reverse image search trouve <strong>d'autres comptes</strong> avec la même photo.</p>
+        <h3>Sites de reverse image search</h3>
+        <ul><li><strong>TinEye</strong> : <<a href="https://tineye.com/" target="_blank" rel="noopener">https://tineye.com/</a>> (gratuit, scientifique)</li><li><strong>Yandex Images</strong> : <<a href="https://yandex.com/images/" target="_blank" rel="noopener">https://yandex.com/images/</a>> (le plus puissant, surtout sur visages)</li><li><strong>Google Images</strong> : <<a href="https://images.google.com/" target="_blank" rel="noopener">https://images.google.com/</a>> (upload bouton appareil photo)</li><li><strong>Bing Visual Search</strong> : <<a href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">https://www.bing.com/visualsearch</a>></li><li><strong>PimEyes</strong> : <<a href="https://pimeyes.com/" target="_blank" rel="noopener">https://pimeyes.com/</a>> (commercial, reconnaissance faciale — sensibilité élevée)</li></ul>
+        <h3>Workflow</h3>
+        <ol><li>Télécharger la photo GHunt</li><li>Aller sur Yandex (souvent le meilleur)</li><li>Upload</li><li>Yandex retourne des sites où la photo apparaît</li><li><strong>Beaucoup de découvertes</strong> : LinkedIn, Twitter, blogs, articles</li></ol>
+        <h3>Discipline</h3>
+        <p>⚠️ Reverse image search est <strong>puissant et intrusif</strong>. À utiliser dans cadre légal strict. Yandex peut révéler des sites où la cible apparaît dans des contextes très privés.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Scripting Python avec l'API GHunt</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>GHunt expose une <strong>API Python</strong> utilisable directement.</p>
+        <h3>Exemple : recherche scriptée</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/usr/bin/env python3
+"""Recherche GHunt scriptée"""
+
+import asyncio
+import json
+from ghunt.modules.email import hunt_email
+from ghunt.helpers.auth import load_authentication
+
+async def main(email):
+    creds = load_authentication()
+    if not creds:
+        print("Erreur : non authentifié. Lance 'ghunt login' d'abord.")
+        return
+
+    result = await hunt_email(email)
+
+    return result
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} email@gmail.com")
+        sys.exit(1)
+
+    result = asyncio.run(main(sys.argv[1]))
+    print(json.dumps(result, indent=2, default=str))</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ L'API GHunt <strong>évolue</strong> avec les versions. Vérifier la doc avant scripting massif. Adapter les imports selon ta version.</div></div>
+        <h3>Batch processing</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/usr/bin/env python3
+"""Batch GHunt sur fichier d'emails"""
+
+import asyncio
+import json
+import sys
+import time
+
+from ghunt.modules.email import hunt_email
+
+async def process_email(email, delay=10):
+    """Une recherche avec délai pour éviter ban"""
+    try:
+        result = await hunt_email(email)
+        return {'email': email, 'success': True, 'data': result}
+    except Exception as e:
+        return {'email': email, 'success': False, 'error': str(e)}
+    finally:
+        await asyncio.sleep(delay)
+
+async def main(emails_file):
+    with open(emails_file) as f:
+        emails = [line.strip() for line in f if line.strip()]
+
+    results = []
+    for email in emails:
+        print(f"[*] Processing {email}...")
+        result = await process_email(email)
+        results.append(result)
+
+    with open('batch_results.json', 'w') as f:
+        json.dump(results, f, indent=2, default=str)
+
+    found = sum(1 for r in results if r['success'])
+    print(f"\n[+] {found}/{len(results)} successful")
+
+if __name__ == '__main__':
+    asyncio.run(main(sys.argv[1]))</code></pre></div>
+        <div class="tuto-callout warning"><div class="tuto-callout-title">⚠️ Attention</div><div>️ Limiter le batch à <strong>10-20 emails</strong> par session pour éviter détection. Rotation des comptes burner.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Workflow orchestré multi-outils</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Script Bash combinant GHunt + Sherlock + Maigret + Holehe + HIBP :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+# osint_email.sh — workflow OSINT complet à partir d'un email
+
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 &lt;email&gt;"
+    exit 1
+fi
+
+EMAIL="$1"
+SAFE="${EMAIL//@/_at_}"
+DIR="case_${SAFE}_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$DIR/photos"
+cd "$DIR"
+
+log() { echo "[$(date +%H:%M:%S)] $*"; }
+
+log "=== Investigation OSINT pour $EMAIL ==="
+
+# 1. GHunt
+log "[1/5] GHunt..."
+ghunt email "$EMAIL" --json ghunt.json 2&gt;ghunt.log || true
+NAME=$(jq -r '.name // empty' ghunt.json 2&gt;/dev/null)
+PHOTO=$(jq -r '.profile_picture_url // empty' ghunt.json 2&gt;/dev/null)
+
+if [ -n "$NAME" ]; then
+    log "  → Nom identifié : $NAME"
+fi
+if [ -n "$PHOTO" ]; then
+    log "  → Téléchargement photo de profil..."
+    curl -s "$PHOTO" -o "photos/${SAFE}.jpg"
+fi
+
+# 2. Holehe
+log "[2/5] Holehe..."
+holehe --only-used --no-color "$EMAIL" &gt; holehe.txt 2&gt;&amp;1 || true
+
+# 3. Have I Been Pwned (si clé API)
+if [ -n "${HIBP_API_KEY:-}" ]; then
+    log "[3/5] Have I Been Pwned..."
+    curl -s -H "hibp-api-key: $HIBP_API_KEY" \
+        -H "user-agent: OSINT-Investigation" \
+        "https://haveibeenpwned.com/api/v3/breachedaccount/$EMAIL" \
+        &gt; hibp.json 2&gt;&amp;1 || true
+else
+    log "[3/5] HIBP skipped (no API key)"
+fi
+
+# 4. Dérivation usernames si nom récupéré
+if [ -n "$NAME" ]; then
+    log "[4/5] Sherlock sur usernames dérivés..."
+    LOCAL="${EMAIL%@*}"
+    USERS=("$LOCAL" "${NAME// /}" "${NAME// /.}" "${NAME// /_}")
+
+    for u in "${USERS[@]}"; do
+        u_lower=$(echo "$u" | tr '[:upper:]' '[:lower:]')
+        sherlock --print-found --no-color "$u_lower" \
+            --folderoutput "sherlock_${u_lower}/" 2&gt;/dev/null || true
+        sleep 5
+    done
+fi
+
+# 5. Maigret sur email
+log "[5/5] Maigret..."
+maigret "$EMAIL" --html --folderoutput maigret/ 2&gt;maigret.log || true
+
+# Manifest
+log "Calcul des hashs..."
+find . -type f \( -name "*.json" -o -name "*.html" -o -name "*.txt" -o -name "*.jpg" \) \
+    -exec sha256sum {} \; &gt; MANIFEST_SHA256.txt
+
+# Synthèse
+log "Génération synthèse..."
+cat &gt; rapport_synthese.md &lt;&lt;EOF
+# Investigation OSINT — $EMAIL
+
+**Date :** $(date -Iseconds)
+**Autorité :** [À compléter — mandat / autorisation]
+**Analyste :** [À compléter]
+</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Identité présumée</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>$([ -n "$NAME" ] && echo "- Nom GHunt : <strong>$NAME</strong>" || echo "- Nom : non identifié") $([ -n "$PHOTO" ] && echo "- Photo : photos/${SAFE}.jpg (téléchargée)" || echo "- Photo : non disponible")</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Sources</h2>
+        </header>
+        <div class="tuto-section-content">
+        <ul><li>GHunt : ghunt.json</li><li>Holehe : holehe.txt</li></ul>
+        <p>$([ -n "${HIBP_API_KEY:-}" ] && echo "- HIBP : hibp.json")</p>
+        <ul><li>Sherlock : sherlock_*/</li><li>Maigret : maigret/</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Manifest</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>\<code>\</code>\<code> $(cat MANIFEST_SHA256.txt) \</code>\<code>\</code></p>
+        <p>À compléter manuellement après corroboration des résultats. EOF</p>
+        <p>log "Investigation terminée. Dossier : $DIR" ls -lh</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>
+Usage :
+
+```bash
+chmod +x osint_email.sh
+./osint_email.sh suspect@gmail.com</code></pre></div>
+        <p>Tu obtiens un <strong>dossier OSINT complet</strong> automatisé.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Pivoter avec Gaia ID entre comptes</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le <strong>Gaia ID</strong> est l'identifiant Google permanent. Permet de pivoter même si l'email change.</p>
+        <h3>Cas : retrouver un compte après changement d'email</h3>
+        <p>Si tu as un <strong>vieil email</strong> d'un suspect et que tu connais son <strong>Gaia ID</strong> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avec l'email connu (peut être obsolète)
+ghunt email vieux_email@gmail.com --json - | jq '.gaia_id'
+# 1234567890123456789
+
+# Avec ce Gaia ID, retrouver le compte actuel
+ghunt gaia 1234567890123456789</code></pre></div>
+        <p>Si le suspect a changé d'email mais gardé son compte → tu retrouves le <strong>nouveau profil</strong> via Gaia ID.</p>
+        <h3>Linkage Gaia ID entre services</h3>
+        <p>Le même Gaia ID est utilisé par tous les services Google (Drive, YouTube, Maps, Photos, Workspace). Indispensable pour <strong>corroborer</strong> : un même Gaia ID dans plusieurs sources = même personne.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Détection et contournement des limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Google <strong>détecte les usages anormaux</strong> de ses API internes. Symptômes :</p>
+        <ul><li>Erreur <code>403 Forbidden</code> sur les requêtes</li><li>Compte burner <strong>suspendu</strong></li><li>Message "Unusual activity detected"</li></ul>
+        <h3>Mitigations</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Max 10 requêtes par heure par compte
+sleep 360   # 6 minutes entre chaque requête</code></pre></div>
+        <p>Utiliser <strong>plusieurs IPs sortantes</strong> via VPN avec rotation :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Avant chaque requête : reconnect VPN
+mullvad disconnect &amp;&amp; sleep 5 &amp;&amp; mullvad connect
+# ou
+nordvpn disconnect &amp;&amp; sleep 3 &amp;&amp; nordvpn connect
+ghunt email "$EMAIL"</code></pre></div>
+        <p>Si tu fais 50+ recherches dans la journée :</p>
+        <ul><li>Compte A pour matin</li><li>Compte B pour après-midi</li><li>Compte C en réserve</li></ul>
+        <p>GHunt rotate déjà les User-Agents. Vérifier dans les logs si toujours valide pour ta version.</p>
+        <ul><li><strong>Tor</strong> : très lent et beaucoup d'IPs sont blacklistées par Google</li><li><strong>Résidentiel proxies</strong> : commercial, coûteux</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>ne faire jamais plus de <strong>10-20 recherches GHunt par jour</strong> par compte burner. Au-delà : risque ban élevé.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Gestion de plusieurs comptes burner</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Pour un usage soutenu, plusieurs comptes burner.</p>
+        <h3>Création</h3>
+        <ol><li>Créer 3-5 comptes Google burner différents</li><li>Chacun avec :</li></ol>
+        <ul><li>Email burner (ProtonMail, Tutanota)</li><li>Pas de téléphone (ou téléphone temporaire)</li><li>Pas de récup email perso</li></ul>
+        <ol><li>Stocker les credentials chiffrés (KeePass, Bitwarden)</li></ol>
+        <h3>Switch entre comptes</h3>
+        <p>GHunt sauvegarde les cookies dans <code>~/.ghunt/</code>. Pour switcher :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Sauvegarder la config actuelle (burner A)
+cp -r ~/.ghunt/ ~/.ghunt-burnerA/
+
+# Charger config burner B
+rm -rf ~/.ghunt/
+cp -r ~/.ghunt-burnerB/ ~/.ghunt/</code></pre></div>
+        <p>Ou script wrapper :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+# ghunt-with-burner.sh BURNER_NAME COMMAND...
+
+BURNER="$1"
+shift
+
+cp -r ~/.ghunt-burner${BURNER}/ ~/.ghunt/
+ghunt "$@"</code></pre></div>
+        <h3>Rotation automatisée</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>#!/bin/bash
+# Round-robin entre 3 burners
+
+BURNERS=("A" "B" "C")
+COUNT_FILE="$HOME/.ghunt-counter"
+
+counter=$(cat "$COUNT_FILE" 2&gt;/dev/null || echo 0)
+burner=${BURNERS[$((counter % ${#BURNERS[@]}))]}
+echo $((counter + 1)) &gt; "$COUNT_FILE"
+
+./ghunt-with-burner.sh "$burner" "$@"</code></pre></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Mise à jour et débogage GHunt</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Mise à jour</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>pip install --upgrade ghunt</code></pre></div>
+        <p>Si recherche échoue après mise à jour : <code>ghunt login</code> à nouveau (le format des cookies peut avoir changé).</p>
+        <h3>Débogage</h3>
+        <p>Si une recherche retourne <code>{}</code> ou échoue :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt login --check
+# OU
+ls -la ~/.ghunt/</code></pre></div>
+        <p>Si les fichiers sont vides ou anciens : re-login.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt email "$EMAIL" -v</code></pre></div>
+        <p>Affiche les requêtes HTTP, les réponses brutes.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt email "$EMAIL" 2&gt;&amp;1 | tee debug.log
+grep -i error debug.log</code></pre></div>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt --version
+pip show ghunt</code></pre></div>
+        <p>Comparer avec la version GitHub : si très en retard → mettre à jour.</p>
+        <h3>Issues sur GitHub</h3>
+        <p>Si GHunt cassé pour tout le monde : voir <<a href="https://github.com/mxrch/GHunt/issues" target="_blank" rel="noopener">https://github.com/mxrch/GHunt/issues</a>>. mxrch est généralement réactif.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Cas pratique : retracer un compte Gmail anonyme</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Scénario : journaliste reçoit des emails anonymes depuis <code>whistleblower2026@gmail.com</code> avec des accusations contre une entreprise.</p>
+        <p>⚠️ Cadre éthique délicat : whistleblower peut être protégé. Cette enquête doit avoir un cadre légal documenté (poursuite pour diffamation, par exemple).</p>
+        <h3>Étape 1 — GHunt sur l'email</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>ghunt email whistleblower2026@gmail.com --json wb.json</code></pre></div>
+        <p>Probablement compte créé récemment, peu d'info publique. Mais on récupère :</p>
+        <ul><li>Gaia ID : 1234567890</li><li>Date de création approximative</li><li>Photo de profil (peut-être anonyme/par défaut)</li></ul>
+        <h3>Étape 2 — Reviews Maps</h3>
+        <p>Souvent rien sur compte burner — bonne hygiène opérationnelle.</p>
+        <h3>Étape 3 — Drive partages</h3>
+        <p>Le whistleblower a peut-être partagé des documents Drive — c'est souvent comme ça qu'il fait fuiter des éléments. GHunt peut révéler ces partages.</p>
+        <h3>Étape 4 — YouTube channel</h3>
+        <p>Rare sur un burner mais à vérifier.</p>
+        <h3>Étape 5 — Holehe sur l'email</h3>
+        <p>Tester si l'email est associé à d'autres services. Souvent <strong>non</strong> sur un vrai burner. Si oui (par erreur) → pivot.</p>
+        <h3>Étape 6 — Have I Been Pwned</h3>
+        <p>Email récent → probablement aucune fuite.</p>
+        <h3>Étape 7 — Recherche manuelle de l'email</h3>
+        <ul><li>Twitter / X : recherche d'occurrences</li><li>GitHub : si l'email apparaît dans un commit</li><li>Pastebin : recherche directe</li><li>Recherche Google : <code>"whistleblower2026@gmail.com"</code></li></ul>
+        <h3>Étape 8 — Analyse des messages reçus</h3>
+        <ul><li><strong>Headers email</strong> : IP source, MTA, langue (cf. tutos forensique mail)</li><li><strong>Contenu</strong> : style d'écriture, fautes typiques, expressions caractéristiques</li><li><strong>Pièces jointes</strong> : EXIF, métadonnées Office (auteur, organisation)</li></ul>
+        <h3>Étape 9 — Corroboration</h3>
+        <p>Si GHunt + recherches manuelles donnent peu de résultats : c'est un <strong>bon burner</strong>. Identification quasi impossible sans accès aux logs Google ou demande judiciaire à Google.</p>
+        <p>⚠️ Demande judiciaire à Google : possible mais réservée aux autorités, avec mandat.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Intégration avec Spiderfoot, Recon-ng, Maltego</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Spiderfoot</h3>
+        <p><<a href="https://www.spiderfoot.net/" target="_blank" rel="noopener">https://www.spiderfoot.net/</a>></p>
+        <p>Plateforme OSINT auto-hébergeable avec 200+ modules. Inclut un module GHunt qui automatise l'enrichissement.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>docker run -p 5001:5001 -v $(pwd)/data:/data binarypool/spiderfoot:latest</code></pre></div>
+        <p>Puis configurer le module GHunt avec tes cookies.</p>
+        <h3>Recon-ng</h3>
+        <p>Framework type Metasploit pour OSINT. Modules custom possibles intégrant GHunt.</p>
+        <h3>Maltego</h3>
+        <p>Visualisation graphique de liens OSINT. Transforms custom pour GHunt (via API GHunt en script Python).</p>
+        <p>Workflow :</p>
+        <ol><li>Maltego avec nœud "Email"</li><li>Right-click → Run transform → GHunt</li><li>Nouveau nœud "Person" avec attributs (nom, photo, Gaia ID)</li><li>Continuer le graphe avec autres OSINT</li></ol>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Bonnes pratiques renforcées</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Comptes burner multiples</strong> : 3-5 en rotation, jamais le perso.</p>
+        <p>🔹 <strong>VM OSINT isolée</strong> : Tails, Whonix, ou VM custom.</p>
+        <p>🔹 <strong>VPN OSINT dédié</strong> : Mullvad, ProtonVPN, rotation IP.</p>
+        <p>🔹 <strong>Limite stricte</strong> : 10-20 requêtes/jour/burner. Au-delà : ban risqué.</p>
+        <p>🔹 <strong>Rotation automatique</strong> entre burners pour les batchs.</p>
+        <p>🔹 <strong>Documenter</strong> chaque enquête : autorité, finalité, burner utilisé, IP.</p>
+        <p>🔹 <strong>Hash systématique</strong> des rapports.</p>
+        <p>🔹 <strong>Archivage immédiat</strong> des éléments (Wayback Machine + screenshots).</p>
+        <p>🔹 <strong>Corroboration</strong> : 3+ sources avant conclure.</p>
+        <p>🔹 <strong>Mise à jour fréquente</strong> : GHunt évolue rapidement avec Google.</p>
+        <p>🔹 <strong>Backup des cookies</strong> : tes burners sont précieux, sauvegarder leurs cookies.</p>
+        <p>🔹 <strong>Stockage chiffré</strong> : noms, photos, Gaia IDs = données très personnelles.</p>
+        <p>🔹 <strong>Durée de conservation limitée</strong> : effacer selon délai légal.</p>
+        <p>🔹 <strong>Pas de pivotement perso</strong> : le compte burner ne doit pas pouvoir te remonter.</p>
+        <p>🔹 <strong>Tester sur soi-même</strong> : faire GHunt sur ton propre email Google personnel pour comprendre ce qui est exposé.</p>
+        <p>🔹 <strong>Lire les TOS Google</strong> : zone grise, conscience des risques.</p>
+        <p>🔹 <strong>Respecter le cadre légal</strong> national : nLPD Suisse, RGPD EU, etc.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Forces, faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Phone OSINT</strong> unique (même avec limites).</p>
+        <p>✅ <strong>Drive enumeration</strong> : trouvailles précieuses (fuites accidentelles).</p>
+        <p>✅ <strong>YouTube deep-dive</strong> : nombreux pivots possibles.</p>
+        <p>✅ <strong>API scriptable</strong> : intégration dans workflows automatisés.</p>
+        <p>✅ <strong>JSON export</strong> clean : exploitable en Python.</p>
+        <p>✅ <strong>Maintenu activement</strong> par mxrch.</p>
+        <p>✅ <strong>Complémentaire</strong> avec Sherlock + Maigret + Holehe + PhoneInfoga.</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>Phone OSINT très limité</strong> par les masques Google.</p>
+        <p>❌ <strong>Dépendance Google</strong> : peut tout casser.</p>
+        <p>❌ <strong>Détection</strong> : usage massif → ban.</p>
+        <p>❌ <strong>Setup complexe</strong> : burners, VPN, isolation.</p>
+        <p>❌ <strong>Zone grise TOS</strong> : risque légal théorique pour usage massif.</p>
+        <p>❌ <strong>Pas de bypass</strong> : si cible verrouille tout, peu de résultats.</p>
+        <p>❌ <strong>Faux négatifs</strong> : un compte existant peut paraître absent si fortement restreint.</p>
+        <p>❌ <strong>Documentation parfois en retard</strong> sur le code (mxrch évolue vite).</p>
+        <p>❌ <strong>Sensibilité légale</strong> : un des outils OSINT les plus sensibles.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources et étapes suivantes</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Tutoriels CAS-IN</h3>
+        <ol><li>✅ <strong>GHunt débutant</strong> (v130)</li><li>✅ <strong>GHunt moyen</strong> (ce tutoriel)</li><li>↔️ <strong>PhoneInfoga</strong> (v130) — pendant phone OSINT</li><li>↔️ <strong>Sherlock + Maigret + Holehe</strong> (v128, v129) — pendant OSINT général</li></ol>
+        <h3>Documentation</h3>
+        <ul><li>📚 <strong>GitHub GHunt</strong> : <<a href="https://github.com/mxrch/GHunt" target="_blank" rel="noopener">https://github.com/mxrch/GHunt</a>></li><li>📚 <strong>mxrch Twitter / Bluesky</strong> : nouveautés</li><li>📚 <strong>OSINT Curious</strong> : <<a href="https://osintcurio.us/" target="_blank" rel="noopener">https://osintcurio.us/</a>></li><li>📚 <strong>Bellingcat OSINT Toolkit</strong></li></ul>
+        <h3>Outils complémentaires</h3>
+        <ul><li>🔧 <strong>PhoneInfoga</strong> : <<a href="https://github.com/sundowndev/phoneinfoga" target="_blank" rel="noopener">https://github.com/sundowndev/phoneinfoga</a>> (cf. tuto v130)</li><li>🔧 <strong>Spiderfoot</strong> : <<a href="https://www.spiderfoot.net/" target="_blank" rel="noopener">https://www.spiderfoot.net/</a>></li><li>🔧 <strong>Maltego</strong> : <<a href="https://www.maltego.com/" target="_blank" rel="noopener">https://www.maltego.com/</a>></li><li>🔧 <strong>Recon-ng</strong> : <<a href="https://github.com/lanmaster53/recon-ng" target="_blank" rel="noopener">https://github.com/lanmaster53/recon-ng</a>></li><li>🔧 <strong>TinEye, Yandex Images</strong> : reverse image search</li></ul>
+        <h3>Formations / CTFs</h3>
+        <ul><li>🎓 <strong>Trace Labs Global OSINT Search Party</strong> : pratique en cadre éthique</li><li>🎓 <strong>OSINT Combine</strong> : formations</li><li>🎓 <strong>SANS SEC487</strong> : Open-Source Intelligence Gathering and Analysis</li></ul>
+        <h3>Cadre légal</h3>
+        <ul><li>⚖️ <strong>PFPDT</strong> (Suisse) : <<a href="https://www.edoeb.admin.ch/" target="_blank" rel="noopener">https://www.edoeb.admin.ch/</a>></li><li>⚖️ <strong>CNIL</strong> (France) : <<a href="https://www.cnil.fr/" target="_blank" rel="noopener">https://www.cnil.fr/</a>></li><li>⚖️ <strong>EDPB</strong> (EU) : <<a href="https://edpb.europa.eu/" target="_blank" rel="noopener">https://edpb.europa.eu/</a>></li></ul>
+        <h3>Livres</h3>
+        <ul><li>📖 **Michael Bazzell — *Open Source Intelligence Techniques***</li><li>📖 **Nihad Hassan — *Open Source Intelligence Methods and Tools***</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s24" data-section-id="s24">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">24</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu maîtrises désormais <strong>GHunt au niveau intermédiaire</strong> : Phone OSINT, Drive enumeration, YouTube deep-dive, Maps geolocation, scripting Python, orchestration multi-outils, rotation comptes burner.</p>
+        <p>GHunt est un outil <strong>puissant et sensible</strong> : il révèle l'identité réelle derrière un compte Google. Son usage exige <strong>discipline maximale</strong> :</p>
+        <ul><li>Comptes burner dédiés</li><li>VM OSINT isolée</li><li>VPN dédié</li><li>Rotation et limitation</li><li>Cadre légal documenté</li><li>Archivage et hash systématiques</li></ul>
+        <p>Combiné avec <strong>Sherlock + Maigret + Holehe + PhoneInfoga</strong>, tu disposes d'un <strong>arsenal OSINT professionnel complet</strong> sur les personnes.</p>
+        <p>Recommandations pour la suite :</p>
+        <ol><li><strong>Configurer 3 comptes burner</strong> en rotation.</li><li><strong>Construire ton script orchestrateur</strong> OSINT (cf. §11 — à adapter à tes besoins).</li><li><strong>Pratiquer sur des CTFs Trace Labs</strong> (cadre éthique).</li><li><strong>Lire Bazzell</strong> intégralement — référence du domaine.</li><li><strong>Suivre mxrch</strong> pour les évolutions GHunt.</li><li><strong>Documenter méticuleusement</strong> chaque enquête.</li><li><strong>Tester périodiquement</strong> GHunt sur ton propre compte pour comprendre l'évolution de ce qui est exposé.</li></ol>
+        <p>L'expertise OSINT vient de <strong>la pratique disciplinée</strong>. À toi de jouer. 🔍</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« GHunt moyen — Phone OSINT, Drive enumeration, scripting maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Google masque volontairement les retours phone (nom partiel, pas de localisation, pas d'activité) pour empêcher l'usage stalking. GHunt phone retourne au mieux : confirmation qu'un compte existe + nom partiel masqué + photo (parfois). <strong>Complément naturel</strong> : PhoneInfoga (v130) pour scanners multi-sources sur le numéro lui-même."
+             data-feedback-ko="✗ La bonne réponse : <strong>Google masque les retours phone</strong>. C'est une protection délibérée contre le stalking. GHunt phone reste utile mais limité — utiliser <strong>PhoneInfoga (v130)</strong> en complément pour les scanners traditionnels (carrier, dorks, etc.).">
+          <div class="tuto-quiz-question-text">1. GHunt peut chercher par <strong>numéro de téléphone</strong>. Quelle est sa <strong>limite principale</strong> ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Il ne supporte que les numéros US</button>
+            <button class="tuto-quiz-option" type="button"><strong>Google MASQUE délibérément les retours phone</strong> (nom partiel « J<em><strong>n D</strong></em> ») pour limiter le stalking — usage limité en pratique</button>
+            <button class="tuto-quiz-option" type="button">Il faut payer pour cette fonction</button>
+            <button class="tuto-quiz-option" type="button">Il n'y a aucune limite</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. <strong>Fuites accidentelles Drive</strong> = trouvaille classique GHunt. Beaucoup d'utilisateurs partagent des documents avec « Anyone with the link » pensant que c'est privé (lien obscur = sécurité par obscurité, illusion). GHunt révèle ces partages. Discipline : si tu trouves des docs privés exposés par erreur, <strong>ne pas télécharger</strong> sans cadre légal — documenter l'URL, archiver via Wayback, signaler à l'autorité."
+             data-feedback-ko="✗ La bonne réponse : <strong>fuites accidentelles via partages publics</strong>. Trouvaille fréquente. Discipline : pas de download sans cadre légal. Documenter et archiver l'URL via Wayback Machine.">
+          <div class="tuto-quiz-question-text">2. GHunt peut <strong>énumérer les partages Google Drive publics</strong>. Quel cas DFIR concret cela permet-il ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Voir les emails de la cible</button>
+            <button class="tuto-quiz-option" type="button"><strong>Découvrir des fuites accidentelles</strong> : documents (parfois mots de passe, brouillons confidentiels, photos personnelles) partagés par mégarde en mode « Anyone with the link can view »</button>
+            <button class="tuto-quiz-option" type="button">Modifier les fichiers de la cible</button>
+            <button class="tuto-quiz-option" type="button">Voir les fichiers privés</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Stratégie de protection : (1) <strong>Limite stricte</strong> 10-20 requêtes/jour/burner — Google détecte les usages anormaux, (2) <strong>Rotation</strong> de plusieurs comptes burner avec script wrapper, (3) <strong>VPN OSINT</strong> dédié avec rotation IP, (4) Délais 5-10 secondes entre requêtes. Au-delà de 50+ requêtes/jour : <strong>suspension probable</strong>. Si suspension : passer au burner suivant."
+             data-feedback-ko="✗ La bonne réponse : <strong>rate limit + rotation burners + VPN + délais</strong>. La discipline opérationnelle est cruciale en OSINT GHunt. Un usage trop massif = ban → perte du burner + alertes côté Google → suspicion sur les autres burners associés.">
+          <div class="tuto-quiz-question-text">3. Tu fais beaucoup de recherches GHunt. Comment <strong>éviter la suspension</strong> de ton compte burner ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">GHunt évite les bans automatiquement</button>
+            <button class="tuto-quiz-option" type="button"><strong>Limiter à 10-20 requêtes/jour/burner + rotation entre 3-5 comptes burner + VPN avec rotation IP + délais entre requêtes</strong></button>
+            <button class="tuto-quiz-option" type="button">Utiliser des Google Voice numbers</button>
+            <button class="tuto-quiz-option" type="button">Demander à Google</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. GHunt est <strong>conçu pour le scripting</strong> : modules Python importables, fonctions async exploitables. Permet de construire des <strong>workflows orchestrés</strong> : GHunt + Holehe + Sherlock + Maigret + HIBP + reverse image search en pipeline automatisé. <strong>Avertissement</strong> : l'API évolue avec les versions GHunt — vérifier la doc à jour avant scripting massif. Adapter les imports selon ta version."
+             data-feedback-ko="✗ La bonne réponse : <strong>importer les modules ghunt en Python async</strong>. C'est l'une des forces de GHunt — il n'est pas qu'un CLI, c'est une lib Python utilisable directement. Workflows orchestrés possibles. À combiner avec rate limit et rotation burners pour usage soutenu.">
+          <div class="tuto-quiz-question-text">4. Pour <strong>scripter GHunt</strong> en Python avec son API interne, comment procéder ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">GHunt n'a pas d'API Python</button>
+            <button class="tuto-quiz-option" type="button"><strong>Importer les modules ghunt (asyncio + httpx)</strong> : <code>from ghunt.modules.email import hunt_email</code> puis appel async — utile pour automation et orchestration avec autres outils OSINT</button>
+            <button class="tuto-quiz-option" type="button">Utiliser PyAutoGUI pour cliquer dans l'interface</button>
+            <button class="tuto-quiz-option" type="button">Recompiler GHunt depuis les sources</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. C'est le <strong>workflow OSINT email professionnel complet</strong>. Chaque étape apporte une dimension différente : GHunt (Google ecosystem), Holehe (autres services), HIBP (fuites de mots de passe potentiellement utilisables), Maigret (3000+ sites avec métadonnées), dérivation (extension à username-based search), Sherlock (validation publique), reverse image search Yandex (autres profils avec même photo), corroboration manuelle (cohérence photo + bio + dates + localisation sur 3+ sources). Tout documenter, hasher, archiver."
+             data-feedback-ko="✗ La bonne réponse : <strong>workflow complet multi-outils + corroboration</strong>. Aucun outil seul ne suffit. C'est la combinaison qui fait l'enquête OSINT sérieuse. Lire Bazzell — <em>Open Source Intelligence Techniques</em> — pour la méthodologie complète.">
+          <div class="tuto-quiz-question-text">5. Quel est le <strong>workflow OSINT email complet</strong> recommandé combinant tous les outils ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Lancer GHunt seul</button>
+            <button class="tuto-quiz-option" type="button"><strong>GHunt (identité Google) → Holehe (services associés) → HIBP (fuites) → Maigret (multi-IoC) → dérivation usernames depuis nom → Sherlock sur usernames → reverse image search sur photo GHunt → corroboration 3+ sources</strong></button>
+            <button class="tuto-quiz-option" type="button">Utiliser Google directement</button>
+            <button class="tuto-quiz-option" type="button">Demander à la cible</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/ghunt_moyen.html" style="color:var(--cyan)">📚 Consulter la fiche GHunt moyen — Phone OSINT, Drive enumeration, scripting</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel GHunt moyen — Phone OSINT, Drive enumeration, scripting v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>

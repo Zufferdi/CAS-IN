@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Autopsy avancé — Plugins, scripting, super-timeline — Tutoriel pas-à-pas — CAS-IN</title>
+<meta name="description" content="Tutoriel pas-à-pas Autopsy avancé — Plugins, scripting, super-timeline : outil DFIR open source. Installation, configuration, premier cas, quiz final.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/tutoriels.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+
+<div id="cas-navbar" data-page="tutoriels"></div>
+
+<nav class="tn-nav" aria-label="Navigation tutoriel">
+  <a href="../tutoriels.html" class="tn-back">← Tutoriels</a>
+  <span class="tn-title">AUTOPSY AVANCÉ — PLUGINS, SCRIPTING, SUPER-TIMELINE — PAS À PAS</span>
+  <a href="../fiches/autopsy_avance.html" class="tn-quiz">📚 Fiche →</a>
+</nav>
+
+<div class="tuto-progress-bar">
+  <span style="font-size:.7rem;color:var(--muted);">📈 Progression</span>
+  <div class="tuto-progress-track"><div class="tuto-progress-fill"></div></div>
+  <span class="tuto-progress-text"><strong>0</strong> / 22 · 0%</span>
+  <button class="tuto-reset" type="button" title="Réinitialiser la progression de ce tutoriel">⟲ Reset</button>
+</div>
+
+<main id="main-content" data-tutoriel-id="autopsy_avance">
+
+  <div class="tuto-layout">
+
+    <aside class="tuto-sidebar">
+      <h3>Plan</h3>
+      <ol>
+        <li><a href="#s1"><span class="check-marker"></span>1. Prérequis et positionnement</a></li>
+        <li><a href="#s2"><span class="check-marker"></span>2. Architecture Autopsy en profondeur</a></li>
+        <li><a href="#s3"><span class="check-marker"></span>3. Carving avancé avec PhotoRec intégr</a></li>
+        <li><a href="#s4"><span class="check-marker"></span>4. Super-timeline Plaso intégrée</a></li>
+        <li><a href="#s5"><span class="check-marker"></span>5. Hash sets personnalisés (NSRL, Proj</a></li>
+        <li><a href="#s6"><span class="check-marker"></span>6. Keyword lists avancées et regex</a></li>
+        <li><a href="#s7"><span class="check-marker"></span>7. Communicating Accounts (CommAccount</a></li>
+        <li><a href="#s8"><span class="check-marker"></span>8. Mode multi-utilisateur (PostgreSQL </a></li>
+        <li><a href="#s9"><span class="check-marker"></span>9. Ingest modules Python custom</a></li>
+        <li><a href="#s10"><span class="check-marker"></span>10. Report modules custom</a></li>
+        <li><a href="#s11"><span class="check-marker"></span>11. Le Sleuth Kit en CLI (TSK)</a></li>
+        <li><a href="#s12"><span class="check-marker"></span>12. Body file et mactime pour timeline </a></li>
+        <li><a href="#s13"><span class="check-marker"></span>13. Intégration avec Cyber Triage</a></li>
+        <li><a href="#s14"><span class="check-marker"></span>14. Plugins communautaires utiles</a></li>
+        <li><a href="#s15"><span class="check-marker"></span>15. Performance et tuning</a></li>
+        <li><a href="#s16"><span class="check-marker"></span>16. Mobile : Android et iOS Analyzer</a></li>
+        <li><a href="#s17"><span class="check-marker"></span>17. Workflow d'enquête complet</a></li>
+        <li><a href="#s18"><span class="check-marker"></span>18. Forces, faiblesses et limites</a></li>
+        <li><a href="#s19"><span class="check-marker"></span>19. Bonnes pratiques expert</a></li>
+        <li><a href="#s20"><span class="check-marker"></span>20. Ressources et certifications</a></li>
+        <li><a href="#s21"><span class="check-marker"></span>21. Conclusion</a></li>
+        <li><a href="#quiz" style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.65rem;color:var(--cyan)"><span class="check-marker"></span>🎯 Quiz final</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <header class="tuto-header">
+        <div class="breadcrumb" style="padding:0 0 .5rem">
+          <a href="../index.html">🏠 Accueil</a>
+          <span class="bc-sep">›</span>
+          <a href="../tutoriels.html">Tutoriels</a>
+          <span class="bc-sep">›</span>
+          <span class="bc-current">Autopsy avancé — Plugins, scripting, super-timeline</span>
+        </div>
+
+        <h1>🧪 Autopsy avancé — Plugins, scripting, super-timeline</h1>
+        <div class="tuto-subtitle">
+          À la fin de ce tutoriel, tu sauras maîtriser le <strong>carving avancé PhotoRec</strong>, intégrer la <strong>super-timeline Plaso</strong> dans Autopsy, configurer des <strong>hash sets personnalisés</strong> (NSRL, IoCs custom, ProjectVic), créer des <strong>keyword lists avec regex</strong>, exploiter <strong>Communicating Accounts</strong>, configurer le <strong>mode multi-utilisateur</strong> (PostgreSQL + Solr), écrire des <strong>ingest modules Python (Jython 2.7)</strong>, utiliser <strong>Sleuth Kit en CLI</strong> (mmls, fls, icat, mactime), et orchestrer un workflow d'enquête complet avec Volatility, Plaso, KAPE, Cellebrite.
+        </div>
+        <div class="tuto-meta">
+          <span class="tuto-meta-badge lvl-expert"><span class="icon">🎯</span> Niveau expert</span>
+          <span class="tuto-meta-badge "><span class="icon">⏱</span> ~85 min</span>
+          <span class="tuto-meta-badge "><span class="icon">🧪</span> Plugins Python</span>
+          <span class="tuto-meta-badge "><span class="icon">🗄️</span> Multi-user PostgreSQL</span>
+          <span class="tuto-meta-badge "><span class="icon">⌨️</span> Sleuth Kit CLI</span>
+          <span class="tuto-meta-badge "><span class="icon">🔬</span> Workflow complet</span>
+        </div>
+      </header>
+
+      <div class="tuto-callout info">
+        <div class="tuto-callout-title">ℹ️ Prérequis : Autopsy débutant + Autopsy standard</div>
+        <div>Niveau expert : tu maîtrises déjà Autopsy (cas, ingest, tags, rapports). Place aux techniques qui distinguent un utilisateur d'un <strong>architecte DFIR</strong> : carving fin, super-timeline intégrée, hash sets custom (NSRL, ProjectVic), modules Python custom, Sleuth Kit en CLI, mode multi-user en équipe.</div>
+      </div>
+
+      <section class="tuto-section" id="s1" data-section-id="s1">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">01</span> Prérequis et positionnement</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Prérequis</strong> :</p>
+        <ul><li>Tutoriel <strong>Autopsy débutant</strong> (v129) : tu sais créer un cas, ajouter une source, lancer ingest, tagger, générer un rapport.</li><li>Tutoriel <strong>Autopsy</strong> standard (v124) : tu connais tous les modules d'ingest et la logique générale.</li><li>Tutoriel <strong>Bases CLI</strong> (v127) et idéalement <strong>CLI intermédiaire</strong> (v128) — pour le travail avec TSK et les scripts custom.</li><li>Notions Python (pour les modules custom).</li></ul>
+        <p><strong>Ce que tu sauras à la fin</strong> :</p>
+        <ul><li>Maîtriser le <strong>carving récursif</strong> avec configuration fine de PhotoRec.</li><li>Générer une <strong>super-timeline Plaso</strong> intégrée et l'exploiter dans Autopsy.</li><li>Importer <strong>NSRL</strong> et <strong>ProjectVic</strong> pour le filtrage des fichiers connus.</li><li>Écrire un <strong>ingest module Python</strong> personnalisé pour un cas spécifique.</li><li>Configurer Autopsy en <strong>mode multi-utilisateur</strong> (PostgreSQL + Solr).</li><li>Utiliser le <strong>Sleuth Kit en CLI</strong> pour les opérations chirurgicales.</li><li>Orchestrer un workflow complet avec <strong>Cyber Triage</strong> et autres outils.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s2" data-section-id="s2">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">02</span> Architecture Autopsy en profondeur</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Comprendre l'architecture aide à dépanner et étendre.</p>
+        <h3>Stack technique</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>┌─────────────────────────────────────┐
+│         Interface NetBeans          │
+│       (Java + RCP framework)        │
+├─────────────────────────────────────┤
+│         Ingest pipeline             │
+│  (modules Java + plugins Python)    │
+├─────────────────────────────────────┤
+│   Case DB (SQLite ou PostgreSQL)    │
+│   Keyword index (Solr / Lucene)     │
+├─────────────────────────────────────┤
+│      The Sleuth Kit (TSK) — C       │
+│   (lecture FS, carving, timeline)   │
+├─────────────────────────────────────┤
+│       libraires natives (libewf,    │
+│       libtsk, libafflib, etc.)      │
+└─────────────────────────────────────┘</code></pre></div>
+        <ul><li><strong>Sleuth Kit</strong> : moteur C qui lit les filesystems (NTFS, FAT, ext, HFS+, APFS).</li><li><strong>Autopsy</strong> : interface Java + base de données + indexation.</li><li><strong>Plugins</strong> : Java natifs ou Python (Jython 2.7 — pas Python 3).</li></ul>
+        <h3>Fichiers d'un cas</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>&lt;case_dir&gt;/
+├── &lt;case_name&gt;.aut          # Fichier de cas (XML)
+├── autopsy.db               # SQLite (mode single-user)
+├── ModuleOutput/            # Sortie de chaque module
+├── Reports/                 # Rapports générés
+├── Logs/                    # Logs Autopsy
+├── Temp/                    # Fichiers temporaires (peut être gros)
+└── timeline.db              # Base timeline (si module Timeline activé)</code></pre></div>
+        <h3>Où sont les configs</h3>
+        <ul><li><strong>Linux</strong> : <code>~/.autopsy/</code> ou <code>~/Library/autopsy/</code></li><li><strong>Windows</strong> : <code>%APPDATA%\autopsy\</code></li><li><strong>macOS</strong> : <code>~/Library/Application Support/Autopsy/</code></li></ul>
+        <p>Les <strong>logs</strong> sont précieux : <code>Logs/autopsy.log</code> pour débuter en cas d'erreur d'ingest.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s3" data-section-id="s3">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">03</span> Carving avancé avec PhotoRec intégré</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le module <strong>PhotoRec Carver</strong> d'Autopsy embarque le célèbre <strong>PhotoRec</strong> (de Christophe Grenier, CGSecurity). Indispensable pour récupérer des fichiers <strong>partiellement supprimés</strong> ou <strong>fragmentés</strong>.</p>
+        <h3>Activer le module</h3>
+        <p><code>Ingest Modules → PhotoRec Carver</code> (lors de l'ajout de la source ou via <code>Tools → Run Ingest Modules</code>).</p>
+        <h3>Configuration</h3>
+        <p>Cliquer <strong>Settings</strong> :</p>
+        <table><thead><tr><th>Option</th><th>Effet</th></tr></thead><tbody><tr><td><strong>Limit max file size</strong></td><td>Ignorer les fichiers > X Mo (gain de temps)</td></tr><tr><td><strong>Carve unallocated space only</strong></td><td>Carving uniquement dans le <code>$Unalloc</code> (logique mais peut rater du contenu en allocated)</td></tr><tr><td><strong>Process this many sectors at a time</strong></td><td>Taille de bloc de traitement</td></tr></tbody></table>
+        <h3>Cibler des types spécifiques</h3>
+        <p>PhotoRec supporte 480+ formats. Pour cibler :</p>
+        <p><code>PhotoRec Carver Settings → Configure PhotoRec → File Family Settings</code></p>
+        <p>Décocher les formats inutiles <strong>accélère drastiquement</strong> le carving. Par exemple, sur une enquête fraude documentaire : ne garder que <strong>PDF, DOCX, JPG, PNG, EML</strong>.</p>
+        <h3>Où trouver les résultats</h3>
+        <p><code>Data Sources → <source> → $CarvedFiles</code> (ou similaire selon version).</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>sur disque SSD avec TRIM, le carving peut donner peu de résultats (TRIM efface définitivement les blocs supprimés). Sur HDD, c'est très productif.</div></div>
+        <h3>Carving manuel avec scalpel ou foremost</h3>
+        <p>Pour aller plus loin que PhotoRec, en CLI :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># foremost (carving guidé par config)
+sudo apt install foremost
+foremost -t jpg,pdf,docx -i image.dd -o /output/carved/
+
+# bulk_extractor (carving + extraction d'IoCs)
+sudo apt install bulk-extractor
+bulk_extractor -o /output/bulk image.E01</code></pre></div>
+        <p>Ces outils peuvent <strong>compléter</strong> Autopsy quand le carving intégré est insuffisant.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s4" data-section-id="s4">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">04</span> Super-timeline Plaso intégrée</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le module <strong>Plaso (super-timeline)</strong> d'Autopsy intègre log2timeline + psort directement.</p>
+        <h3>Comportement</h3>
+        <p>Le module Plaso lit tous les <strong>artefacts temporels</strong> : fichiers, registres Windows, EVTX, Prefetch, navigateurs, $LogFile NTFS, ... et produit une <strong>super-timeline unifiée</strong> intégrée à Autopsy.</p>
+        <h3>Activer</h3>
+        <p><code>Ingest Modules → Plaso</code> (cocher lors de l'ajout de source).</p>
+        <h3>Configuration</h3>
+        <p><code>Settings → Plaso Module Settings</code> :</p>
+        <ul><li><strong>Parser selection</strong> : tous (long) ou sélection (cibler EVTX, Web, Registry)</li><li><strong>Date range</strong> : restreindre la timeline à une période</li></ul>
+        <h3>Visualisation</h3>
+        <p>Une fois Plaso terminé : menu <code>Tools → Timeline</code>.</p>
+        <p>Autopsy ouvre la <strong>vue Timeline</strong> dédiée :</p>
+        <ul><li>Histogramme global de l'activité</li><li>Filtrage par type d'événement (file activity, web, registry, EVTX)</li><li>Zoom temporel</li><li>Liens vers les fichiers source dans l'arbre</li></ul>
+        <h3>Combiner avec le tutoriel Plaso (v124)</h3>
+        <p>Pour un usage encore plus puissant, <strong>générer la timeline avec Plaso en CLI directement</strong> (cf. tutoriel Plaso v124) et l'importer dans Autopsy via le module <strong>Body File</strong>.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Générer un body file Plaso
+log2timeline.py --output bodyfile case.plaso image.E01
+psort.py -o l2tcsv -w timeline.csv case.plaso
+
+# Importer dans Autopsy : Tools → Import Body File</code></pre></div>
+        <p>Avantage : la timeline CLI est plus customisable et reproductible. L'intégration Autopsy est plus visuelle.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s5" data-section-id="s5">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">05</span> Hash sets personnalisés (NSRL, ProjectVic, IoCs custom)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Le module <strong>Hash Lookup</strong> compare chaque fichier à une <strong>base de hashs</strong>. Permet de :</p>
+        <ul><li>Filtrer les fichiers <strong>connus comme bénins</strong> (NSRL) → gain de temps massif</li><li>Détecter des fichiers <strong>connus comme malveillants</strong> (CIRCL, malwarebazaar) → flag</li><li>Détecter des fichiers <strong>connus comme illégaux</strong> (ProjectVic, NCMEC) → flag</li></ul>
+        <h3>Installer NSRL (Reference Data Set)</h3>
+        <p>NSRL (NIST National Software Reference Library) contient <strong>millions de hashs</strong> de logiciels légitimes (Windows, Office, navigateurs, jeux).</p>
+        <ol><li>Télécharger depuis <<a href="https://www.nist.gov/itl/ssd/software-quality-group/national-software-reference-library-nsrl" target="_blank" rel="noopener">https://www.nist.gov/itl/ssd/software-quality-group/national-software-reference-library-nsrl</a>> (très lourd, plusieurs Go)</li><li>Format : <code>.txt</code> (CSV avec colonnes SHA-1, MD5, etc.) ou plus efficace : <strong><code>.kdb</code></strong> (Hash Database compatible Autopsy)</li></ol>
+        <h3>Configurer dans Autopsy</h3>
+        <p><code>Tools → Options → Hash Sets → New Database</code> :</p>
+        <ul><li><strong>Database Type</strong> : <code>Known Files (NSRL)</code> ou <code>Known Bad Files</code> ou <code>Indexed Files</code></li><li><strong>Source File</strong> : pointer vers le <code>.kdb</code> ou <code>.txt</code></li></ul>
+        <p>Une fois indexé, Autopsy filtrera ou flaguera automatiquement.</p>
+        <h3>Pour les IoCs custom</h3>
+        <p>Si tu as une liste de hashs SHA-1 issus de la CTI (Cyber Threat Intelligence) :</p>
+        <ol><li>Créer un fichier texte avec un hash par ligne.</li><li><code>New Database → Known Bad Files → Source file = ton fichier txt</code>.</li><li>Autopsy l'indexe.</li></ol>
+        <p>Tout fichier de l'image qui a un de ces hashs apparaîtra dans <strong>Results → Hashset Hits</strong>.</p>
+        <h3>ProjectVic</h3>
+        <p>Pour les enquêtes pédopornographie : <strong>ProjectVic</strong> maintient des hashs catégorisés.</p>
+        <p><strong>Accès strictement réservé</strong> aux forces de l'ordre habilitées (Suisse : Office fédéral de la police).</p>
+        <h3>Source malware</h3>
+        <ul><li><strong>MalwareBazaar</strong> (Abuse.ch) : <<a href="https://bazaar.abuse.ch/" target="_blank" rel="noopener">https://bazaar.abuse.ch/</a>> — dumps SHA-256</li><li><strong>MISP</strong> : si ton organisation a une instance, exporter les hashs en feed Autopsy</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s6" data-section-id="s6">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">06</span> Keyword lists avancées et regex</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Importer une liste</h3>
+        <p><code>Tools → Options → Keyword Search → New List</code> :</p>
+        <ul><li><strong>Name</strong> : ex. <code>IoC_2026_Q1</code></li><li><strong>Type</strong> : <code>Exact match</code>, <code>Substring match</code>, ou <code>Regex</code></li><li><strong>Add Keyword</strong> : un par un, ou Import depuis un fichier texte</li></ul>
+        <h3>Regex utiles</h3>
+        <table><thead><tr><th>Regex</th><th>Capture</th></tr></thead><tbody><tr><td><code>\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b</code></td><td>IPs</td></tr><tr><td>`\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z\</td><td>a-z]{2,}\b`</td><td>Emails</td></tr><tr><td><code>\b[A-Fa-f0-9]{32}\b</code></td><td>MD5</td></tr><tr><td><code>\b[A-Fa-f0-9]{64}\b</code></td><td>SHA-256</td></tr><tr><td><code>bc1[a-z0-9]{25,42}</code></td><td>Adresses Bitcoin segwit</td></tr><tr><td><code>\b\d{2,4}[/-]\d{2}[/-]\d{2,4}\b</code></td><td>Dates</td></tr></tbody></table>
+        <h3>Lancer sur cas existant</h3>
+        <p>Si tu ajoutes une liste après l'analyse initiale : <code>Tools → Run Ingest Modules → Keyword Search</code> (cocher la nouvelle liste).</p>
+        <p>Pas besoin de relancer tous les modules.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s7" data-section-id="s7">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">07</span> Communicating Accounts (CommAccounts)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Module <strong>avancé</strong> qui extrait et croise les <strong>comptes de communication</strong> trouvés dans l'image :</p>
+        <ul><li>Emails dans les <code>.pst</code>, <code>.mbox</code>, signatures</li><li>Numéros de téléphone dans contacts mobiles, SMS, signatures</li><li>Identifiants de messagerie (Skype, WhatsApp, Telegram dans les caches)</li></ul>
+        <h3>Activer</h3>
+        <p><code>Ingest Modules → Communication Accounts</code> (cocher).</p>
+        <h3>Visualiser</h3>
+        <p><code>Tools → Communications</code></p>
+        <p>Autopsy ouvre une <strong>vue graphique</strong> : nœuds = comptes (emails, téléphones), liens = échanges. Tu peux :</p>
+        <ul><li><strong>Filtrer</strong> par date, type de compte, fréquence</li><li><strong>Identifier les hubs</strong> (un compte qui communique avec beaucoup d'autres)</li><li><strong>Exporter</strong> les listes pour rapport</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>enquête fraude → CommAccounts révèle souvent qui communiquait avec qui, à quelle fréquence, sur quelle période. Visualisation très parlante pour magistrat.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s8" data-section-id="s8">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">08</span> Mode multi-utilisateur (PostgreSQL + Solr)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Pour les <strong>équipes</strong> travaillant sur le même cas, ou les très <strong>gros cas</strong> (> 500 Go).</p>
+        <h3>Prérequis</h3>
+        <ul><li><strong>PostgreSQL</strong> 9.5+ accessible en réseau</li><li><strong>Apache Solr</strong> 4.x.x (version spécifique Autopsy)</li><li><strong>ActiveMQ</strong> pour la messagerie</li></ul>
+        <h3>Configuration</h3>
+        <p><code>Tools → Options → Multi-user</code></p>
+        <table><thead><tr><th>Champ</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>PostgreSQL Server</strong></td><td><code>db.internal:5432</code></td></tr><tr><td><strong>Username / Password</strong></td><td>credentials</td></tr><tr><td><strong>Solr Server</strong></td><td><code>solr.internal:8983</code></td></tr><tr><td><strong>ActiveMQ Server</strong></td><td><code>mq.internal:61616</code></td></tr></tbody></table>
+        <p>Tester chaque connexion.</p>
+        <h3>Créer un cas multi-user</h3>
+        <p><code>Case → New Case → Case Type = Multi-user</code>.</p>
+        <p>Plusieurs analystes peuvent maintenant <strong>ouvrir le même cas</strong> depuis leur poste, voir les tags et notes des autres, contribuer à la même base.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>multi-user demande infrastructure et compétences DB. À envisager seulement pour les équipes ≥ 3 et cas ≥ 500 Go. Pour les autres cas, le single-user reste plus simple.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s9" data-section-id="s9">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">09</span> Ingest modules Python custom</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu peux <strong>étendre Autopsy</strong> avec tes propres modules en Python (Jython 2.7).</p>
+        <h3>Squelette d'un module</h3>
+        <p>Fichier <code>MyCustomIngestModule.py</code> :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>import jarray
+import inspect
+
+from java.lang import System
+from java.util.logging import Level
+from org.sleuthkit.autopsy.casemodule import Case
+from org.sleuthkit.autopsy.coreutils import Logger
+from org.sleuthkit.autopsy.ingest import IngestModule
+from org.sleuthkit.autopsy.ingest import IngestModule.IngestModuleException
+from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
+from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
+from org.sleuthkit.autopsy.ingest import IngestServices
+from org.sleuthkit.autopsy.ingest import ModuleDataEvent
+from org.sleuthkit.datamodel import SleuthkitCase
+from org.sleuthkit.datamodel import BlackboardArtifact
+from org.sleuthkit.datamodel import BlackboardAttribute
+
+
+class MyCustomIngestModuleFactory(IngestModuleFactoryAdapter):
+
+    moduleName = "Detecteur de fichiers .donottouch"
+
+    def getModuleDisplayName(self):
+        return self.moduleName
+
+    def getModuleDescription(self):
+        return "Flague les fichiers avec extension .donottouch"
+
+    def getModuleVersionNumber(self):
+        return "1.0"
+
+    def isDataSourceIngestModuleFactory(self):
+        return True
+
+    def createDataSourceIngestModule(self, ingestOptions):
+        return MyCustomIngestModule()
+
+
+class MyCustomIngestModule(DataSourceIngestModule):
+
+    _logger = Logger.getLogger(MyCustomIngestModuleFactory.moduleName)
+
+    def __init__(self):
+        self.context = None
+
+    def startUp(self, context):
+        self.context = context
+
+    def process(self, dataSource, progressBar):
+        progressBar.switchToIndeterminate()
+
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+        files = fileManager.findFiles(dataSource, "%.donottouch")
+
+        self._logger.log(Level.INFO, "Trouvé " + str(len(files)) + " fichiers .donottouch")
+
+        for file in files:
+            # Créer un artefact blackboard
+            artifact = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_INTERESTING_FILE_HIT)
+            attribute = BlackboardAttribute(
+                BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME,
+                MyCustomIngestModuleFactory.moduleName,
+                "Fichier .donottouch détecté"
+            )
+            artifact.addAttribute(attribute)
+
+        return IngestModule.ProcessResult.OK</code></pre></div>
+        <h3>Installer</h3>
+        <ol><li>Trouver le dossier des modules Python : <code>Tools → Python Plugins</code></li><li>Y déposer le fichier <code>MyCustomIngestModule.py</code></li><li>Redémarrer Autopsy</li><li>Le module apparaît dans la liste lors de l'ajout de source</li></ol>
+        <h3>Use case typique</h3>
+        <p>Un client a une <strong>liste interne d'IoCs</strong> pas dans les bases publiques (noms de fichiers projet leaké, patterns spécifiques). Un module Python custom les détecte en quelques lignes.</p>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>Autopsy utilise <strong>Jython 2.7</strong> (Python 2.7), pas Python 3. Pas de <code>f-strings</code>, pas de bibliothèques Python 3 modernes. Pour des analyses complexes, préférer exporter les artefacts en CSV et traiter en Python 3 externe.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s10" data-section-id="s10">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">10</span> Report modules custom</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Comme les ingest modules, tu peux écrire des <strong>modules de rapport</strong> en Python.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">python</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>from org.sleuthkit.autopsy.report import GeneralReportModuleAdapter
+from org.sleuthkit.autopsy.casemodule import Case
+
+class MyReportModule(GeneralReportModuleAdapter):
+
+    moduleName = "Rapport HTML simplifié"
+
+    def getName(self):
+        return self.moduleName
+
+    def getDescription(self):
+        return "Rapport HTML synthétique custom"
+
+    def getRelativeFilePath(self):
+        return "report_custom.html"
+
+    def generateReport(self, baseReportDir, progressBar):
+        # Logique de génération
+        with open(baseReportDir + "/report_custom.html", "w") as f:
+            f.write("&lt;html&gt;&lt;body&gt;&lt;h1&gt;Rapport custom&lt;/h1&gt;")
+            # ... requêter la base, écrire le contenu ...
+            f.write("&lt;/body&gt;&lt;/html&gt;")
+
+        progressBar.complete()</code></pre></div>
+        <p>Utile pour générer des rapports au format exact d'un client ou d'une procédure.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s11" data-section-id="s11">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">11</span> Le Sleuth Kit en CLI (TSK)</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Sous Autopsy, il y a <strong>The Sleuth Kit</strong>. Tu peux l'utiliser directement en CLI pour les <strong>opérations chirurgicales</strong>.</p>
+        <h3>Inspecter une image</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lister les partitions
+mmls image.E01
+
+# Lister les fichiers d'une partition
+fls -r -p -o 2048 image.E01     # -o 2048 = offset du début de la partition
+
+# Voir les attributs d'un fichier
+istat -o 2048 image.E01 12345
+
+# Extraire un fichier par son inode
+icat -o 2048 image.E01 12345 &gt; extracted_file.bin</code></pre></div>
+        <h3>Body file pour timeline</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>fls -m / -r -o 2048 image.E01 &gt; body.txt
+mactime -b body.txt -d &gt; timeline.csv</code></pre></div>
+        <p>C'est le format <strong>mactime</strong> classique — base de toute timeline DFIR.</p>
+        <h3>Recherche par hash</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>hfind -e hashes.kdb my_db.txt</code></pre></div>
+        <h3>Avantage CLI</h3>
+        <ul><li><strong>Scriptable</strong> : tu peux automatiser sur 100 images.</li><li><strong>Léger</strong> : pas besoin de lancer l'interface Autopsy pour 3 fichiers.</li><li><strong>Reproductible</strong> : commande exacte documentable dans un rapport.</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s12" data-section-id="s12">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">12</span> Body file et mactime pour timeline manuelle</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Si la super-timeline Plaso est trop lente ou trop verbose, tu peux générer une <strong>timeline minimaliste</strong> très rapidement.</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># Lister tous les fichiers avec horodatages MFT
+fls -m C: -r -o 2048 image.E01 &gt; body.txt
+
+# Voir le format body file
+head body.txt
+# 0|&lt;path&gt;|&lt;inode&gt;|&lt;mode&gt;|&lt;UID&gt;|&lt;GID&gt;|&lt;size&gt;|&lt;atime&gt;|&lt;mtime&gt;|&lt;ctime&gt;|&lt;crtime&gt;
+
+# Convertir en timeline
+mactime -b body.txt -y -d &gt; timeline.csv
+
+# Filtrer sur une période
+mactime -b body.txt -y -d 2026-01-01..2026-02-01 &gt; timeline_jan.csv</code></pre></div>
+        <p>Bien plus rapide que Plaso. Capture <strong>seulement le filesystem</strong> (pas EVTX, pas registre), donc à compléter avec d'autres sources si besoin.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s13" data-section-id="s13">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">13</span> Intégration avec Cyber Triage</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p><strong>Cyber Triage</strong> (Basis Technology, créateurs d'Autopsy) est un outil <strong>commercial</strong> de triage Windows. Il s'intègre nativement avec Autopsy.</p>
+        <h3>Cas d'usage</h3>
+        <ul><li>Triage <strong>automatique</strong> sur poste compromis en cours d'incident</li><li><strong>Scoring</strong> automatique des artefacts (ce qui est suspect, ce qui ne l'est pas)</li><li>Comparaison <strong>multi-postes</strong> dans un même incident</li></ul>
+        <h3>Workflow</h3>
+        <ol><li>Cyber Triage collecte sur le poste (similaire à KAPE, mais avec scoring)</li><li>Le résultat est <strong>importé dans Autopsy</strong> : <code>Add Data Source → Cyber Triage Collection</code></li><li>Tu disposes des deux vues : Cyber Triage (scoring rapide) + Autopsy (exploration approfondie)</li></ol>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>mais l'intégration native avec Autopsy en fait un outil légitime pour le DFIR pro. Version Lite gratuite pour évaluer.</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s14" data-section-id="s14">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">14</span> Plugins communautaires utiles</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>La communauté Autopsy maintient des plugins extérieurs.</p>
+        <table><thead><tr><th>Plugin</th><th>Auteur</th><th>Utilité</th></tr></thead><tbody><tr><td><strong>Autopsy_pyplugins</strong></td><td>divers</td><td>Collection de modules Python contribués</td></tr><tr><td><strong>Autopsy_4n6time</strong></td><td>4n6Time</td><td>Timeline analysis enrichie</td></tr><tr><td><strong>Volatility Autopsy</strong></td><td>Volatility Foundation</td><td>Intégration directe Volatility 3 dans Autopsy</td></tr><tr><td><strong>Magnet Custom</strong></td><td>Magnet Forensics</td><td>Plugins de Magnet AXIOM portés sur Autopsy</td></tr><tr><td><strong>Mark McKinnon's modules</strong></td><td>M. McKinnon</td><td>Modules registry, prefetch, jumplists avancés</td></tr></tbody></table>
+        <h3>Où chercher</h3>
+        <ul><li>📦 <strong>GitHub</strong> : <<a href="https://github.com/sleuthkit/autopsy_addon_modules" target="_blank" rel="noopener">https://github.com/sleuthkit/autopsy_addon_modules</a>></li><li>📦 <strong>Sleuth Kit forum</strong> : section community modules</li></ul>
+        <h3>Installation</h3>
+        <p>Télécharger les <code>.py</code>, les placer dans le dossier <code>python_modules/</code> d'Autopsy (<code>Tools → Python Plugins → Open Python Modules Folder</code>), redémarrer.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s15" data-section-id="s15">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">15</span> Performance et tuning</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Configuration JVM</h3>
+        <p>Autopsy tourne sur la JVM. Augmenter la mémoire allouée :</p>
+        <p>Fichier <code>etc/autopsy.conf</code> (dans le dossier d'installation) :</p>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>default_options="-J-Xms2g -J-Xmx16g"</code></pre></div>
+        <p><code>-Xmx16g</code> = 16 Go max JVM. À adapter selon ta machine.</p>
+        <h3>Solr (keyword search)</h3>
+        <p>Pour les gros cas, Solr peut consommer beaucoup. Tuner <code>solrconfig.xml</code> :</p>
+        <ul><li><code>ramBufferSizeMB</code> : à 256-512 pour les gros cas</li><li><code>mergeFactor</code> : à 25-50 pour réduire les recompactions</li></ul>
+        <h3>Base de données</h3>
+        <p>Mode multi-user → PostgreSQL → tuning <code>postgresql.conf</code> :</p>
+        <ul><li><code>shared_buffers</code> : 25 % de la RAM</li><li><code>effective_cache_size</code> : 75 % de la RAM</li><li><code>work_mem</code> : 256 Mo</li></ul>
+        <h3>Stockage</h3>
+        <ul><li><strong>Image disque</strong> : sur disque externe USB 3.0 ou eSATA — lecture seule.</li><li><strong>Cas</strong> : sur SSD NVMe rapide — accès intensif.</li><li><strong>Sortie Plaso</strong> : encore sur SSD séparé idéalement (très intensif disk).</li></ul>
+        <h3>Modules</h3>
+        <p>Désactiver les modules <strong>non pertinents</strong> au cas pour gagner du temps :</p>
+        <ul><li>Cas Android → désactiver iOS Analyzer</li><li>Cas sans email → désactiver Email Parser</li><li>Cas sans archive → désactiver Embedded File Extractor</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s16" data-section-id="s16">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">16</span> Mobile : Android et iOS Analyzer</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Android Analyzer</h3>
+        <p>Module qui parse les artefacts Android :</p>
+        <ul><li>Contacts</li><li>SMS / MMS</li><li>Call logs</li><li>WhatsApp, Telegram (caches publics)</li><li>Géolocalisation Google</li><li>Browser history</li></ul>
+        <p>Source = <strong>image Android</strong> acquise (ADB backup, Cellebrite UFD, etc.).</p>
+        <h3>iOS Analyzer</h3>
+        <p>Idem pour iOS :</p>
+        <ul><li>Contacts, SMS, calls</li><li>iMessage (si extrait full file system)</li><li>Photos avec EXIF</li><li>Safari history</li></ul>
+        <p>Source = backup iTunes / iOS image / extraction Cellebrite.</p>
+        <h3>Limitations</h3>
+        <ul><li>Apps <strong>chiffrées</strong> : sans clé, non accessibles.</li><li>iOS récents avec <strong>Secure Enclave</strong> : full file system difficile sans GrayKey ou Cellebrite Premium.</li><li>Pas de <strong>bypass</strong> intégré : Autopsy lit ce qu'il a, ne contourne pas la sécurité.</li></ul>
+        <div class="tuto-callout tip"><div class="tuto-callout-title">💡 Astuce</div><div>extraction avec Cellebrite (cf. tutoriel v126) → lecture dans Cellebrite Reader → export → import dans Autopsy pour croiser avec autres sources (PC, cloud, etc.).</div></div>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s17" data-section-id="s17">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">17</span> Workflow d'enquête complet</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Mise en pratique : enquête sur poste Windows compromis.</p>
+        <h3>1. Acquisition</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># FTK Imager (cf. tuto v126) sur le poste → image.E01
+# Calcul SHA-256
+sha256sum image.E01 &gt; MANIFEST.txt</code></pre></div>
+        <h3>2. Triage rapide</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">bash</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code># KAPE pour un triage rapide (cf. tuto v125)
+KAPE.exe --tsource image.E01 --tdest /triage --tflush --target !SANS_Triage</code></pre></div>
+        <h3>3. Création cas Autopsy</h3>
+        <div class="tuto-cmd"><div class="tuto-cmd-header"><span class="tuto-cmd-lang">shell</span><button class="tuto-cmd-copy" type="button">📋 Copier</button></div><pre><code>Case Name : INC-2026-001-WORKSTATION-John
+Examiner : [analyste]
+Multi-user : non (sauf si équipe)</code></pre></div>
+        <h3>4. Ajout source + ingest configuré</h3>
+        <p>Modules à activer :</p>
+        <ul><li>✅ Recent Activity (essentiel)</li><li>✅ Hash Lookup (NSRL + IoCs CTI internes)</li><li>✅ File Type Identification</li><li>✅ Encryption Detection</li><li>✅ Email Parser</li><li>✅ Embedded File Extractor</li><li>✅ Keyword Search (avec IoC list à jour)</li><li>✅ Interesting Files Identifier</li><li>✅ Communication Accounts</li><li>✅ Plaso (pour super-timeline)</li><li>⚠️ PhotoRec : seulement si recherche de fichiers supprimés suspectée</li></ul>
+        <p>Durée typique : 4-12 heures.</p>
+        <h3>5. Analyse</h3>
+        <p>Pendant que Plaso tourne, on commence à explorer :</p>
+        <ul><li><strong>Recent Activity → USB Device Attached</strong> : clé USB inconnue ?</li><li><strong>Web History → derniers 7 jours</strong> : sites suspects ?</li><li><strong>Hashset Hits</strong> : IoCs trouvés ?</li><li><strong>Encryption Detection</strong> : conteneur VeraCrypt ?</li></ul>
+        <h3>6. Timeline analysis</h3>
+        <p>Une fois Plaso fini : <code>Tools → Timeline</code>.</p>
+        <p>Zoom sur le jour de l'incident. Filtrer par catégorie : <code>Web Activity</code>, <code>File Activity</code>, <code>Registry</code>. Identifier le <strong>point d'entrée</strong>.</p>
+        <h3>7. Tags</h3>
+        <p>Tagger systématiquement chaque artefact pertinent : <code>Notable</code>, <code>Evidence</code>, <code>Follow-up</code>.</p>
+        <h3>8. Croisement</h3>
+        <ul><li>Memory : Volatility 3 sur le memory dump (cf. tuto v124)</li><li>Network : PCAP via tshark CLI (cf. tuto v128)</li><li>Endpoint distant : Velociraptor (cf. tuto v125)</li></ul>
+        <p>Importer les éléments clés dans Autopsy via <strong>Logical Files</strong> comme source supplémentaire.</p>
+        <h3>9. Rapport final</h3>
+        <p><code>Tools → Generate Report → HTML Report</code> avec <strong>Tagged Files Only</strong>.</p>
+        <p>Compléter avec un <strong>rapport rédigé manuellement</strong> qui contextualise les éléments tagués.</p>
+        <h3>10. Archivage</h3>
+        <ul><li>Cas Autopsy → archivé chiffré</li><li>Image source → archivée séparément</li><li>Hash MANIFEST → conservé</li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s18" data-section-id="s18">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">18</span> Forces, faiblesses et limites</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Forces</h3>
+        <p>✅ <strong>Le standard open source mondial</strong> du DFIR disque.</p>
+        <p>✅ <strong>GUI accessible</strong> + extensibilité par modules Python.</p>
+        <p>✅ <strong>Sleuth Kit en backend</strong> : robuste, mature.</p>
+        <p>✅ <strong>Intégration native</strong> Plaso, PhotoRec, Communications Accounts.</p>
+        <p>✅ <strong>Multi-user</strong> disponible pour les équipes.</p>
+        <p>✅ <strong>Tous filesystems</strong> : NTFS, FAT, ext, HFS+, APFS, exFAT.</p>
+        <p>✅ <strong>Plugins communautaires</strong> riches.</p>
+        <p>✅ <strong>Documentation</strong> correcte et <strong>formation gratuite</strong> Basis Tech.</p>
+        <h3>Faiblesses</h3>
+        <p>❌ <strong>Java Heavy</strong> : RAM et CPU intensif sur gros cas.</p>
+        <p>❌ <strong>Jython 2.7</strong> : limitation pour modules Python modernes.</p>
+        <p>❌ <strong>Mobile</strong> : moins puissant que Cellebrite, Magnet AXIOM payants.</p>
+        <p>❌ <strong>Pas de bypass sécurité</strong> : ne déchiffre rien sans la clé.</p>
+        <p>❌ <strong>Multi-user complexe</strong> : PostgreSQL + Solr + ActiveMQ = infra non triviale.</p>
+        <p>❌ <strong>Lent sur très gros cas</strong> (> 1 To) : la BD SQLite ralentit.</p>
+        <p>❌ <strong>Pas de scripting CLI</strong> natif : tout passe par la GUI (sauf workarounds TSK direct).</p>
+        <p>❌ <strong>Mises à jour parfois lentes</strong> sur nouveaux formats (par rapport aux outils commerciaux).</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s19" data-section-id="s19">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">19</span> Bonnes pratiques expert</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>🔹 <strong>Architecture du cas</strong> : disque externe pour image (lecture seule), SSD NVMe pour le cas (intensif), SSD séparé pour Plaso si possible.</p>
+        <p>🔹 <strong>Tuning JVM systématique</strong> : <code>-Xmx16g</code> minimum sur les gros cas.</p>
+        <p>🔹 <strong>Hash sets à jour</strong> : NSRL trimestriel, IoCs CTI quotidiens si possible.</p>
+        <p>🔹 <strong>Keyword lists versionnées</strong> : Git interne pour partager entre analystes.</p>
+        <p>🔹 <strong>Modules Python custom</strong> pour les patterns récurrents : capitaliser sur les enquêtes.</p>
+        <p>🔹 <strong>Documentation continue</strong> : tags + notes dans le cas + journal externe.</p>
+        <p>🔹 <strong>Croiser sources</strong> : Autopsy seul rate des choses. Volatility (mémoire), Plaso CLI (timeline plus fine), KAPE (triage rapide), Cellebrite (mobile) sont complémentaires.</p>
+        <p>🔹 <strong>Backup régulier</strong> du cas : ne pas perdre 40 heures d'analyse pour un crash disque.</p>
+        <p>🔹 <strong>Hash verification</strong> systématique avant ET après analyse.</p>
+        <p>🔹 <strong>Tester les modules custom</strong> sur image de test AVANT image de production.</p>
+        <p>🔹 <strong>Logs autopsy.log</strong> : à conserver pour audit/débogage.</p>
+        <p>🔹 <strong>Versionner les configs</strong> Autopsy : <code>etc/autopsy.conf</code>, listes de mots-clés, hash sets.</p>
+        <p>🔹 <strong>Former l'équipe</strong> : Basis Tech a des formations gratuites. À suivre par chaque membre.</p>
+        <p>🔹 <strong>Suivre les releases</strong> : nouvelles versions Autopsy ~3-4 fois/an avec améliorations notables.</p>
+        <p>🔹 <strong>Contribuer à la communauté</strong> : modules custom utiles → soumettre sur GitHub Autopsy.</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s20" data-section-id="s20">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">20</span> Ressources et certifications</h2>
+        </header>
+        <div class="tuto-section-content">
+        <h3>Documentation officielle</h3>
+        <ul><li>📚 <strong>Autopsy User Docs</strong> : <<a href="https://sleuthkit.org/autopsy/docs/user-docs/latest/" target="_blank" rel="noopener">https://sleuthkit.org/autopsy/docs/user-docs/latest/</a>></li><li>📚 <strong>Developer Guide</strong> : <<a href="https://sleuthkit.org/autopsy/docs/api-docs/latest/" target="_blank" rel="noopener">https://sleuthkit.org/autopsy/docs/api-docs/latest/</a>></li><li>📚 <strong>Sleuth Kit Wiki</strong> : <<a href="https://wiki.sleuthkit.org/" target="_blank" rel="noopener">https://wiki.sleuthkit.org/</a>></li></ul>
+        <h3>Formations</h3>
+        <ul><li>🎓 <strong>Autopsy Basic Training</strong> (gratuit) : <<a href="https://www.autopsy.com/support/training/" target="_blank" rel="noopener">https://www.autopsy.com/support/training/</a>></li><li>🎓 <strong>Autopsy Advanced Training</strong> (gratuit)</li><li>🎓 <strong>SANS FOR308 / FOR500 / FOR508</strong> : couvrent Autopsy en module</li><li>🎓 <strong>EC-Council CHFI</strong> : certification commerciale (mention Autopsy)</li><li>🎓 <strong>GCFE / GCFA</strong> (GIAC) : forensique Windows et avancé</li></ul>
+        <h3>CTFs et entraînement</h3>
+        <ul><li>🔬 <strong>CyberDefenders</strong> : <<a href="https://cyberdefenders.org/" target="_blank" rel="noopener">https://cyberdefenders.org/</a>></li><li>🔬 <strong>DFIR Madness</strong> : <<a href="https://dfirmadness.com/" target="_blank" rel="noopener">https://dfirmadness.com/</a>></li><li>🔬 <strong>HTB Sherlock</strong> : challenges DFIR</li></ul>
+        <h3>Livres</h3>
+        <ul><li>📖 **Brian Carrier — *File System Forensic Analysis*** (la référence)</li><li>📖 **Harlan Carvey — *Windows Forensic Analysis Toolkit***</li><li>📖 **Cory Altheide & Harlan Carvey — *Digital Forensics with Open Source Tools***</li></ul>
+        <h3>Communauté</h3>
+        <ul><li>💬 <strong>Sleuth Kit forum</strong> : <<a href="https://forum.sleuthkit.org/" target="_blank" rel="noopener">https://forum.sleuthkit.org/</a>></li><li>💬 <strong>r/computerforensics</strong></li><li>💬 <strong>DFIR.training</strong> : <<a href="https://dfir.training/" target="_blank" rel="noopener">https://dfir.training/</a>></li><li>💬 <strong>Twitter/X DFIR community</strong> : @DFIR_Diva, @Brian_Carrier, @autopsy_open</li></ul>
+        <h3>Plugins community</h3>
+        <ul><li>📦 <strong>GitHub Autopsy addon modules</strong> : <<a href="https://github.com/sleuthkit/autopsy_addon_modules" target="_blank" rel="noopener">https://github.com/sleuthkit/autopsy_addon_modules</a>></li><li>📦 <strong>Mark McKinnon's modules</strong> : <<a href="https://github.com/markmckinnon/Autopsy-Plugins" target="_blank" rel="noopener">https://github.com/markmckinnon/Autopsy-Plugins</a>></li></ul>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <section class="tuto-section" id="s21" data-section-id="s21">
+        <header class="tuto-section-header">
+          <h2 class="tuto-section-title"><span class="tuto-section-num">21</span> Conclusion</h2>
+        </header>
+        <div class="tuto-section-content">
+        <p>Tu disposes maintenant des <strong>techniques d'un expert Autopsy</strong>. PhotoRec configuré finement, super-timeline Plaso intégrée, hash sets personnalisés, modules Python custom, Sleuth Kit en CLI, mode multi-user : tu peux orchestrer une analyse de disque industrielle.</p>
+        <p>L'expertise vient de <strong>la pratique sur cas réels</strong>. Un débutant lance les modules et regarde. Un expert <strong>sait quels modules activer</strong>, <strong>comment les configurer</strong>, <strong>où regarder en priorité</strong>, <strong>quand écrire un module custom</strong> plutôt que faire à la main.</p>
+        <p>Recommandations finales :</p>
+        <ol><li><strong>Faire 5 CTFs DFIR</strong> sur CyberDefenders ou DFIR Madness pour acquérir le réflexe.</li><li><strong>Construire ta bibliothèque de modules Python</strong> custom pour les patterns récurrents.</li><li><strong>Maintenir des hash sets à jour</strong> (NSRL trimestriel + feed CTI quotidien).</li><li><strong>Versionner tes configs et modules</strong> dans un Git d'équipe.</li><li><strong>Suivre Basis Tech</strong> pour les releases et nouveautés.</li><li><strong>Croiser systématiquement</strong> avec Volatility, Plaso, KAPE, Cellebrite selon le cas.</li><li><strong>Contribuer</strong> au moins un module Python custom à la communauté.</li><li><strong>Préparer GCFE ou GCFA</strong> pour valider ton expertise par une certification reconnue.</li></ol>
+        <p>Le DFIR de pointe ne consiste pas à utiliser un outil, mais à <strong>savoir lequel utiliser, quand, et comment l'étendre</strong>. Tu es prêt pour ce niveau. 🔬</p>
+        </div>
+        <div class="tuto-section-mark">
+          <button class="tuto-mark-done" type="button">Marquer comme réussie</button>
+        </div>
+      </section>
+
+      <!-- Quiz final -->
+      <section class="tuto-quiz" id="quiz">
+        <header class="tuto-quiz-header">
+          <span class="tuto-quiz-icon">🎯</span>
+          <h2>Quiz final — Vérifie ce que tu as appris</h2>
+        </header>
+        <div class="tuto-quiz-desc">
+          5 questions issues du tutoriel. Il faut <strong>≥ 80 %</strong> pour débloquer le trophée
+          <strong>« Autopsy avancé — Plugins, scripting, super-timeline maîtrisé »</strong>. Tu peux retenter autant de fois que nécessaire.
+        </div>
+
+        <!-- Question 1 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Le module <strong>Plaso</strong> intégré à Autopsy exécute log2timeline+psort en interne et produit une super-timeline unifiée visible dans <code>Tools → Timeline</code>. Lecture de tous les artefacts temporels : fichiers, registres, EVTX, Prefetch, navigateurs, $LogFile NTFS. Long (4-12h sur disque 500 Go) mais incontournable pour reconstituer la chronologie d'un incident."
+             data-feedback-ko="✗ La bonne réponse : <strong>Plaso</strong>. C'est le module qui génère la super-timeline complète. Recent Activity ne couvre que les artefacts navigateur/usb/récents. Pour une analyse forensique sérieuse, Plaso est obligatoire.">
+          <div class="tuto-quiz-question-text">1. Tu veux générer une <strong>super-timeline complète</strong> intégrée à Autopsy. Quel module activer ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Recent Activity</button>
+            <button class="tuto-quiz-option" type="button"><strong>Plaso (super-timeline)</strong></button>
+            <button class="tuto-quiz-option" type="button">Timeline Analyzer</button>
+            <button class="tuto-quiz-option" type="button">Keyword Search</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Le NSRL contient les hashs de <strong>millions de fichiers logiciels légitimes</strong> (Windows, Office, navigateurs, jeux, librairies, drivers). Configurer Autopsy avec le NSRL comme « Known Files » : Autopsy <strong>ignore automatiquement</strong> ces fichiers, te faisant gagner des heures et te concentrant sur ce qui est inconnu / suspect. <code>Tools → Options → Hash Sets → New Database</code>."
+             data-feedback-ko="✗ La bonne réponse : <strong>NSRL</strong>. C'est la base de référence DFIR. VirusTotal serait pour détecter du malware, pas filtrer le bénin. NSRL réduit massivement le bruit — sans lui, tu examines des milliers de fichiers Windows légitimes inutilement.">
+          <div class="tuto-quiz-question-text">2. Tu veux <strong>filtrer les fichiers connus comme bénins</strong> pour gagner du temps. Quelle base de hashs utiliser ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">VirusTotal API</button>
+            <button class="tuto-quiz-option" type="button"><strong>NSRL</strong> (National Software Reference Library, NIST) — base de millions de hashs de logiciels légitimes</button>
+            <button class="tuto-quiz-option" type="button">Les hashs de Hashcat</button>
+            <button class="tuto-quiz-option" type="button">Aucune, il faut tout examiner</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="tuto-quiz-question" data-correct="2"
+             data-feedback-ok="✓ Exact. Autopsy utilise <strong>Jython 2.7</strong> — pas de f-strings, pas de bibliothèques Python 3. Limitation importante : pour des analyses complexes nécessitant des bibliothèques modernes (asyncio, dataclasses, requests moderne), <strong>exporter en CSV depuis Autopsy puis traiter en Python 3 externe</strong>. Jython convient pour des modules simples (détection de patterns, comptages, flag)."
+             data-feedback-ko="✗ La bonne réponse : <strong>Jython 2.7</strong>. C'est une limitation héritée. Modules simples : OK directement en Jython. Logique complexe : exporter et traiter en Python 3 externe (cf. tuto CLI expert v128).">
+          <div class="tuto-quiz-question-text">3. Tu veux écrire un <strong>ingest module Python</strong> custom pour détecter un pattern spécifique. Quelle version de Python Autopsy utilise-t-il ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Python 3.10+</button>
+            <button class="tuto-quiz-option" type="button">Python 3.6</button>
+            <button class="tuto-quiz-option" type="button"><strong>Jython 2.7</strong> (Python 2 sur la JVM Java)</button>
+            <button class="tuto-quiz-option" type="button">Aucun, c'est Java uniquement</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 4 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Autopsy est une <strong>GUI</strong> au-dessus du Sleuth Kit. Les commandes TSK (mmls, fls, icat, mactime) permettent l'analyse en CLI scriptable, légère, reproductible. Idéal pour automatiser sur 100 images, ou pour les opérations chirurgicales (extraire un inode précis). Compagnons utiles : <code>img_stat</code>, <code>fsstat</code>, <code>hfind</code>."
+             data-feedback-ko="✗ La bonne réponse : <strong>Sleuth Kit en CLI</strong>. Autopsy n'a pas de mode CLI complet — c'est une GUI sur TSK. Pour scripter, utiliser directement TSK : <code>mmls image.E01</code> pour les partitions, <code>fls -r</code> pour lister, <code>mactime</code> pour timeline.">
+          <div class="tuto-quiz-question-text">4. Pour analyser une image disque <strong>en CLI</strong> sans lancer l'interface Autopsy, quel outil utiliser ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Autopsy a un mode CLI <code>autopsy --cli</code></button>
+            <button class="tuto-quiz-option" type="button">Le <strong>Sleuth Kit (TSK)</strong> en ligne de commande : <code>mmls</code>, <code>fls</code>, <code>icat</code>, <code>istat</code>, <code>mactime</code></button>
+            <button class="tuto-quiz-option" type="button">FTK Imager CLI</button>
+            <button class="tuto-quiz-option" type="button">Volatility</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <!-- Question 5 -->
+        <div class="tuto-quiz-question" data-correct="1"
+             data-feedback-ok="✓ Exact. Sur gros cas, l'optimisation est <strong>essentielle</strong> : <code>-Xmx16g</code> dans <code>etc/autopsy.conf</code> alloue 16 Go à la JVM (sinon Autopsy plante). Stockage : SSD NVMe pour le cas (intensif), disque externe USB 3.0 pour l'image (lecture seule séquentielle). Désactiver modules non pertinents (pas iOS Analyzer sur cas Windows). Mode multi-user (PostgreSQL+Solr) si > 1 To."
+             data-feedback-ko="✗ La bonne réponse : <strong>tuning JVM + architecture stockage + sélection modules</strong>. Sans tuning, Autopsy peut planter ou être inutilisable sur gros cas. Le débutant rate souvent ces optimisations qui font la différence entre 8 h et 48 h d'analyse.">
+          <div class="tuto-quiz-question-text">5. Tu lances un cas Autopsy sur une image de <strong>800 Go</strong>. Que prévoir pour les performances ?</div>
+          <div class="tuto-quiz-options">
+            <button class="tuto-quiz-option" type="button">Rien, Autopsy s'optimise tout seul</button>
+            <button class="tuto-quiz-option" type="button"><strong>Tuner la JVM</strong> (<code>-Xmx16g</code> minimum) + stockage SSD NVMe pour le cas + image source sur disque séparé + désactiver les modules non pertinents</button>
+            <button class="tuto-quiz-option" type="button">Acheter un nouveau PC</button>
+            <button class="tuto-quiz-option" type="button">Réduire la qualité de l'image</button>
+          </div>
+          <div class="tuto-quiz-feedback"></div>
+        </div>
+
+        <div class="tuto-quiz-result">
+          <div class="tuto-quiz-result-score"></div>
+          <div class="tuto-quiz-result-msg"></div>
+          <button class="tuto-quiz-restart" type="button">↻ Recommencer le quiz</button>
+        </div>
+      </section>
+
+      <footer style="margin:2.5rem 0 4rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+          Tutoriel terminé ?
+          <a href="../fiches/autopsy_avance.html" style="color:var(--cyan)">📚 Consulter la fiche Autopsy avancé — Plugins, scripting, super-timeline</a>
+          ·
+          <a href="../tutoriels.html" style="color:var(--cyan)">← Retour aux tutoriels</a>
+        </p>
+        <p style="color:var(--dim);font-size:.7rem">
+          CAS-IN · Tutoriel Autopsy avancé — Plugins, scripting, super-timeline v1.0 · Contenu open source · Pédagogie active
+        </p>
+      </footer>
+
+    </article>
+  </div>
+</main>
+
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/pages/tutoriels-app.js" defer></script>
+</body>
+</html>
