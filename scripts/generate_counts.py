@@ -127,6 +127,22 @@ def count_tp_categories(root: Path) -> int:
     return len(cats)
 
 
+def count_tutoriels(root: Path) -> int:
+    """v131a — Compte les tutoriels DFIR (fichiers HTML dans tutoriels/, hors index)."""
+    tdir = root / "tutoriels"
+    if not tdir.exists():
+        return 0
+    return len([p for p in tdir.glob("*.html") if p.name != "index.html"])
+
+
+def count_refs(root: Path) -> int:
+    """v131a — Compte les pages de références (hors index)."""
+    rdir = root / "references"
+    if not rdir.exists():
+        return 0
+    return len([p for p in rdir.glob("*.html") if p.name != "index.html"])
+
+
 def read_version(root: Path) -> str:
     """v2.93 — Lit la version courante depuis docs/CHANGELOG.md (Keep-a-Changelog).
     Cherche le premier `## [X.Y]` ou `## X.Y` non marqué `[Unreleased]`.
@@ -158,6 +174,9 @@ def patch_html_fallbacks(root: Path, counts: dict) -> int:
         "scenes":        str(counts.get("scenes", 0)),
         "tp_categories": str(counts.get("tp_categories", 0)),
         "tp_exercises":  str(counts.get("tp_exercises", 0)),
+        "tutoriels":     str(counts.get("tutoriels", 0)),
+        "refs":          str(counts.get("refs", 0)),
+        "learn":         str(counts.get("learn", 0)),
     }
     pattern = re.compile(r'data-count="([a-z_]+)">(\d+)')
     files_changed = 0
@@ -192,6 +211,10 @@ def main():
     }
     # tp_exercises = tp_categories par convention (1 catégorie = 1 générateur d'exercice)
     counts["tp_exercises"] = counts["tp_categories"]
+    # v131a — Cluster Apprendre : tutoriels + références + agrégat learn
+    counts["tutoriels"] = count_tutoriels(root)
+    counts["refs"] = count_refs(root)
+    counts["learn"] = counts["fiches"] + counts["tutoriels"] + counts["refs"]
 
     out = root / "data" / "counts.json"
     out.parent.mkdir(parents=True, exist_ok=True)
