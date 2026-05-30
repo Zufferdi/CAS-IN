@@ -1676,6 +1676,8 @@ const STATIC_ASSETS = [
   // ─── Pages racine ───
   './',
   './index.html',
+  // v131a — Hub Apprendre (fiches + tutoriels + références)
+  './apprendre.html',
   './quiz.html',
   './tp.html',
   './exam.html',
