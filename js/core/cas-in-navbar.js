@@ -41,6 +41,8 @@
     tp:           { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
     tutoriels:    { icon: '🛠️', label: 'TUTORIELS DFIR' },
     fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
+    // v131a — Hub Apprendre (chapeaute fiches/tutoriels/références)
+    apprendre:    { icon: '📚', label: 'APPRENDRE' },
     glossary:     { icon: '📚', label: 'GLOSSAIRE' },
     npcs:         { icon: '👥', label: 'PERSONNAGES' },
     tools:        { icon: '🛠', label: 'OUTILS FORENSIQUES' },
