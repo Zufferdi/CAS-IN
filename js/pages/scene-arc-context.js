@@ -21,7 +21,23 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  if (window.__sceneArcContext) return;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+if (window.__sceneArcContext) return;
   window.__sceneArcContext = true;
 
   let _chronologyCache = null;
@@ -30,7 +46,7 @@
   function loadChronology() {
     if (_chronologyCache) return Promise.resolve(_chronologyCache);
     if (_chronoLoadPromise) return _chronoLoadPromise;
-    _chronoLoadPromise = fetch('data/scenes-chronology.json')
+    _chronoLoadPromise = fetch(_dataUrl('scenes-chronology.json'))
       .then(r => r.ok ? r.json() : null)
       .then(d => { _chronologyCache = d; return d; })
       .catch(() => null);

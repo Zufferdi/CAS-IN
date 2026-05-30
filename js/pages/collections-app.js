@@ -12,7 +12,23 @@
 (function () {
   'use strict';
 
-  const STAGE_THRESHOLD = 60;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+const STAGE_THRESHOLD = 60;
 
   // Palette de couleurs par "spécialité" implicite de la collection
   // (déterminée à partir de l'icône ou du titre)
@@ -155,7 +171,7 @@
 
     let camp;
     try {
-      camp = await fetch('data/campaigns.json').then(r => r.json());
+      camp = await fetch(_dataUrl('campaigns.json')).then(r => r.json());
     } catch (e) {
       console.warn('[collections-app] failed to load campaigns.json', e);
       grid.innerHTML = `<div style="text-align:center;padding:30px;color:var(--dim);grid-column:1/-1">⚠ ${t('collections_page.load_error', 'Impossible de charger les collections. Réessayez en mode connecté.')}</div>`;

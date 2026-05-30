@@ -16,7 +16,23 @@
 (function() {
   'use strict';
 
-  const LS_PROGRESS = 'caseStudiesProgress';
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+const LS_PROGRESS = 'caseStudiesProgress';
   const SECTION_KEYS = [
     'briefing',
     'prerequisites_quiz',
@@ -448,7 +464,7 @@
       return;
     }
 
-    fetch('data/case-studies.json')
+    fetch(_dataUrl('case-studies.json'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         var cs = (data.case_studies || []).find(function(c){ return c.id === csId; });

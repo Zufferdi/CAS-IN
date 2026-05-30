@@ -18,7 +18,23 @@
  * ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  if (window.__casInCampaigns) return;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+if (window.__casInCampaigns) return;
   window.__casInCampaigns = true;
 
   const LS_VIEW_PREF = 'cas_view_preference';
@@ -55,7 +71,7 @@
   async function loadCampaigns() {
     if (_data) return _data;
     try {
-      const r = await fetch('data/campaigns.json');
+      const r = await fetch(_dataUrl('campaigns.json'));
       if (!r.ok) throw new Error('HTTP ' + r.status);
       _data = await r.json();
       return _data;
