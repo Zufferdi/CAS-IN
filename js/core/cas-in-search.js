@@ -72,26 +72,53 @@
         }
       } catch (_) { /* silencieux */ }
 
-      // 2. Questions : charge via index + chunks parallèles (v132f), fallback questions.json
+      // 2. Questions : v132k — index minimaliste dédié search (~425 KB)
+      // Fallback : v132f chunks parallèles (~4.2 MB) si index search absent
+      // Fallback final : questions.json legacy si chunks absents aussi
       try {
         let data = null;
+
+        // v132k — Tentative : questions-search.json (format minimaliste)
         try {
-          const idxResp = await fetch(base + 'data/questions-index.json', { cache: 'force-cache' });
-          if (idxResp.ok) {
-            const idx = await idxResp.json();
-            if (idx && Array.isArray(idx.themes) && idx.themes.length) {
-              const chunks = await Promise.all(
-                idx.themes.map(t => fetch(base + t.file, { cache: 'force-cache' }).then(r => r.ok ? r.json() : []))
-              );
-              data = chunks.flat();
+          const sResp = await fetch(base + 'data/questions-search.json', { cache: 'force-cache' });
+          if (sResp.ok) {
+            const sData = await sResp.json();
+            if (Array.isArray(sData) && sData.length) {
+              // Réhydrater au format attendu par le mapper ci-dessous
+              data = sData.map(e => ({
+                q: e.q || '',
+                theme: e.t || '',
+                chapter: e.c || '',
+                diff: e.d || '',
+                theme_icon: e.ic || '💊',
+              }));
             }
           }
-        } catch (_) { /* tentative échouée, fallback ci-dessous */ }
+        } catch (_) { /* fallback ci-dessous */ }
+
+        // Fallback v132f : chunks complets parallèles
+        if (!data) {
+          try {
+            const idxResp = await fetch(base + 'data/questions-index.json', { cache: 'force-cache' });
+            if (idxResp.ok) {
+              const idx = await idxResp.json();
+              if (idx && Array.isArray(idx.themes) && idx.themes.length) {
+                const chunks = await Promise.all(
+                  idx.themes.map(t => fetch(base + t.file, { cache: 'force-cache' }).then(r => r.ok ? r.json() : []))
+                );
+                data = chunks.flat();
+              }
+            }
+          } catch (_) { /* fallback final ci-dessous */ }
+        }
+
+        // Fallback legacy : questions.json monolithique
         if (!data) {
           const resp = await fetch(base + 'data/questions.json', { cache: 'force-cache' });
           if (!resp.ok) throw new Error('questions.json HTTP ' + resp.status);
           data = await resp.json();
         }
+
         if (Array.isArray(data)) {
           result.questions = data.map((q, i) => {
             const title = q.q ? q.q.slice(0, 80) : '(sans titre)';
