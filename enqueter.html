@@ -2,6 +2,7 @@
 <html lang="fr" data-theme="dark">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <script>
 (function(){try{var p=localStorage.getItem('cas_theme_pref');
 document.documentElement.setAttribute('data-theme',p==='light'?'light':'dark');}catch(e){
@@ -176,71 +177,35 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-  // v132j — Seuil "résolu" aligné avec profile-affinities.js (COMPLETION_THRESHOLD = 70)
-  const SCENE_COMPLETION_THRESHOLD = 70;
-
   function getScenesResolved() {
-    // scene_results = { sceneId: { pct: number, ... } }
     try {
       const map = JSON.parse(localStorage.getItem('scene_results') || '{}') || {};
-      return Object.values(map).filter(r =>
-        r && typeof r.pct === 'number' && r.pct >= SCENE_COMPLETION_THRESHOLD
-      ).length;
+      return Object.values(map).filter(v => v && (v.beaten || v.completed || v.win)).length;
     } catch (e) { return 0; }
   }
 
-  async function getSagasCompleted() {
-    // Une saga = une campagne (avec narrative). Complétée si toutes ses scènes ont pct >= 70.
-    // Charge campaigns.json et croise avec scene_results.
+  function getSagasCompleted() {
     try {
-      const results = JSON.parse(localStorage.getItem('scene_results') || '{}') || {};
-      const resp = await fetch('data/campaigns.json', { cache: 'force-cache' });
-      if (!resp.ok) return 0;
-      const camps = await resp.json();
-      if (!Array.isArray(camps)) return 0;
-      let done = 0;
-      camps.forEach(c => {
-        // Filtrer aux campagnes ayant une narrative (= "saga")
-        if (!c.narrative) return;
-        const sceneIds = Array.isArray(c.scenes) ? c.scenes : [];
-        if (sceneIds.length === 0) return;
-        const allDone = sceneIds.every(sid => {
-          const r = results[sid];
-          return r && typeof r.pct === 'number' && r.pct >= SCENE_COMPLETION_THRESHOLD;
-        });
-        if (allDone) done++;
-      });
-      return done;
+      const map = JSON.parse(localStorage.getItem('cas_sagas_progress') || '{}') || {};
+      return Object.values(map).filter(v => v && v.completed).length;
     } catch (e) { return 0; }
   }
 
-  async function getSagasTotal() {
+  function getExamSessions() {
     try {
-      const resp = await fetch('data/campaigns.json', { cache: 'force-cache' });
-      if (!resp.ok) return 14;
-      const camps = await resp.json();
-      if (!Array.isArray(camps)) return 14;
-      return camps.filter(c => c.narrative).length || 14;
-    } catch (e) { return 14; }
-  }
-
-  function getSceneExamSessions() {
-    // scene-exam utilise 'cas-in-scene-exam-last' (juste le dernier essai, pas d'historique)
-    // On retourne 1 si une session existe, 0 sinon
-    try {
-      const last = localStorage.getItem('cas-in-scene-exam-last');
-      return last ? 1 : 0;
+      const arr = JSON.parse(localStorage.getItem('examHist') || '[]') || [];
+      return Array.isArray(arr) ? arr.length : 0;
     } catch (e) { return 0; }
   }
 
-  Promise.all([
-    fetch('data/counts.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({})),
-    getSagasCompleted(),
-    getSagasTotal()
-  ]).then(([counts, sagasDone, sagasTotal]) => {
+  fetch('data/counts.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(counts => {
       const scenesTotal = counts.scenes || 392;
+      const sagasTotal = 14;
       const scenesDone = getScenesResolved();
-      const examDone = getSceneExamSessions();
+      const sagasDone = getSagasCompleted();
+      const examDone = getExamSessions();
 
       document.getElementById('prog-scenes-r').textContent = scenesDone;
       document.getElementById('prog-sagas-r').textContent = sagasDone;
@@ -250,11 +215,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
       document.getElementById('prog-scenes-fill').style.width = Math.min(100, Math.round((scenesDone / scenesTotal) * 100)) + '%';
       document.getElementById('prog-sagas-fill').style.width  = Math.min(100, Math.round((sagasDone / sagasTotal) * 100)) + '%';
-      document.getElementById('prog-exam-fill').style.width   = examDone > 0 ? '100%' : '0%';
+      // Pour l'examen : barre proportionnelle plafonnée à 10 sessions = 100%
+      document.getElementById('prog-exam-fill').style.width   = Math.min(100, examDone * 10) + '%';
 
       renderRecos(scenesDone, scenesTotal, sagasDone, sagasTotal, examDone);
     })
-    .catch(() => renderRecos(getScenesResolved(), 392, 0, 14, getSceneExamSessions()));
+    .catch(() => renderRecos(getScenesResolved(), 392, getSagasCompleted(), 14, getExamSessions()));
 
   function renderRecos(scenesDone, scenesTotal, sagasDone, sagasTotal, examDone) {
     const recos = [];
