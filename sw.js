@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v130';
+const CACHE_VERSION = 'cas-in-v131';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1842,7 +1842,6 @@ const STATIC_ASSETS = [
   './js/components/hub-activity.js',
   './js/components/hub-identity.js',
   './js/components/swiss-flags.js',
-  './js/components/npc-arcs.js',
 
   // ─── Pages JS (js/pages/*) ───
   './js/pages/landing.js',
