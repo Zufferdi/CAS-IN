@@ -297,6 +297,38 @@
   } catch (e) { /* ignore */ }
 
   // ─────────────────────────────────────────────────────────────
+  // v132f — Résolution de paths data/ depuis n'importe quel niveau
+  // ─────────────────────────────────────────────────────────────
+  // Depuis racine (index.html, quiz.html, …)       : './data/X.json'
+  // Depuis sous-dossier (pages/, fiches/, …)       : '../data/X.json'
+  //
+  // Détection : compte le nombre de '/' dans le pathname après /CAS-IN/.
+  // Si > 0, on est en sous-dossier → préfixer par '../'.
+  //
+  // Utilisation :
+  //   fetch(CasInUtils.dataUrl('questions.json'))
+  //   fetch(CasInUtils.dataUrl('questions/quiz-droit.json'))
+
+  function dataUrl(rel) {
+    // Enlève './' ou 'data/' initial si présent
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location)
+      ? window.location.pathname
+      : '/';
+    // Compte la profondeur depuis /CAS-IN/ (ou racine si app servie ailleurs)
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    // Compter les '/' dans la partie après /CAS-IN/
+    // pages/profile.html → 1 slash → préfixe '../'
+    // index.html         → 0 slash → préfixe './'
+    // fiches/ntfs.html   → 1 slash → préfixe '../'
+    const after = m[2];
+    const slashCount = (after.match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // API publique
   // ─────────────────────────────────────────────────────────────
   window.CasInUtils = {
@@ -312,5 +344,7 @@
     mulberry32, stringToSeed,
     // Math
     clamp, asInt,
+    // v132f — Path resolution
+    dataUrl,
   };
 })();

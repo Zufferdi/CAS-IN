@@ -72,11 +72,27 @@
         }
       } catch (_) { /* silencieux */ }
 
-      // 2. Questions : charge data/questions.json (TOUTES, sans slice)
+      // 2. Questions : charge via index + chunks parallèles (v132f), fallback questions.json
       try {
-        const resp = await fetch(base + 'data/questions.json', { cache: 'force-cache' });
-        if (resp.ok) {
-          const data = await resp.json();
+        let data = null;
+        try {
+          const idxResp = await fetch(base + 'data/questions-index.json', { cache: 'force-cache' });
+          if (idxResp.ok) {
+            const idx = await idxResp.json();
+            if (idx && Array.isArray(idx.themes) && idx.themes.length) {
+              const chunks = await Promise.all(
+                idx.themes.map(t => fetch(base + t.file, { cache: 'force-cache' }).then(r => r.ok ? r.json() : []))
+              );
+              data = chunks.flat();
+            }
+          }
+        } catch (_) { /* tentative échouée, fallback ci-dessous */ }
+        if (!data) {
+          const resp = await fetch(base + 'data/questions.json', { cache: 'force-cache' });
+          if (!resp.ok) throw new Error('questions.json HTTP ' + resp.status);
+          data = await resp.json();
+        }
+        if (Array.isArray(data)) {
           result.questions = data.map((q, i) => {
             const title = q.q ? q.q.slice(0, 80) : '(sans titre)';
             const desc = (q.theme || '') + ' · ' + (q.chapter || '') + ' · ' + (q.diff || '');
