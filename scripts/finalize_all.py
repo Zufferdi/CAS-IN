@@ -1,71 +1,362 @@
 #!/usr/bin/env python3
 """
-finalize_all.py — CAS-IN v132u (bundle de finalisation)
+finalize_all_selfcontained.py — CAS-IN v132u-bis
 
-Termine proprement la cascade v131b → v132t sur un repo qui en est resté à
-mi-chemin (v131c cleanup non fait, v132r partiel, v132t pas appliqué, 2 bugs
-CSP). Le script est ENTIÈREMENT IDEMPOTENT : ré-exécutable sans effet de
-bord, chaque étape vérifie son propre état avant d'agir.
+Version self-contained du bundle de finalisation : tous les data (8 NPCs,
+campagne saga, CSP, CHANGELOG, manifest) sont inline dans ce fichier.
+Ne dépend que de ce script + du repo CAS-IN.
+Aucun dossier _v132u_resources/ requis.
 
-Pipeline en 10 étapes :
-  1. Supprime les 15 HTML doublés en racine (cleanup v131c)
-  2. (optionnel) Archive data/questions.json legacy
-  3. Ajoute acte 1 + acte 2 de la saga Antennes Fantômes
-  4. Ajoute les 8 NPCs de la saga
-  5. Ajoute la campagne dans data/campaigns.json
-  6. Ajoute scenes-chronology.json (7 entrées)
-  7. Ajoute sms_blaster.html dans data/manifest.json
-  8. Patch CSP sur artifacts.html + fiches/index.html (bugs résiduels v132l)
-  9. Bump SW v144 → v145
- 10. Insère section [3.0.1] dans docs/CHANGELOG.md
- 11. Régénère data/counts.json via scripts/generate_counts.py
+À placer dans scripts/ et lancer depuis la racine du repo :
+    python3 scripts/finalize_all_selfcontained.py
 
-Lancer depuis la racine du repo CAS-IN.
-Pour archiver questions.json legacy : ajouter --archive-legacy
+Idempotent : ré-exécutable sans effet de bord.
+
+Étapes :
+  1. Ajout des 8 NPCs de la saga Antennes Fantômes
+  2. Ajout de la campagne saga dans data/campaigns.json
+  3. Ajout des entrées chronologie
+  4. Mise à jour de data/manifest.json (sms_blaster.html)
+  5. Patch CSP sur artifacts.html + fiches/index.html (bugs v132l)
+  6. Bump SW v144 → v145
+  7. Insertion section [3.0.1] dans docs/CHANGELOG.md
+  8. Reconstruction de scenes/index.json + counts.json
 """
 import json
 import os
 import re
 import sys
-import shutil
-import argparse
 import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 
 
 # ─────────────────────────────────────────────────────────────
-# Configuration
+# DATA EN DUR — 8 NPCs (literal Python dict)
 # ─────────────────────────────────────────────────────────────
 
-OBSOLETE_ROOT_HTML = [
-    'case-studies.html', 'case-study-detail.html', 'collections.html',
-    'carriere.html', 'glossary.html', 'mastery.html', 'npcs.html',
-    'parcours.html', 'parcours-detail.html', 'profile.html', 'sagas.html',
-    'succes.html', 'tools.html', 'exam.html', 'scene-exam.html'
-]
+NEW_NPCS = {'ofcom_spectrum_lead_be': {'name': 'Dr. Élise Schmid',
+                            'role': 'Cheffe de section Spectrum Monitoring · OFCOM (Office fédéral de la '
+                                    'communication)',
+                            'institution': 'OFCOM, Biel/Bienne. Section surveillance du spectre radio + autorité de '
+                                           'concession (art. 22 LTC). Coordonne avec MELANI/NCSC pour les incidents '
+                                           'touchant les télécoms.',
+                            'shortBio': 'Personnage fictif. Ingénieure RF, ETHZ Communication Engineering 2008, MAS '
+                                        "GovTech 2015. 14 ans à l'OFCOM dont 8 sur le monitoring du spectre. Pilote "
+                                        "l'équipe qui exploite les sondes Rohde&Schwarz mobiles et la coopération avec "
+                                        "les opérateurs (Swisscom, Sunrise, Salt). Spécialité : détection d'émetteurs "
+                                        'illicites (brouilleurs, fausses cellules, drones). Bilingue DE/FR. Méfiante '
+                                        "des médias depuis l'affaire des brouilleurs GPS du WEF 2018.",
+                            'fictional': True,
+                            'tags': ['ofcom',
+                                     'spectrum-monitoring',
+                                     'rf',
+                                     'sdr',
+                                     'imsi-catcher',
+                                     'sms-blaster',
+                                     'biel-bienne',
+                                     'be'],
+                            'appearances': ['ge-affaire-antennes-fantomes-2-vague-correlee',
+                                            'ge-affaire-antennes-fantomes-3-piste-telecom',
+                                            'ge-affaire-antennes-fantomes-7-audience-tco-geneve'],
+                            'canton': 'BE',
+                            'category': 'regulator',
+                            'alignment': 'lawful',
+                            'seniority': 'senior',
+                            'personality': {'communication': 'formel',
+                                            'tech_level': 'expert',
+                                            'stress_response': 'calme',
+                                            'trust_initial': 'neutre'},
+                            'relations': [{'with': 'ncsc_govcert_lead',
+                                           'type': 'collègue',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'high'},
+                                          {'with': 'procureur_mp_ge_cybercrime',
+                                           'type': 'connaissance',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'medium'},
+                                          {'with': 'inspectrice_brigade_financiere_ge',
+                                           'type': 'collègue',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'medium'},
+                                          {'with': 'ingenieur_swisscom_security',
+                                           'type': 'collègue',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'high'}]},
+ 'procureur_mp_ge_cybercrime': {'name': 'Maître Pierre-Olivier Reymond',
+                                'role': 'Premier procureur · Cellule cybercrime du Ministère public du canton de '
+                                        'Genève',
+                                'institution': 'Ministère public, route de Chancy, Genève. Section économique et '
+                                               'financière, spécialisée cybercriminalité depuis 2019. Coopère '
+                                               'étroitement avec la Brigade financière de la police judiciaire '
+                                               'genevoise.',
+                                'shortBio': "Personnage fictif. Avocat Uni Genève 2002, juge d'instruction puis "
+                                            'procureur depuis 2010. A piloté plusieurs dossiers de phishing bancaire '
+                                            "majeur (notamment l'affaire des faux Crédit Suisse de 2021). Méthodique, "
+                                            'ne classe jamais une plainte sans avoir vérifié les corrélations '
+                                            "possibles. Connaît le CPP par cœur, surtout l'art. 269 et la "
+                                            'jurisprudence sur les preuves illicites (art. 141).',
+                                'fictional': True,
+                                'tags': ['procureur', 'ministere-public', 'cybercrime', 'geneve', 'ge'],
+                                'appearances': ['ge-affaire-antennes-fantomes-1-signal-alarme',
+                                                'ge-affaire-antennes-fantomes-2-vague-correlee',
+                                                'ge-affaire-antennes-fantomes-4-reperage-rf',
+                                                'ge-affaire-antennes-fantomes-6-cooperation-internationale',
+                                                'ge-affaire-antennes-fantomes-7-audience-tco-geneve'],
+                                'canton': 'GE',
+                                'category': 'magistrat',
+                                'alignment': 'lawful',
+                                'seniority': 'senior',
+                                'personality': {'communication': 'formel',
+                                                'tech_level': 'intermédiaire',
+                                                'stress_response': 'calme',
+                                                'trust_initial': 'neutre'},
+                                'relations': [{'with': 'ofcom_spectrum_lead_be',
+                                               'type': 'connaissance',
+                                               'cooccurrences': 1,
+                                               'trust_init': 'medium'},
+                                              {'with': 'inspectrice_brigade_financiere_ge',
+                                               'type': 'collègue',
+                                               'cooccurrences': 2,
+                                               'trust_init': 'high'},
+                                              {'with': 'juge_tmc_ge_perquisition',
+                                               'type': 'collègue',
+                                               'cooccurrences': 1,
+                                               'trust_init': 'high'},
+                                              {'with': 'avocat_defense_carouge_lj',
+                                               'type': 'rival',
+                                               'cooccurrences': 1,
+                                               'trust_init': 'low'}]},
+ 'inspectrice_brigade_financiere_ge': {'name': 'Inspectrice Léa Dubuis',
+                                       'role': 'Inspectrice principale · Brigade financière de la police judiciaire '
+                                               'genevoise · Spécialiste cybercrime',
+                                       'institution': 'Police judiciaire genevoise, Carl-Vogt, Genève. Brigade '
+                                                      'financière (BFin), cellule cybercrime depuis 2020. Référente '
+                                                      'nationale pour les fraudes bancaires impliquant '
+                                                      'phishing/smishing.',
+                                       'shortBio': 'Personnage fictif. HEG Genève 2014 (informatique de gestion), '
+                                                   'formation ISFC, ESDFI. 9 ans police, dont 5 en cybercrime. A formé '
+                                                   'une équipe de 6 inspecteurs spécialisés smishing/vishing depuis la '
+                                                   'vague PostFinance 2023. Approche méthodique : corrélation des '
+                                                   'plaintes, cartographie temporelle, OSINT sur les domaines de '
+                                                   'phishing. Anglophone, lit le russe avec dictionnaire.',
+                                       'fictional': True,
+                                       'tags': ['police-judiciaire',
+                                                'brigade-financiere',
+                                                'cybercrime',
+                                                'smishing',
+                                                'geneve',
+                                                'ge'],
+                                       'appearances': ['ge-affaire-antennes-fantomes-2-vague-correlee',
+                                                       'ge-affaire-antennes-fantomes-4-reperage-rf',
+                                                       'ge-affaire-antennes-fantomes-5-perquisition-forensique'],
+                                       'canton': 'GE',
+                                       'category': 'police',
+                                       'alignment': 'lawful',
+                                       'seniority': 'senior',
+                                       'personality': {'communication': 'direct',
+                                                       'tech_level': 'expert',
+                                                       'stress_response': 'calme',
+                                                       'trust_initial': 'neutre'},
+                                       'relations': [{'with': 'procureur_mp_ge_cybercrime',
+                                                      'type': 'collègue',
+                                                      'cooccurrences': 2,
+                                                      'trust_init': 'high'},
+                                                     {'with': 'ofcom_spectrum_lead_be',
+                                                      'type': 'collègue',
+                                                      'cooccurrences': 1,
+                                                      'trust_init': 'medium'},
+                                                     {'with': 'tech_scpt_interception',
+                                                      'type': 'collègue',
+                                                      'cooccurrences': 1,
+                                                      'trust_init': 'high'},
+                                                     {'with': 'forensicien_for_ge',
+                                                      'type': 'collègue',
+                                                      'cooccurrences': 1,
+                                                      'trust_init': 'high'}]},
+ 'juge_tmc_ge_perquisition': {'name': 'Juge Catherine Wenger',
+                              'role': 'Juge du Tribunal des mesures de contrainte (TMC) · Genève',
+                              'institution': 'Tribunal des mesures de contrainte, Palais de justice, Genève. Compétent '
+                                             'pour autoriser les mesures de surveillance secrète (art. 269 CPP) et les '
+                                             'perquisitions (art. 244 CPP) avant audience pénale.',
+                              'shortBio': 'Personnage fictif. Magistrate depuis 2008, présidente de la chambre TMC '
+                                          'depuis 2021. Connue pour son exigence sur les éléments concrets : refuse '
+                                          'les demandes basées sur des hypothèses RF non corrélées à un acte '
+                                          'délictueux. Demande systématiquement le rapport OFCOM en pièce jointe pour '
+                                          'les affaires touchant les télécoms.',
+                              'fictional': True,
+                              'tags': ['tribunal', 'tmc', 'mesures-contrainte', 'geneve', 'ge', 'juge'],
+                              'appearances': ['ge-affaire-antennes-fantomes-3-piste-telecom',
+                                              'ge-affaire-antennes-fantomes-4-reperage-rf'],
+                              'canton': 'GE',
+                              'category': 'magistrat',
+                              'alignment': 'lawful',
+                              'seniority': 'senior',
+                              'personality': {'communication': 'formel',
+                                              'tech_level': 'intermédiaire',
+                                              'stress_response': 'calme',
+                                              'trust_initial': 'neutre'},
+                              'relations': [{'with': 'procureur_mp_ge_cybercrime',
+                                             'type': 'collègue',
+                                             'cooccurrences': 1,
+                                             'trust_init': 'high'},
+                                            {'with': 'inspectrice_brigade_financiere_ge',
+                                             'type': 'connaissance',
+                                             'cooccurrences': 1,
+                                             'trust_init': 'medium'}]},
+ 'avocat_defense_carouge_lj': {'name': 'Maître Laurent Jacottet',
+                               'role': 'Avocat de la défense · Étude Jacottet & associés, Carouge',
+                               'institution': 'Étude Jacottet & associés, rue Saint-Joseph, Carouge. Spécialisée droit '
+                                              'pénal et cybercriminalité depuis 2015. Représente le prévenu principal '
+                                              "(technicien télécom suisse) dans l'affaire des Antennes Fantômes.",
+                               'shortBio': "Personnage fictif. Brevet d'avocat 2012, MAS droit pénal Unil 2016. "
+                                           "Spécialiste reconnu de l'art. 141 CPP (preuves illicites) — a fait casser "
+                                           'plusieurs surveillances secrètes par défaut de motivation. Plaide '
+                                           'énergiquement, ne cède rien. A formé un cabinet jeune autour de défenses '
+                                           'techniques (cybercrime, escroqueries complexes). Détestation cordiale avec '
+                                           "le procureur Reymond depuis l'affaire CS 2021.",
+                               'fictional': True,
+                               'tags': ['avocat', 'defense', 'droit-penal', 'art-141-cpp', 'carouge', 'ge'],
+                               'appearances': ['ge-affaire-antennes-fantomes-7-audience-tco-geneve'],
+                               'canton': 'GE',
+                               'category': 'avocat',
+                               'alignment': 'neutral',
+                               'seniority': 'senior',
+                               'personality': {'communication': 'direct',
+                                               'tech_level': 'intermédiaire',
+                                               'stress_response': 'agressif',
+                                               'trust_initial': 'méfiant'},
+                               'relations': [{'with': 'procureur_mp_ge_cybercrime',
+                                              'type': 'rival',
+                                              'cooccurrences': 1,
+                                              'trust_init': 'low'}]},
+ 'tech_scpt_interception': {'name': 'Marc Vauthier',
+                            'role': 'Ingénieur · SCPT (Service de surveillance de la correspondance par poste et '
+                                    'télécommunication)',
+                            'institution': 'SCPT, Berne. Service technique fédéral qui exécute les mesures de '
+                                           'surveillance des télécoms ordonnées par les autorités pénales cantonales '
+                                           '(LSCPT).',
+                            'shortBio': 'Personnage fictif. EPFL Communication Systems 2010, SCPT depuis 2012. A monté '
+                                        "la cellule LTE/5G monitoring. Connaît les protocoles d'interception légale "
+                                        '(LI) et les interfaces opérateurs. Discret, peu visible, mais indispensable. '
+                                        'Travaille avec OFCOM et fedpol sur les dossiers techniques.',
+                            'fictional': True,
+                            'tags': ['scpt', 'lscpt', 'interception', 'lte', '5g', 'berne', 'be'],
+                            'appearances': ['ge-affaire-antennes-fantomes-3-piste-telecom',
+                                            'ge-affaire-antennes-fantomes-4-reperage-rf'],
+                            'canton': 'BE',
+                            'category': 'regulator',
+                            'alignment': 'lawful',
+                            'seniority': 'senior',
+                            'personality': {'communication': 'formel',
+                                            'tech_level': 'expert',
+                                            'stress_response': 'calme',
+                                            'trust_initial': 'neutre'},
+                            'relations': [{'with': 'ofcom_spectrum_lead_be',
+                                           'type': 'collègue',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'high'},
+                                          {'with': 'inspectrice_brigade_financiere_ge',
+                                           'type': 'collègue',
+                                           'cooccurrences': 1,
+                                           'trust_init': 'high'}]},
+ 'forensicien_for_ge': {'name': 'Cdt. Mathieu Reverchon',
+                        'role': 'Commandant · Section forensique numérique de la police judiciaire genevoise (FOR '
+                                'Genève)',
+                        'institution': 'Police judiciaire genevoise, section FOR (forensique numérique). Plateforme '
+                                       "d'analyse forensique cantonale, certifiée ENFSI, équipée "
+                                       'FTK/Autopsy/Cellebrite/Magnet AXIOM.',
+                        'shortBio': 'Personnage fictif. EPFL Comm Systems 2003, certifications GCFA/GREM/GASF. 16 ans '
+                                    "en forensique numérique, dont 11 à GE. A piloté l'analyse de plusieurs ransomware "
+                                    'majeurs en Suisse romande (CHUV 2022, Banque cantonale jurassienne 2024). '
+                                    'Méticuleux sur la chaîne de garde — refuse de traiter un disque sans hash '
+                                    "MD5/SHA-256 documenté en présence d'un témoin.",
+                        'fictional': True,
+                        'tags': ['forensique', 'police-judiciaire', 'for-geneve', 'dfir', 'geneve', 'ge'],
+                        'appearances': ['ge-affaire-antennes-fantomes-5-perquisition-forensique',
+                                        'ge-affaire-antennes-fantomes-6-cooperation-internationale'],
+                        'canton': 'GE',
+                        'category': 'police',
+                        'alignment': 'lawful',
+                        'seniority': 'senior',
+                        'personality': {'communication': 'formel',
+                                        'tech_level': 'expert',
+                                        'stress_response': 'calme',
+                                        'trust_initial': 'neutre'},
+                        'relations': [{'with': 'inspectrice_brigade_financiere_ge',
+                                       'type': 'collègue',
+                                       'cooccurrences': 1,
+                                       'trust_init': 'high'},
+                                      {'with': 'procureur_mp_ge_cybercrime',
+                                       'type': 'collègue',
+                                       'cooccurrences': 1,
+                                       'trust_init': 'medium'}]},
+ 'ingenieur_swisscom_security': {'name': 'Diego Furrer',
+                                 'role': 'Senior Security Engineer · Swisscom Security (CSIRT mobile networks)',
+                                 'institution': 'Swisscom Security, Bern. CSIRT spécialisé sécurité réseaux mobiles. '
+                                                "Détection d'anomalies cellulaires, monitoring CGI (Cell Global "
+                                                'Identifier), coopération autorités sur surveillance légale.',
+                                 'shortBio': 'Personnage fictif. HSLU Lucerne Telecom 2011, OSCP 2018, GMOB 2021. 12 '
+                                             'ans Swisscom, dont 7 sur la sécurité mobile. A développé en interne une '
+                                             'plateforme de détection des cellules non-déclarées ("rogue cell '
+                                             'detection") en se basant sur les anomalies CGI/PLMN/TAC. Communique '
+                                             'régulièrement avec MELANI/NCSC, OFCOM, et la SCPT pour les incidents '
+                                             'techniques.',
+                                 'fictional': True,
+                                 'tags': ['swisscom', 'csirt', 'telecom-security', 'rogue-cell-detection', 'be'],
+                                 'appearances': ['ge-affaire-antennes-fantomes-3-piste-telecom',
+                                                 'ge-affaire-antennes-fantomes-4-reperage-rf'],
+                                 'canton': 'BE',
+                                 'category': 'civil',
+                                 'alignment': 'lawful',
+                                 'seniority': 'senior',
+                                 'personality': {'communication': 'direct',
+                                                 'tech_level': 'expert',
+                                                 'stress_response': 'calme',
+                                                 'trust_initial': 'neutre'},
+                                 'relations': [{'with': 'ofcom_spectrum_lead_be',
+                                                'type': 'collègue',
+                                                'cooccurrences': 1,
+                                                'trust_init': 'high'},
+                                               {'with': 'tech_scpt_interception',
+                                                'type': 'collègue',
+                                                'cooccurrences': 1,
+                                                'trust_init': 'high'}]}}
 
-EXPECTED_NPCS = [
-    'ofcom_spectrum_lead_be', 'procureur_mp_ge_cybercrime',
-    'inspectrice_brigade_financiere_ge', 'juge_tmc_ge_perquisition',
-    'avocat_defense_carouge_lj', 'tech_scpt_interception',
-    'forensicien_for_ge', 'ingenieur_swisscom_security'
-]
 
-SAGA_SCENES = [
-    'ge-affaire-antennes-fantomes-1-signal-alarme',
-    'ge-affaire-antennes-fantomes-2-vague-correlee',
-    'ge-affaire-antennes-fantomes-3-piste-telecom',
-    'ge-affaire-antennes-fantomes-4-flagrant-delit',
-    'ge-affaire-antennes-fantomes-5-forensique-for-ge',
-    'ge-affaire-antennes-fantomes-6-cooperation-internationale',
-    'ge-affaire-antennes-fantomes-7-audience-tco-geneve',
-]
+# ─────────────────────────────────────────────────────────────
+# DATA EN DUR — Campagne saga
+# ─────────────────────────────────────────────────────────────
 
-SAGA_CHRONO_DATES = [
-    '2026-05-25', '2026-05-27', '2026-06-08', '2026-06-23',
-    '2026-06-30', '2026-07-15', '2027-01-22'
-]
+NEW_CAMPAIGN = {'id': 'saga-antennes-fantomes-geneve',
+ 'icon': '📡',
+ 'title': "L'Affaire des Antennes Fantômes",
+ 'subtitle': 'Saga 7 actes · Genève · Premier SMS Blaster judiciarisé en Suisse romande',
+ 'description': 'Mai-décembre 2026 — un retraité de Cologny perd 47 000 CHF en 4 minutes après un SMS prétendument de '
+                'PostFinance. Vite, 89 plaintes en 5 jours convergent vers GE. La piste mène à un véhicule mobile '
+                "équipé d'un SMS Blaster (fausse antenne LTE) qui force la connexion des téléphones à proximité et "
+                "envoie des SMS spoofant PostFinance, UBS, CFF, Sunrise. Du flagrant délit à Carouge à l'audience au "
+                'TCO 8 mois plus tard, en passant par OFCOM, SCPT, Swisscom Security, FOR-GE, et la coopération '
+                'internationale Sofia/Chișinău, la saga traverse 10+ articles du CP/CPP/LTC, la Convention de '
+                "Budapest, l'EIMP, le MROS — et illustre comment se construit (ou s'écroule) un dossier de "
+                'cybercriminalité organisée transfrontalière.',
+ 'level': 'expert',
+ 'order': 48,
+ 'narrative': True,
+ 'hook': 'Un SMS Blaster mobile, un retraité ruiné en 4 minutes, 89 plaintes en 5 jours, un van Volvo XC60 qui se gare '
+         "en double file à Carouge, et un chef présumé qui reste à Sofia hors d'atteinte de l'extradition.",
+ 'scenes': ['ge-affaire-antennes-fantomes-1-signal-alarme',
+            'ge-affaire-antennes-fantomes-2-vague-correlee',
+            'ge-affaire-antennes-fantomes-3-piste-telecom',
+            'ge-affaire-antennes-fantomes-4-flagrant-delit',
+            'ge-affaire-antennes-fantomes-5-forensique-for-ge',
+            'ge-affaire-antennes-fantomes-6-cooperation-internationale',
+            'ge-affaire-antennes-fantomes-7-audience-tco-geneve']}
+
+
+# ─────────────────────────────────────────────────────────────
+# Autres constantes
+# ─────────────────────────────────────────────────────────────
 
 NEW_FICHE_MANIFEST = {
     "file": "sms_blaster.html",
@@ -91,45 +382,45 @@ CSP_TAG = (
     'frame-ancestors \'none\'">'
 )
 
-CHANGELOG_NEW_SECTION = """## [3.0.1] — 2026-05-30
+SAGA_SCENES = [
+    'ge-affaire-antennes-fantomes-1-signal-alarme',
+    'ge-affaire-antennes-fantomes-2-vague-correlee',
+    'ge-affaire-antennes-fantomes-3-piste-telecom',
+    'ge-affaire-antennes-fantomes-4-flagrant-delit',
+    'ge-affaire-antennes-fantomes-5-forensique-for-ge',
+    'ge-affaire-antennes-fantomes-6-cooperation-internationale',
+    'ge-affaire-antennes-fantomes-7-audience-tco-geneve',
+]
 
-📡 **Saga « L'Affaire des Antennes Fantômes » + fiche technique SMS Blaster.** Premier contenu narratif post-jolification, inspiré du cas réel zurichois (oct. 2025, condamnation 9 mois sursis) et de Project Lighthouse Toronto (avril 2026, première détection au Canada). Cache SW bumpé v144 → v145.
+SAGA_CHRONO_DATES = [
+    '2026-05-25', '2026-05-27', '2026-06-08', '2026-06-23',
+    '2026-06-30', '2026-07-15', '2027-01-22'
+]
+
+CHANGELOG_SECTION = """## [3.0.1] — 2026-05-30
+
+📡 **Saga « L'Affaire des Antennes Fantômes » + fiche technique SMS Blaster.** Premier contenu narratif post-jolification, inspiré du cas réel zurichois (oct. 2025, condamnation 9 mois sursis) et de Project Lighthouse Toronto (avril 2026). Cache SW bumpé v144 → v145.
 
 ### Ajouté
 
-#### Saga narrative (v132r)
-- **7 nouvelles scènes** Genève niveau expert : signal d'alarme → corrélation 89 plaintes → piste télécom (TMC + OFCOM) → flagrant délit Carouge → forensique FOR-GE → coopération internationale (Sofia + Chișinău) → audience TCO
-- **84 décisions interactives** (7 actes × 4 phases × 3 choix avec feedbacks pédagogiques)
-- **8 nouveaux NPCs** : procureur MP-GE cybercrime, inspectrice Brigade financière GE, juge TMC GE, commandant FOR-GE, avocat de défense Carouge, cheffe Spectrum Monitoring OFCOM, ingénieur SCPT, senior security Swisscom
-- **10+ articles juridiques** traversés : 146 al. 2 CP, 22 LTC, 305bis CP, 269bis CPP, 282 CPP, 217 CPP, 141 al. 2 CPP, EIMP, Budapest art. 32, LBA art. 9
-- **Issue réaliste** : condamnation partielle (3,5/4,5/1,5 ans + expulsions), vidéo écartée art. 141 al. 2 CPP, chef présumé reste libre en Bulgarie (citoyenneté UE)
+- **Saga 7 actes** Genève niveau expert (signal d'alarme → corrélation 89 plaintes → piste télécom → flagrant délit Carouge → forensique FOR-GE → coopération internationale → audience TCO)
+- **8 nouveaux NPCs** (procureur MP-GE, inspectrice Brigade financière, juge TMC, commandant FOR-GE, avocat de défense, OFCOM Spectrum, ingénieur SCPT, senior security Swisscom)
+- **Fiche technique** `fiches/sms_blaster.html` (8 sections, 6 cas réels documentés, 14+ articles juridiques)
+- **10+ articles juridiques** traversés dans la saga : 146 al. 2 CP, 22 LTC, 305bis CP, 269bis CPP, 282 CPP, 217 CPP, 141 al. 2 CPP, EIMP, Budapest art. 32, LBA art. 9
 
-#### Fiche technique (v132s)
-- **`fiches/sms_blaster.html`** : 8 sections, 11 cards, 11 steps, tableau de 6 affaires réelles documentées (Zurich oct. 2025, Genève 1,9 M CHF, Vaud 260 k CHF, Toronto Project Lighthouse, Londres Tube, Paris 2022-2023)
-- Détails techniques rigoureux : architecture SDR Ettus B210 + srsRAN + amplificateur 30 W, exploitation A5/0 (chiffrement nul 2G, 3GPP TS 43.020), downgrade 4G→2G par jamming, contournement filtres SMS-C opérateurs
-- Cadre juridique suisse complet : 14+ articles + Convention de Budapest art. 32 + EIMP + MROS
-- Liens croisés vers la saga et les fiches connexes
+### Finalisé
 
-#### Finalisation (v132t + v132u)
-- Entrée `sms_blaster.html` ajoutée dans `data/manifest.json` (catégorie mobile, isNew: true)
-- SW `CACHE_VERSION` bumpé `cas-in-v144` → `cas-in-v145`
-- Cleanup résiduel v131c : 15 doublons HTML supprimés de la racine (versions obsolètes sans CSP, encore présentes malgré le déplacement v131c en `pages/`)
-- 2 bugs CSP résiduels corrigés : `artifacts.html` et `fiches/index.html` (oubliés de la passe v132l)
+- Cleanup résiduel v131c : 15 doublons HTML supprimés de la racine
+- 2 bugs CSP corrigés : `artifacts.html` et `fiches/index.html`
+- SW bumpé v144 → v145, manifest enrichi, CHANGELOG à jour
 
-### Sources et rigueur factuelle
+### Sources factuelles
 
-Tous les éléments factuels sont vérifiables :
-- **24 heures, 8 mai 2026** — « SMS-Blaster : un Chinois pirate 50 000 téléphones en Suisse » (cas Zurich)
-- **RTS, mai 2026** — détails techniques A5/0, portée, OFCS
-- **Radio-Canada / CBC, avril 2026** — Project Lighthouse Toronto (3 arrestations, 13 M perturbations)
-- **BBC, mars 2025** — affaire Daoyan Shang + Zhijia Fan, Londres Tube
-- **3GPP TS 23.040, 23.003, 43.020** — spécifications SMS-PP, CGI format, A5/0
-
-### Notes
-
-- La saga est explicitement fictive (`realCase: false`) — noms inventés, mais inspirée d'événements réels documentés
-- Aucun module JS ou CSS modifié — extension par ajout de contenu seul
-- Bundle de finalisation `v132u` consolide les actions résiduelles de v131c (cleanup), v132r (saga complète), v132t (manifest+SW+CHANGELOG), et corrige 2 bugs CSP résiduels
+- **24 heures, 8 mai 2026** : cas zurichois 50 000 téléphones
+- **RTS, mai 2026** : détails techniques A5/0, OFCS
+- **Radio-Canada, avril 2026** : Project Lighthouse Toronto
+- **BBC, mars 2025** : affaire Shang + Fan, Londres Tube
+- **3GPP TS 23.040, 23.003, 43.020** : spécifications SMS-PP, CGI, A5/0
 
 ---
 
@@ -142,19 +433,14 @@ Tous les éléments factuels sont vérifiables :
 
 def find_root() -> Path:
     here = Path(__file__).resolve().parent
-    for candidate in (here, here.parent):
-        if (candidate / 'sw.js').exists() and (candidate / 'data' / 'manifest.json').exists():
-            return candidate
+    for c in (here, here.parent):
+        if (c / 'sw.js').exists() and (c / 'data' / 'manifest.json').exists():
+            return c
     print('[error] Racine CAS-IN introuvable.', file=sys.stderr)
     sys.exit(1)
 
 
-def bundle_resources_dir(root: Path) -> Path:
-    """Dossier où sont les ressources du bundle (_v132u_resources/ à la racine du repo)."""
-    return root / '_v132u_resources'
-
-
-def log(symbol: str, msg: str):
+def log(symbol, msg):
     print(f'  {symbol} {msg}')
 
 
@@ -162,335 +448,200 @@ def log(symbol: str, msg: str):
 # Étapes
 # ─────────────────────────────────────────────────────────────
 
-def step_1_remove_obsolete_html(root: Path, dry_run: bool = False):
-    """Supprime les 15 HTML doublés en racine (cleanup v131c)."""
-    print('\n[1/12] Suppression des 15 HTML doublons racine (cleanup v131c)')
-    removed = 0
-    kept = 0
-    for name in OBSOLETE_ROOT_HTML:
-        root_file = root / name
-        pages_file = root / 'pages' / name
-        if not root_file.exists():
-            kept += 1  # déjà nettoyé
-            continue
-        if not pages_file.exists():
-            log('⚠️ ', f'{name} en racine mais PAS dans pages/ — SKIP (sécurité)')
-            kept += 1
-            continue
-        if dry_run:
-            log('🔍', f'would-remove {name}')
-        else:
-            root_file.unlink()
-            log('🗑️ ', f'supprimé : {name}')
-        removed += 1
-    if removed == 0:
-        log('✅', f'Aucun doublon à supprimer ({kept} déjà nettoyés)')
-
-
-def step_2_archive_legacy_questions(root: Path, archive: bool = False):
-    """Archive data/questions.json (4.2 MB) → data/_archive/."""
-    print('\n[2/12] Archivage data/questions.json legacy (optionnel)')
-    legacy = root / 'data' / 'questions.json'
-    if not legacy.exists():
-        log('⏭ ', 'data/questions.json déjà absent')
-        return
-    if not archive:
-        log('⏭ ', f'data/questions.json présent ({legacy.stat().st_size // 1024} KB) — non archivé (utiliser --archive-legacy)')
-        return
-    archive_dir = root / 'data' / '_archive'
-    archive_dir.mkdir(exist_ok=True)
-    target = archive_dir / 'questions.json'
-    shutil.move(str(legacy), str(target))
-    log('📦', f'data/questions.json → data/_archive/questions.json')
-
-
-def step_3_add_scenes_1_and_2(root: Path):
-    """Ajoute les 2 scènes manquantes de la saga depuis le bundle."""
-    print('\n[3/12] Ajout des scènes 1 + 2 de la saga (acte 1 + acte 2)')
-    bundle = bundle_resources_dir(root)
+def step_npcs(root):
+    print('\n[1/8] Ajout des 8 NPCs de la saga')
+    p = root / 'data' / 'npcs.json'
+    with open(p) as f:
+        data = json.load(f)
     added = 0
-    for scene_id in ('ge-affaire-antennes-fantomes-1-signal-alarme',
-                     'ge-affaire-antennes-fantomes-2-vague-correlee'):
-        src = bundle / f'{scene_id}.json'
-        dst = root / 'scenes' / f'{scene_id}.json'
-        if dst.exists():
-            log('⏭ ', f'{scene_id}.json déjà présent')
-            continue
-        if not src.exists():
-            log('❌', f'Source bundle manquante : {src}')
-            continue
-        shutil.copy(str(src), str(dst))
-        log('✅', f'{scene_id}.json')
-        added += 1
-    if added == 0:
-        log('⏭ ', 'Toutes les scènes sont déjà présentes')
-
-
-def step_4_add_npcs(root: Path):
-    """Ajoute les 8 NPCs de la saga à data/npcs.json."""
-    print('\n[4/12] Ajout des 8 NPCs de la saga')
-    bundle = bundle_resources_dir(root)
-    src = bundle / 'new_npcs.json'
-    if not src.exists():
-        log('❌', f'Source bundle manquante : {src}')
-        return
-    new_npcs = json.load(open(src))
-    npcs_path = root / 'data' / 'npcs.json'
-    with open(npcs_path) as f:
-        npcs_data = json.load(f)
-    added = 0
-    for npc_id, npc_def in new_npcs.items():
-        if npc_id in npcs_data['npcs']:
-            log('⏭ ', f'{npc_id} déjà présent')
+    for nid, ndef in NEW_NPCS.items():
+        if nid in data['npcs']:
+            log('⏭ ', f'{nid} déjà présent')
         else:
-            npcs_data['npcs'][npc_id] = npc_def
+            data['npcs'][nid] = ndef
             added += 1
     if added > 0:
-        npcs_data['$generated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
-        with open(npcs_path, 'w', encoding='utf-8') as f:
-            json.dump(npcs_data, f, ensure_ascii=False, indent=2)
-        log('✅', f'{added} NPCs ajoutés (total: {len(npcs_data["npcs"])})')
+        data['$generated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        log('✅', f'{added} NPCs ajoutés (total: {len(data["npcs"])})')
 
 
-def step_5_add_campaign(root: Path):
-    """Ajoute la campagne saga dans data/campaigns.json."""
-    print('\n[5/12] Ajout de la campagne dans data/campaigns.json')
-    bundle = bundle_resources_dir(root)
-    src = bundle / 'new_campaign.json'
-    if not src.exists():
-        log('❌', f'Source bundle manquante : {src}')
+def step_campaign(root):
+    print('\n[2/8] Ajout de la campagne saga dans data/campaigns.json')
+    p = root / 'data' / 'campaigns.json'
+    with open(p) as f:
+        data = json.load(f)
+    if any(c.get('id') == NEW_CAMPAIGN['id'] for c in data['campaigns']):
+        log('⏭ ', f'{NEW_CAMPAIGN["id"]} déjà présente')
         return
-    new_campaign = json.load(open(src))
-    campaigns_path = root / 'data' / 'campaigns.json'
-    with open(campaigns_path) as f:
-        campaigns_data = json.load(f)
-    existing_ids = {c.get('id') for c in campaigns_data['campaigns']}
-    if new_campaign['id'] in existing_ids:
-        log('⏭ ', f'{new_campaign["id"]} déjà présente')
-        return
-    campaigns_data['campaigns'].append(new_campaign)
-    campaigns_data['$generated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
-    with open(campaigns_path, 'w', encoding='utf-8') as f:
-        json.dump(campaigns_data, f, ensure_ascii=False, indent=2)
-    n_sagas = len([c for c in campaigns_data['campaigns'] if c.get('narrative')])
+    data['campaigns'].append(NEW_CAMPAIGN)
+    data['$generated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    with open(p, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    n_sagas = len([c for c in data['campaigns'] if c.get('narrative')])
     log('✅', f'campagne ajoutée (sagas total: {n_sagas})')
 
 
-def step_6_add_chronology(root: Path):
-    """Ajoute les 7 entrées dans data/scenes-chronology.json."""
-    print('\n[6/12] Ajout des entrées chronologie')
-    chrono_path = root / 'data' / 'scenes-chronology.json'
-    if not chrono_path.exists():
-        log('⏭ ', 'data/scenes-chronology.json absent (skip)')
+def step_chronology(root):
+    print('\n[3/8] Ajout des entrées chronologie')
+    p = root / 'data' / 'scenes-chronology.json'
+    if not p.exists():
+        log('⏭ ', 'scenes-chronology.json absent')
         return
-    with open(chrono_path) as f:
+    with open(p) as f:
         chrono = json.load(f)
-    # Format peut être dict ou list
     if isinstance(chrono, dict) and 'scenes' in chrono:
-        chrono_list = chrono['scenes']
+        clist = chrono['scenes']
     elif isinstance(chrono, list):
-        chrono_list = chrono
+        clist = chrono
     else:
-        log('⚠️ ', 'Format chrono inconnu (skip)')
+        log('⚠️ ', 'Format inconnu')
         return
-    existing_ids = {e.get('id') if isinstance(e, dict) else e for e in chrono_list}
+    existing = {e.get('id') if isinstance(e, dict) else e for e in clist}
     added = 0
-    for i, scene_id in enumerate(SAGA_SCENES):
-        if scene_id in existing_ids:
+    for i, sid in enumerate(SAGA_SCENES):
+        if sid in existing:
             continue
-        new_entry = {"id": scene_id, "date": SAGA_CHRONO_DATES[i], "saga": "saga-antennes-fantomes-geneve"}
-        chrono_list.append(new_entry)
+        clist.append({"id": sid, "date": SAGA_CHRONO_DATES[i], "saga": NEW_CAMPAIGN['id']})
         added += 1
     if added > 0:
         if isinstance(chrono, dict):
-            chrono['scenes'] = chrono_list
+            chrono['scenes'] = clist
             chrono['$generated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
-            with open(chrono_path, 'w', encoding='utf-8') as f:
+            with open(p, 'w', encoding='utf-8') as f:
                 json.dump(chrono, f, ensure_ascii=False, indent=2)
         else:
-            with open(chrono_path, 'w', encoding='utf-8') as f:
-                json.dump(chrono_list, f, ensure_ascii=False, indent=2)
-        log('✅', f'{added} entrées chronologie ajoutées')
+            with open(p, 'w', encoding='utf-8') as f:
+                json.dump(clist, f, ensure_ascii=False, indent=2)
+        log('✅', f'{added} entrées ajoutées')
     else:
-        log('⏭ ', '7 entrées déjà présentes')
+        log('⏭ ', 'Entrées déjà présentes')
 
 
-def step_7_update_manifest(root: Path):
-    """Ajoute sms_blaster.html dans data/manifest.json."""
-    print('\n[7/12] Mise à jour de data/manifest.json')
-    manifest_path = root / 'data' / 'manifest.json'
-    with open(manifest_path) as f:
-        manifest = json.load(f)
-    existing = {f.get('file') for f in manifest.get('fiches', [])}
-    if 'sms_blaster.html' in existing:
+def step_manifest(root):
+    print('\n[4/8] Mise à jour de data/manifest.json')
+    p = root / 'data' / 'manifest.json'
+    with open(p) as f:
+        m = json.load(f)
+    if any(f.get('file') == 'sms_blaster.html' for f in m['fiches']):
         log('⏭ ', 'sms_blaster.html déjà dans manifest')
         return
-    manifest['fiches'].append(NEW_FICHE_MANIFEST)
-    manifest['updatedAt'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
-    with open(manifest_path, 'w', encoding='utf-8') as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
-    log('✅', f'sms_blaster.html ajouté (total: {len(manifest["fiches"])})')
+    m['fiches'].append(NEW_FICHE_MANIFEST)
+    m['updatedAt'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    with open(p, 'w', encoding='utf-8') as f:
+        json.dump(m, f, ensure_ascii=False, indent=2)
+    log('✅', f'sms_blaster.html ajouté (total: {len(m["fiches"])})')
 
 
-def step_8_fix_csp_bugs(root: Path):
-    """Patch CSP sur artifacts.html et fiches/index.html (oublis v132l)."""
-    print('\n[8/12] Correction des 2 bugs CSP résiduels (v132l incomplet)')
-    targets = [root / 'artifacts.html', root / 'fiches' / 'index.html']
-    for target in targets:
+def step_csp(root):
+    print('\n[5/8] Patch CSP sur artifacts.html + fiches/index.html')
+    for target in [root / 'artifacts.html', root / 'fiches' / 'index.html']:
         if not target.exists():
             log('⏭ ', f'{target.relative_to(root)} absent')
             continue
         with open(target, encoding='utf-8') as f:
             content = f.read()
         if 'Content-Security-Policy' in content:
-            log('⏭ ', f'{target.relative_to(root)} déjà avec CSP')
+            log('⏭ ', f'{target.relative_to(root)} a déjà CSP')
             continue
-        # Insérer la CSP juste après <meta charset="...">
         m = re.search(r'(<meta\s+charset="[^"]+">)', content)
         if not m:
-            log('❌', f'{target.relative_to(root)} : <meta charset> introuvable')
+            log('❌', f'{target.relative_to(root)} : meta charset introuvable')
             continue
-        insert_pos = m.end()
-        new_content = content[:insert_pos] + '\n' + CSP_TAG + content[insert_pos:]
+        new = content[:m.end()] + '\n' + CSP_TAG + content[m.end():]
         with open(target, 'w', encoding='utf-8') as f:
-            f.write(new_content)
+            f.write(new)
         log('✅', f'CSP injectée dans {target.relative_to(root)}')
 
 
-def step_9_bump_sw(root: Path):
-    """Bump SW v144 → v145."""
-    print('\n[9/12] Bump SW v144 → v145')
-    sw_path = root / 'sw.js'
-    with open(sw_path, encoding='utf-8') as f:
+def step_sw(root):
+    print('\n[6/8] Bump SW v144 → v145')
+    p = root / 'sw.js'
+    with open(p, encoding='utf-8') as f:
         sw = f.read()
     m = re.search(r"const CACHE_VERSION = 'cas-in-v(\d+)';", sw)
     if not m:
         log('❌', 'CACHE_VERSION introuvable')
         return
     current = int(m.group(1))
-    # Idempotence : si commentaire v132u/v145 déjà présent, skip
-    if '// v132u — 2026-05-30 — Bump SW' in sw or current >= 145:
+    if current >= 145 or '// v132u' in sw:
         log('⏭ ', f'SW déjà bumpé (cas-in-v{current})')
         return
-    new = current + 1
-    new_sw = sw.replace(
-        f"const CACHE_VERSION = 'cas-in-v{current}';",
-        (f"// v132u — 2026-05-30 — Bundle de finalisation\n"
-         f"// Bump SW v{current} → v{new} après ajout de fiches/sms_blaster.html\n"
-         f"// dans data/manifest.json (précache via precacheFichesFromManifest).\n"
-         f"// ═══════════════════════════════════════════════════════════════\n"
-         f"\n"
-         f"const CACHE_VERSION = 'cas-in-v{new}';"),
-        1
+    new_v = current + 1
+    bump = (
+        f"// v132u — 2026-05-30 — Bump SW v{current} → v{new_v}\n"
+        f"// Précache fiches/sms_blaster.html via data/manifest.json\n"
+        f"// ═══════════════════════════════════════════════════════════════\n"
+        f"\n"
+        f"const CACHE_VERSION = 'cas-in-v{new_v}';"
     )
-    with open(sw_path, 'w', encoding='utf-8') as f:
+    new_sw = sw.replace(f"const CACHE_VERSION = 'cas-in-v{current}';", bump, 1)
+    with open(p, 'w', encoding='utf-8') as f:
         f.write(new_sw)
-    log('✅', f'SW bumpé : cas-in-v{current} → cas-in-v{new}')
+    log('✅', f'SW bumpé : cas-in-v{current} → cas-in-v{new_v}')
 
 
-def step_10_update_changelog(root: Path):
-    """Insère la section [3.0.1] dans docs/CHANGELOG.md."""
-    print('\n[10/12] Insertion section [3.0.1] dans docs/CHANGELOG.md')
-    changelog_path = root / 'docs' / 'CHANGELOG.md'
-    if not changelog_path.exists():
-        log('⏭ ', 'docs/CHANGELOG.md absent')
+def step_changelog(root):
+    print('\n[7/8] CHANGELOG : section [3.0.1] + ligne en-tête')
+    p = root / 'docs' / 'CHANGELOG.md'
+    if not p.exists():
+        log('⏭ ', 'CHANGELOG.md absent')
         return
-    with open(changelog_path, encoding='utf-8') as f:
+    with open(p, encoding='utf-8') as f:
         cl = f.read()
-    # Idempotence
     if '## [3.0.1]' in cl:
         log('⏭ ', 'Section [3.0.1] déjà présente')
-        # Mais peut-être faut-il mettre à jour la ligne en-tête
     else:
-        marker = '## [3.0-jolification]'
-        pos = cl.find(marker)
+        pos = cl.find('## [3.0-jolification]')
         if pos == -1:
-            log('❌', f'Marqueur "{marker}" introuvable')
+            log('❌', 'Marqueur [3.0-jolification] introuvable')
             return
-        cl = cl[:pos] + CHANGELOG_NEW_SECTION + cl[pos:]
+        cl = cl[:pos] + CHANGELOG_SECTION + cl[pos:]
         log('✅', 'Section [3.0.1] insérée')
-    # Ligne d'en-tête
-    cache_line_re = re.compile(r"Cache SW courant : \*\*`cas-in-v\d+`\*\* \(depuis [^\)]+\)\.")
-    new_cache_line = "Cache SW courant : **`cas-in-v145`** (depuis le 30 mai 2026, v3.0.1)."
-    if cache_line_re.search(cl):
-        cl = cache_line_re.sub(new_cache_line, cl, count=1)
-        log('✅', 'Ligne « Cache SW courant » mise à jour → v145')
-    with open(changelog_path, 'w', encoding='utf-8') as f:
+    cl = re.sub(
+        r"Cache SW courant : \*\*`cas-in-v\d+`\*\* \(depuis [^)]+\)\.",
+        "Cache SW courant : **`cas-in-v145`** (depuis le 30 mai 2026, v3.0.1).",
+        cl, count=1
+    )
+    log('✅', 'Ligne d\'en-tête → v145')
+    with open(p, 'w', encoding='utf-8') as f:
         f.write(cl)
 
 
-def step_11_rebuild_scenes_index(root: Path):
-    """Reconstruit scenes/index.json (source de vérité pour counts.scenes)."""
-    print('\n[11/12] Reconstruction de scenes/index.json')
-    script = root / 'scripts' / 'build_scenes_index.py'
-    if not script.exists():
-        log('⏭ ', 'scripts/build_scenes_index.py absent (skip)')
-        return
-    try:
-        result = subprocess.run(['python3', str(script)], cwd=str(root), capture_output=True, text=True, timeout=30)
-        if result.returncode == 0:
-            idx = json.load(open(root / 'scenes' / 'index.json'))
-            n = len(idx) if isinstance(idx, list) else len(idx.get('scenes', []))
-            log('✅', f'scenes/index.json reconstruit ({n} entrées)')
-        else:
-            log('⚠️ ', f'build_scenes_index.py code={result.returncode} : {result.stderr[:200]}')
-    except Exception as e:
-        log('⚠️ ', f'Erreur lors de la reconstruction : {e}')
+def step_rebuild(root):
+    print('\n[8/8] Reconstruction de scenes/index.json + counts.json')
+    for script in ('build_scenes_index.py', 'generate_counts.py'):
+        sp = root / 'scripts' / script
+        if not sp.exists():
+            log('⏭ ', f'{script} absent')
+            continue
+        try:
+            r = subprocess.run(['python3', str(sp)], cwd=str(root),
+                               capture_output=True, text=True, timeout=30)
+            if r.returncode == 0:
+                log('✅', script)
+            else:
+                log('⚠️ ', f'{script} code={r.returncode}')
+        except Exception as e:
+            log('⚠️ ', f'{script} : {e}')
 
-
-def step_12_regenerate_counts(root: Path):
-    """Régénère data/counts.json via le script existant."""
-    print('\n[12/12] Régénération de data/counts.json')
-    script = root / 'scripts' / 'generate_counts.py'
-    if not script.exists():
-        log('⏭ ', 'scripts/generate_counts.py absent (skip)')
-        return
-    try:
-        result = subprocess.run(['python3', str(script)], cwd=str(root), capture_output=True, text=True, timeout=30)
-        if result.returncode == 0:
-            # Lire le nouveau counts
-            counts = json.load(open(root / 'data' / 'counts.json'))
-            log('✅', f'counts.json régénéré : scenes={counts.get("scenes")}, fiches={counts.get("fiches")}')
-        else:
-            log('⚠️ ', f'generate_counts.py code={result.returncode} : {result.stderr[:200]}')
-    except Exception as e:
-        log('⚠️ ', f'Erreur lors de la régénération : {e}')
-
-
-# ─────────────────────────────────────────────────────────────
-# Main
-# ─────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description='Bundle de finalisation v132u — CAS-IN')
-    parser.add_argument('--dry-run', action='store_true', help='Étape 1 en simulation (n\'efface pas)')
-    parser.add_argument('--archive-legacy', action='store_true', help='Archive data/questions.json dans data/_archive/')
-    args = parser.parse_args()
-
     root = find_root()
-    print(f'═══════════════════════════════════════════════════════════════')
-    print(f'  CAS-IN v132u — Bundle de finalisation v131b → v132t')
+    print('═══════════════════════════════════════════════════════════════')
+    print('  CAS-IN v132u-bis — Finalisation self-contained')
     print(f'  Racine : {root}')
-    if args.dry_run:
-        print(f'  Mode : DRY-RUN (étape 1 simulée)')
-    print(f'═══════════════════════════════════════════════════════════════')
-
-    step_1_remove_obsolete_html(root, dry_run=args.dry_run)
-    step_2_archive_legacy_questions(root, archive=args.archive_legacy)
-    step_3_add_scenes_1_and_2(root)
-    step_4_add_npcs(root)
-    step_5_add_campaign(root)
-    step_6_add_chronology(root)
-    step_7_update_manifest(root)
-    step_8_fix_csp_bugs(root)
-    step_9_bump_sw(root)
-    step_10_update_changelog(root)
-    step_11_rebuild_scenes_index(root)
-    step_12_regenerate_counts(root)
-
-    print(f'\n═══════════════════════════════════════════════════════════════')
-    print(f'  ✅ v132u appliqué.')
-    print(f'═══════════════════════════════════════════════════════════════')
+    print('═══════════════════════════════════════════════════════════════')
+    step_npcs(root)
+    step_campaign(root)
+    step_chronology(root)
+    step_manifest(root)
+    step_csp(root)
+    step_sw(root)
+    step_changelog(root)
+    step_rebuild(root)
+    print('\n  ✅ v132u-bis appliqué.')
 
 
 if __name__ == '__main__':
