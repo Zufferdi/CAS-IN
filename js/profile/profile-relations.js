@@ -21,7 +21,23 @@
 (function () {
   'use strict';
 
-  let NPC_DATA = null;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+let NPC_DATA = null;
   let NPC_FAMILY_CACHE = null;
 
   // ─── Familles institutionnelles (pour la jauge "Réputation par faction") ───
@@ -58,7 +74,7 @@
   async function loadNpcData() {
     if (NPC_DATA) return NPC_DATA;
     try {
-      const r = await fetch('data/npcs.json');
+      const r = await fetch(_dataUrl('npcs.json'));
       const d = await r.json();
       NPC_DATA = d.npcs || {};
       window.NPC_DATA = NPC_DATA;

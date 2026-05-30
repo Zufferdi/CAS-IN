@@ -21,7 +21,23 @@
 (function () {
   'use strict';
 
-  const COMPLETION_THRESHOLD = 70;
+  
+  // v132g — Résolution path data/ correcte depuis n'importe quelle page
+  // (fix régression v131c sur les fetches relatifs depuis pages/, fiches/, etc.)
+  function _dataUrl(rel) {
+    if (typeof window !== 'undefined' && window.CasInUtils && typeof window.CasInUtils.dataUrl === 'function') {
+      return window.CasInUtils.dataUrl(rel);
+    }
+    const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+    if (!m) return './data/' + clean;
+    const slashCount = (m[2].match(/\//g) || []).length;
+    const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+    return prefix + 'data/' + clean;
+  }
+
+const COMPLETION_THRESHOLD = 70;
   const AFFINITY_PCT = 50;
 
   // i18n helper
@@ -50,7 +66,7 @@
       ? Promise.resolve(window.SceneIndex.getAll())
       : fetch('scenes/index.json').then(r => r.json());
 
-    const pAtmo = fetch('data/atmospheres.json').then(r => r.json());
+    const pAtmo = fetch(_dataUrl('atmospheres.json')).then(r => r.json());
 
     _loadPromise = Promise.all([pIndex, pAtmo]).then(([idx, atmoData]) => {
       _sceneIndex = idx;
