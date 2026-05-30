@@ -130,9 +130,41 @@ async function startExam() {
   document.getElementById('start-btn').disabled = true;
   document.getElementById('start-btn').textContent = 'Chargement…';
   try {
-    const r = await fetch('data/questions.json');
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    const data = await r.json();
+    // v132f — Lazy load via index + chunks (fix régression v131c pour pages/exam.html)
+    const _dataUrl = (function () {
+      if (window.CasInUtils && window.CasInUtils.dataUrl) return window.CasInUtils.dataUrl;
+      return function (rel) {
+        const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+        const path = window.location.pathname;
+        const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+        if (!m) return './data/' + clean;
+        const slashCount = (m[2].match(/\//g) || []).length;
+        const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+        return prefix + 'data/' + clean;
+      };
+    })();
+
+    let data;
+    try {
+      // Tentative : charger l'index + tous les chunks en parallèle
+      const idxResp = await fetch(_dataUrl('questions-index.json'));
+      if (!idxResp.ok) throw new Error('index absent');
+      const idx = await idxResp.json();
+      if (!idx || !Array.isArray(idx.themes) || !idx.themes.length) throw new Error('index invalide');
+      const chunks = await Promise.all(
+        idx.themes.map(t => fetch(_dataUrl(t.file)).then(r => {
+          if (!r.ok) throw new Error('chunk HTTP ' + r.status);
+          return r.json();
+        }))
+      );
+      data = chunks.flat();
+    } catch (e) {
+      // Fallback legacy : questions.json monolithique
+      console.warn('[exam] Lazy load échoué, fallback sur questions.json :', e.message);
+      const r = await fetch(_dataUrl('questions.json'));
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      data = await r.json();
+    }
     allQ = Array.isArray(data) ? data : (data.questions || data.items || []);
     if (!allQ.length) throw new Error('vide');
   } catch(e) {

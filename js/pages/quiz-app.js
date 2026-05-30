@@ -1997,13 +1997,53 @@
         lsSet('playdates', [...dates].slice(-60));
       }
       startLoadingMessages();
-      // v3.48 — Chargement parallèle questions.json + fiches-titles.json (chantier #4)
+      // v132f — Lazy loading via questions-index.json + chunks par thème
+      // Fallback : si l'index est absent, charge questions.json (legacy)
+      // Helper local équivalent à CasInUtils.dataUrl pour résoudre les paths
+      // depuis n'importe quelle page (racine ou sous-dossier).
+      const _dataUrl = (function () {
+        if (window.CasInUtils && window.CasInUtils.dataUrl) return window.CasInUtils.dataUrl;
+        return function (rel) {
+          const clean = String(rel || '').replace(/^\.?\/?(data\/)?/, '');
+          const path = window.location.pathname;
+          const m = path.match(/^(.*?\/CAS-IN\/|\/)(.*)$/);
+          if (!m) return './data/' + clean;
+          const slashCount = (m[2].match(/\//g) || []).length;
+          const prefix = slashCount > 0 ? '../'.repeat(slashCount) : './';
+          return prefix + 'data/' + clean;
+        };
+      })();
+
+      const loadQuestions = async () => {
+        try {
+          // Tentative : charger l'index (1.6 KB) puis tous les chunks en parallèle
+          const idxResp = await fetch(_dataUrl('questions-index.json'));
+          if (!idxResp.ok) throw new Error('index absent');
+          const idx = await idxResp.json();
+          if (!idx || !Array.isArray(idx.themes) || !idx.themes.length) {
+            throw new Error('index invalide');
+          }
+          // Fetch parallèle des 8 chunks (HTTP/2 multiplexing)
+          const chunks = await Promise.all(
+            idx.themes.map(t => fetch(_dataUrl(t.file)).then(r => {
+              if (!r.ok) throw new Error('chunk ' + t.slug + ' HTTP ' + r.status);
+              return r.json();
+            }))
+          );
+          // Reconstituer la liste plate ordonnée comme dans questions.json original
+          return chunks.flat();
+        } catch (e) {
+          // Fallback legacy : questions.json monolithique
+          console.warn('[quiz] Lazy load échoué, fallback sur questions.json :', e.message);
+          const resp = await fetch(_dataUrl('questions.json'));
+          if (!resp.ok) throw new Error('HTTP ' + resp.status + ' — data/questions.json introuvable');
+          return resp.json();
+        }
+      };
+
       Promise.all([
-        fetch(new URL('data/questions.json', document.baseURI)).then(r => {
-          if (!r.ok) throw new Error('HTTP ' + r.status + ' — data/questions.json introuvable');
-          return r.json();
-        }),
-        fetch(new URL('data/fiches-titles.json', document.baseURI)).then(r => {
+        loadQuestions(),
+        fetch(_dataUrl('fiches-titles.json')).then(r => {
           if (!r.ok) return {}; // fallback silencieux : pas critique
           return r.json();
         }).catch(() => ({}))
