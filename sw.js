@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v141';
+const CACHE_VERSION = 'cas-in-v142';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1809,6 +1809,8 @@ const STATIC_ASSETS = [
   './js/core/cas-in-mastery-quiz.js',
   './js/core/cas-in-leaderboard.js',
   './js/core/cas-in-utils.js',
+  // v132n — Module de robustesse localStorage (validation au boot + versioning)
+  './js/core/cas-in-storage.js',
   './js/core/cas-in-counts.js',
   './js/core/cas-in-export.js',
   './js/core/cas-in-pwa.js',
