@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v136';
+const CACHE_VERSION = 'cas-in-v137';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1678,6 +1678,10 @@ const STATIC_ASSETS = [
   './index.html',
   // v131a — Hub Apprendre (fiches + tutoriels + références)
   './apprendre.html',
+  // v132h — Hubs symétriques pour les 3 autres pilules
+  './pratiquer.html',
+  './enqueter.html',
+  './tester.html',
   './quiz.html',
   './tp.html',
   './pages/exam.html',
