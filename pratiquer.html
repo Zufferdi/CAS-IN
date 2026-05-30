@@ -156,22 +156,19 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 /* ═══ Logique du tableau de bord Pratiquer ═══ */
 document.addEventListener('DOMContentLoaded', function () {
 
-  function getTpSolved() {
+  function getTpSolvedCategories() {
+    // tp_solved = { categoryKey: count, ... } — compte les catégories touchées
     try {
       const map = JSON.parse(localStorage.getItem('tp_solved') || '{}') || {};
-      return Object.keys(map).filter(k => map[k] && (map[k].solved || map[k].completed)).length;
+      return Object.keys(map).filter(k => parseInt(map[k], 10) > 0).length;
     } catch (e) { return 0; }
   }
 
   function getToolsUsed() {
-    // Approximation : compter les clés "tool_X_used" dans localStorage
+    // tools_used = { toolKey: count, ... } — compte les outils utilisés au moins une fois
     try {
-      let n = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k.startsWith('cas_tool_') || k.startsWith('tool_used_'))) n++;
-      }
-      return n;
+      const map = JSON.parse(localStorage.getItem('tools_used') || '{}') || {};
+      return Object.entries(map).filter(([k, v]) => parseInt(v, 10) > 0).length;
     } catch (e) { return 0; }
   }
 
@@ -179,8 +176,8 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(r => r.json())
     .then(counts => {
       const tpTotal = counts.tp_categories || 43;
-      const toolsTotal = 10; // estimation, à raffiner si tools-data.js fournit le nombre
-      const tpSolved = getTpSolved();
+      const toolsTotal = 12; // TOOL_LABELS dans tools-app.js contient ~12 outils
+      const tpSolved = getTpSolvedCategories();
       const toolsUsed = Math.min(toolsTotal, getToolsUsed());
 
       document.getElementById('prog-tp-r').textContent = tpSolved;
@@ -194,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       renderRecos(tpSolved, tpTotal, toolsUsed, toolsTotal);
     })
-    .catch(() => renderRecos(getTpSolved(), 43, getToolsUsed(), 10));
+    .catch(() => renderRecos(getTpSolvedCategories(), 43, getToolsUsed(), 12));
 
   function renderRecos(tpSolved, tpTotal, toolsUsed, toolsTotal) {
     const recos = [];
