@@ -13,6 +13,147 @@
 <link rel="stylesheet" href="style/cas-in-navbar.css">
 <link rel="stylesheet" href="style/gamification-toasts.css">
 <link rel="stylesheet" href="style/gamification-tiers.css">
+
+<style>
+/* ═══ v131b — Panneau de filtres tutoriels ═══ */
+.tuto-filters {
+  background: var(--surface, #161b22);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .9rem 1.1rem;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+.tuto-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+.tuto-filter-label {
+  font-family: var(--mono);
+  font-size: .76rem;
+  color: var(--muted);
+  letter-spacing: .03em;
+  min-width: 6rem;
+  flex-shrink: 0;
+}
+.tuto-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  flex: 1;
+}
+.tuto-filter-btn {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+  padding: .35rem .7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .15s ease;
+  white-space: nowrap;
+}
+.tuto-filter-btn:hover {
+  border-color: var(--cyan, #00e5cc);
+  color: var(--text);
+  background: rgba(0,229,204,.06);
+}
+.tuto-filter-btn.active {
+  background: var(--cyan, #00e5cc);
+  color: #0d1117;
+  border-color: var(--cyan, #00e5cc);
+  font-weight: 600;
+}
+.tuto-filter-actions {
+  border-top: 1px dashed var(--border);
+  padding-top: .7rem;
+  margin-top: .3rem;
+  justify-content: space-between;
+}
+.tuto-sort-btn {
+  background: rgba(183, 148, 244, .08);
+  border: 1px solid #b794f4;
+  color: #b794f4;
+  font-family: var(--mono);
+  font-size: .76rem;
+  padding: .45rem .9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .15s ease;
+}
+.tuto-sort-btn:hover { background: rgba(183, 148, 244, .15); }
+.tuto-sort-btn[aria-pressed="true"] {
+  background: #b794f4;
+  color: #0d1117;
+  font-weight: 600;
+}
+.tuto-filter-count {
+  font-family: var(--mono);
+  font-size: .76rem;
+  color: var(--dim);
+}
+
+/* ── Badges niveau et phase sur les cartes ── */
+.tuto-card { position: relative; }
+.tuto-card-badges {
+  position: absolute;
+  top: .7rem;
+  right: .7rem;
+  display: flex;
+  gap: .3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 60%;
+}
+.tuto-badge {
+  font-family: var(--mono);
+  font-size: .62rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  background: rgba(255,255,255,.05);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  letter-spacing: .03em;
+}
+.tuto-badge-lvl-debutant   { background: rgba(122,223,192,.12); color: #7adfc0; border-color: #5dcaa5; }
+.tuto-badge-lvl-standard   { background: rgba(0,229,204,.08); color: var(--cyan, #00e5cc); border-color: var(--cyan, #00e5cc); }
+.tuto-badge-lvl-expert     { background: rgba(255,142,142,.10); color: #ff8e8e; border-color: #e24b4a; }
+
+/* ── Cartes masquées par le filtre ── */
+.tuto-card.filtered-out { display: none !important; }
+
+/* ── Indicateur de tri pédagogique actif ── */
+.tuto-index-grid.sort-pedagogical .tuto-card::before {
+  content: attr(data-order);
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  background: #b794f4;
+  color: #0d1117;
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+
+@media (max-width: 720px) {
+  .tuto-filter-label { min-width: 100%; }
+  .tuto-filter-buttons { width: 100%; }
+  .tuto-filter-actions { flex-direction: column; align-items: stretch; gap: .5rem; }
+}
+</style>
 </head>
 <body>
 <div id="cas-navbar" data-page="tutoriels"></div>
@@ -55,11 +196,52 @@
         </div>
       </div>
 
-      <div class="tuto-index-grid">
+      <!-- v131b — Panneau de filtres niveau + phase + parcours suggéré -->
+      <div class="tuto-filters" id="tuto-filters" aria-label="Filtres tutoriels">
+
+        <div class="tuto-filter-row">
+          <span class="tuto-filter-label">🎯 Niveau :</span>
+          <div class="tuto-filter-buttons" role="group" aria-label="Niveau">
+            <button type="button" class="tuto-filter-btn active" data-filter-level="all">Tous</button>
+            <button type="button" class="tuto-filter-btn" data-filter-level="debutant">🌱 Débutant</button>
+            <button type="button" class="tuto-filter-btn" data-filter-level="standard">🔧 Standard</button>
+            <button type="button" class="tuto-filter-btn" data-filter-level="expert">🚀 Expert</button>
+          </div>
+        </div>
+
+        <div class="tuto-filter-row">
+          <span class="tuto-filter-label">🛠 Phase :</span>
+          <div class="tuto-filter-buttons" role="group" aria-label="Phase DFIR">
+            <button type="button" class="tuto-filter-btn active" data-filter-phase="all">Toutes</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="cli">⌨️ CLI</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="acquisition">💾 Acquisition</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="triage">🥋 Triage</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="disque">🔬 Disque</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="memoire">🧠 Mémoire</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="mobile">📱 Mobile</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="reseau">🦈 Réseau</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="endpoint">🦖 Endpoint</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="timeline">⏳ Timeline</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="registry">🗝️ Registry</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="hash">🔓 Hash</button>
+            <button type="button" class="tuto-filter-btn" data-filter-phase="osint">🔍 OSINT</button>
+          </div>
+        </div>
+
+        <div class="tuto-filter-row tuto-filter-actions">
+          <button type="button" class="tuto-sort-btn" id="tuto-sort-toggle" aria-pressed="false" title="Basculer entre ordre par défaut et parcours pédagogique suggéré">
+            📖 Parcours pédagogique
+          </button>
+          <span class="tuto-filter-count" id="tuto-filter-count">28 tutoriels visibles</span>
+        </div>
+
+      </div>
+
+      <div class="tuto-index-grid" id="tuto-index-grid">
 
         <!-- Carte Autopsy -->
         <a class="tuto-card" href="tutoriels/autopsy.html"
-           data-tutoriel-id="autopsy" data-total-sections="17" data-has-quiz="true">
+           data-tutoriel-id="autopsy" data-total-sections="17" data-has-quiz="true" data-level="standard" data-phase="disque">
           <div class="tuto-card-icon">🔬</div>
           <div class="tuto-card-title">Autopsy &amp; Sleuth Kit</div>
           <div class="tuto-card-desc">
@@ -78,7 +260,7 @@
 
         <!-- Carte IPED -->
         <a class="tuto-card" href="tutoriels/iped.html"
-           data-tutoriel-id="iped" data-total-sections="15" data-has-quiz="true">
+           data-tutoriel-id="iped" data-total-sections="15" data-has-quiz="true" data-level="standard" data-phase="disque">
           <div class="tuto-card-icon">⚡</div>
           <div class="tuto-card-title">IPED</div>
           <div class="tuto-card-desc">
@@ -96,7 +278,7 @@
 
         <!-- Carte MVT -->
         <a class="tuto-card" href="tutoriels/mvt.html"
-           data-tutoriel-id="mvt" data-total-sections="16" data-has-quiz="true">
+           data-tutoriel-id="mvt" data-total-sections="16" data-has-quiz="true" data-level="standard" data-phase="mobile">
           <div class="tuto-card-icon">📱</div>
           <div class="tuto-card-title">MVT — Mobile Verification Toolkit</div>
           <div class="tuto-card-desc">
@@ -114,7 +296,7 @@
 
         <!-- Carte Plaso -->
         <a class="tuto-card" href="tutoriels/plaso.html"
-           data-tutoriel-id="plaso" data-total-sections="22" data-has-quiz="true">
+           data-tutoriel-id="plaso" data-total-sections="22" data-has-quiz="true" data-level="standard" data-phase="timeline">
           <div class="tuto-card-icon">⏳</div>
           <div class="tuto-card-title">Plaso / log2timeline</div>
           <div class="tuto-card-desc">
@@ -133,7 +315,7 @@
 
         <!-- Carte Volatility 3 -->
         <a class="tuto-card" href="tutoriels/volatility3.html"
-           data-tutoriel-id="volatility3" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="volatility3" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="memoire">
           <div class="tuto-card-icon">🧠</div>
           <div class="tuto-card-title">Volatility 3</div>
           <div class="tuto-card-desc">
@@ -152,7 +334,7 @@
 
         <!-- Carte Wireshark (v125) -->
         <a class="tuto-card" href="tutoriels/wireshark.html"
-           data-tutoriel-id="wireshark" data-total-sections="18" data-has-quiz="true">
+           data-tutoriel-id="wireshark" data-total-sections="18" data-has-quiz="true" data-level="standard" data-phase="reseau">
           <div class="tuto-card-icon">🦈</div>
           <div class="tuto-card-title">Wireshark</div>
           <div class="tuto-card-desc">
@@ -171,7 +353,7 @@
 
         <!-- Carte KAPE (v125) -->
         <a class="tuto-card" href="tutoriels/kape.html"
-           data-tutoriel-id="kape" data-total-sections="17" data-has-quiz="true">
+           data-tutoriel-id="kape" data-total-sections="17" data-has-quiz="true" data-level="standard" data-phase="triage">
           <div class="tuto-card-icon">🥋</div>
           <div class="tuto-card-title">KAPE — Triage Windows</div>
           <div class="tuto-card-desc">
@@ -189,7 +371,7 @@
 
         <!-- Carte Velociraptor (v125) -->
         <a class="tuto-card" href="tutoriels/velociraptor.html"
-           data-tutoriel-id="velociraptor" data-total-sections="18" data-has-quiz="true">
+           data-tutoriel-id="velociraptor" data-total-sections="18" data-has-quiz="true" data-level="standard" data-phase="endpoint">
           <div class="tuto-card-icon">🦖</div>
           <div class="tuto-card-title">Velociraptor</div>
           <div class="tuto-card-desc">
@@ -207,7 +389,7 @@
 
         <!-- Carte FTK Imager (v126) -->
         <a class="tuto-card" href="tutoriels/ftkimager.html"
-           data-tutoriel-id="ftkimager" data-total-sections="18" data-has-quiz="true">
+           data-tutoriel-id="ftkimager" data-total-sections="18" data-has-quiz="true" data-level="debutant" data-phase="acquisition">
           <div class="tuto-card-icon">💾</div>
           <div class="tuto-card-title">FTK Imager — Acquisition</div>
           <div class="tuto-card-desc">
@@ -225,7 +407,7 @@
 
         <!-- Carte Eric Zimmerman Tools (v126) -->
         <a class="tuto-card" href="tutoriels/eztools.html"
-           data-tutoriel-id="eztools" data-total-sections="19" data-has-quiz="true">
+           data-tutoriel-id="eztools" data-total-sections="19" data-has-quiz="true" data-level="standard" data-phase="registry">
           <div class="tuto-card-icon">🧰</div>
           <div class="tuto-card-title">Eric Zimmerman Tools</div>
           <div class="tuto-card-desc">
@@ -243,7 +425,7 @@
 
         <!-- Carte Cellebrite Reader (v126) -->
         <a class="tuto-card" href="tutoriels/cellebrite_reader.html"
-           data-tutoriel-id="cellebrite_reader" data-total-sections="19" data-has-quiz="true">
+           data-tutoriel-id="cellebrite_reader" data-total-sections="19" data-has-quiz="true" data-level="standard" data-phase="mobile">
           <div class="tuto-card-icon">📲</div>
           <div class="tuto-card-title">Cellebrite Reader — UFDR</div>
           <div class="tuto-card-desc">
@@ -261,7 +443,7 @@
 
         <!-- Carte Hashcat (v127) -->
         <a class="tuto-card" href="tutoriels/hashcat.html"
-           data-tutoriel-id="hashcat" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="hashcat" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="hash">
           <div class="tuto-card-icon">🔓</div>
           <div class="tuto-card-title">Hashcat — Cassage de hash</div>
           <div class="tuto-card-desc">
@@ -280,7 +462,7 @@
 
         <!-- Carte Bases CLI (v127) -->
         <a class="tuto-card" href="tutoriels/bases_cli.html"
-           data-tutoriel-id="bases_cli" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="bases_cli" data-total-sections="21" data-has-quiz="true" data-level="debutant" data-phase="cli">
           <div class="tuto-card-icon">⌨️</div>
           <div class="tuto-card-title">Bases CLI — Terminal Windows & Linux</div>
           <div class="tuto-card-desc">
@@ -298,7 +480,7 @@
 
         <!-- Carte CLI intermédiaire (v128) -->
         <a class="tuto-card" href="tutoriels/cli_intermediaire.html"
-           data-tutoriel-id="cli_intermediaire" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="cli_intermediaire" data-total-sections="21" data-has-quiz="true" data-level="standard" data-phase="cli">
           <div class="tuto-card-icon">🔧</div>
           <div class="tuto-card-title">CLI intermédiaire — Pipelines & scripts</div>
           <div class="tuto-card-desc">
@@ -316,7 +498,7 @@
 
         <!-- Carte CLI expert (v128) -->
         <a class="tuto-card" href="tutoriels/cli_expert.html"
-           data-tutoriel-id="cli_expert" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="cli_expert" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="cli">
           <div class="tuto-card-icon">🚀</div>
           <div class="tuto-card-title">CLI expert — Automation & orchestration</div>
           <div class="tuto-card-desc">
@@ -334,7 +516,7 @@
 
         <!-- Carte Sherlock (v128) -->
         <a class="tuto-card" href="tutoriels/sherlock.html"
-           data-tutoriel-id="sherlock" data-total-sections="20" data-has-quiz="true">
+           data-tutoriel-id="sherlock" data-total-sections="20" data-has-quiz="true" data-level="standard" data-phase="osint">
           <div class="tuto-card-icon">🔍</div>
           <div class="tuto-card-title">Sherlock — OSINT pseudonymes</div>
           <div class="tuto-card-desc">
@@ -352,7 +534,7 @@
 
         <!-- Carte Maigret (v128) -->
         <a class="tuto-card" href="tutoriels/maigret.html"
-           data-tutoriel-id="maigret" data-total-sections="26" data-has-quiz="true">
+           data-tutoriel-id="maigret" data-total-sections="26" data-has-quiz="true" data-level="expert" data-phase="osint">
           <div class="tuto-card-icon">🕵️</div>
           <div class="tuto-card-title">Maigret — OSINT approfondi (3000+ sites)</div>
           <div class="tuto-card-desc">
@@ -370,7 +552,7 @@
 
         <!-- Carte John the Ripper (v129) -->
         <a class="tuto-card" href="tutoriels/john_ripper.html"
-           data-tutoriel-id="john_ripper" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="john_ripper" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="hash">
           <div class="tuto-card-icon">🔑</div>
           <div class="tuto-card-title">John the Ripper — Cassage multi-format</div>
           <div class="tuto-card-desc">
@@ -388,7 +570,7 @@
 
         <!-- Carte Autopsy débutant (v129) -->
         <a class="tuto-card" href="tutoriels/autopsy_debutant.html"
-           data-tutoriel-id="autopsy_debutant" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="autopsy_debutant" data-total-sections="21" data-has-quiz="true" data-level="debutant" data-phase="disque">
           <div class="tuto-card-icon">🌱</div>
           <div class="tuto-card-title">Autopsy débutant — Première prise en main</div>
           <div class="tuto-card-desc">
@@ -406,7 +588,7 @@
 
         <!-- Carte Autopsy avancé (v129) -->
         <a class="tuto-card" href="tutoriels/autopsy_avance.html"
-           data-tutoriel-id="autopsy_avance" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="autopsy_avance" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="disque">
           <div class="tuto-card-icon">🧪</div>
           <div class="tuto-card-title">Autopsy avancé — Plugins, scripting, super-timeline</div>
           <div class="tuto-card-desc">
@@ -424,7 +606,7 @@
 
         <!-- Carte Holehe (v129) -->
         <a class="tuto-card" href="tutoriels/holehe.html"
-           data-tutoriel-id="holehe" data-total-sections="25" data-has-quiz="true">
+           data-tutoriel-id="holehe" data-total-sections="25" data-has-quiz="true" data-level="standard" data-phase="osint">
           <div class="tuto-card-icon">✉️</div>
           <div class="tuto-card-title">Holehe — OSINT email (services associés)</div>
           <div class="tuto-card-desc">
@@ -442,7 +624,7 @@
 
         <!-- Carte IPED débutant (v130) -->
         <a class="tuto-card" href="tutoriels/iped_debutant.html"
-           data-tutoriel-id="iped_debutant" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="iped_debutant" data-total-sections="21" data-has-quiz="true" data-level="debutant" data-phase="disque">
           <div class="tuto-card-icon">🌿</div>
           <div class="tuto-card-title">IPED débutant — Première prise en main</div>
           <div class="tuto-card-desc">
@@ -460,7 +642,7 @@
 
         <!-- Carte IPED avancé (v130) -->
         <a class="tuto-card" href="tutoriels/iped_avance.html"
-           data-tutoriel-id="iped_avance" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="iped_avance" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="disque">
           <div class="tuto-card-icon">⚗️</div>
           <div class="tuto-card-title">IPED avancé — Profils custom, tasks Java</div>
           <div class="tuto-card-desc">
@@ -478,7 +660,7 @@
 
         <!-- Carte X-Ways débutant (v130) -->
         <a class="tuto-card" href="tutoriels/xways_debutant.html"
-           data-tutoriel-id="xways_debutant" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="xways_debutant" data-total-sections="21" data-has-quiz="true" data-level="debutant" data-phase="disque">
           <div class="tuto-card-icon">🛡️</div>
           <div class="tuto-card-title">X-Ways débutant — Référence DFIR commerciale</div>
           <div class="tuto-card-desc">
@@ -496,7 +678,7 @@
 
         <!-- Carte GHunt débutant (v130) -->
         <a class="tuto-card" href="tutoriels/ghunt_debutant.html"
-           data-tutoriel-id="ghunt_debutant" data-total-sections="25" data-has-quiz="true">
+           data-tutoriel-id="ghunt_debutant" data-total-sections="25" data-has-quiz="true" data-level="standard" data-phase="osint">
           <div class="tuto-card-icon">🪪</div>
           <div class="tuto-card-title">GHunt débutant — OSINT Google Account</div>
           <div class="tuto-card-desc">
@@ -514,7 +696,7 @@
 
         <!-- Carte GHunt moyen (v130) -->
         <a class="tuto-card" href="tutoriels/ghunt_moyen.html"
-           data-tutoriel-id="ghunt_moyen" data-total-sections="24" data-has-quiz="true">
+           data-tutoriel-id="ghunt_moyen" data-total-sections="24" data-has-quiz="true" data-level="expert" data-phase="osint">
           <div class="tuto-card-icon">🔭</div>
           <div class="tuto-card-title">GHunt moyen — Phone OSINT, Drive, scripting</div>
           <div class="tuto-card-desc">
@@ -532,7 +714,7 @@
 
         <!-- Carte RegRipper (v130) -->
         <a class="tuto-card" href="tutoriels/regripper.html"
-           data-tutoriel-id="regripper" data-total-sections="21" data-has-quiz="true">
+           data-tutoriel-id="regripper" data-total-sections="21" data-has-quiz="true" data-level="expert" data-phase="registry">
           <div class="tuto-card-icon">🗝️</div>
           <div class="tuto-card-title">RegRipper — Analyse Registry Windows</div>
           <div class="tuto-card-desc">
@@ -550,7 +732,7 @@
 
         <!-- Carte PhoneInfoga (v130) -->
         <a class="tuto-card" href="tutoriels/phoneinfoga.html"
-           data-tutoriel-id="phoneinfoga" data-total-sections="25" data-has-quiz="true">
+           data-tutoriel-id="phoneinfoga" data-total-sections="25" data-has-quiz="true" data-level="standard" data-phase="osint">
           <div class="tuto-card-icon">📞</div>
           <div class="tuto-card-title">PhoneInfoga — OSINT téléphone</div>
           <div class="tuto-card-desc">
@@ -583,5 +765,168 @@
 
 <script src="js/core/cas-in-navbar.js" defer></script>
 <script src="js/pages/tutoriels-app.js" defer></script>
+
+<script>
+/* ═══ v131b — Filtres niveau/phase + tri pédagogique des tutoriels ═══ */
+(function () {
+  'use strict';
+
+  // Ordre pédagogique recommandé (parcours d'apprentissage CAS-IN)
+  const PEDAGOGICAL_ORDER = [
+    'bases_cli',          // 1. Socle CLI
+    'cli_intermediaire',  // 2. CLI intermédiaire
+    'ftkimager',          // 3. Acquisition (premier outil pratique)
+    'autopsy_debutant',   // 4. Premier outil disque accessible
+    'iped_debutant',      // 5. Alternative disque
+    'kape',               // 6. Triage Windows
+    'eztools',            // 7. Profondeur Windows
+    'autopsy',            // 8. Autopsy niveau standard
+    'iped',               // 9. IPED niveau standard
+    'sherlock',           // 10. Première marche OSINT
+    'holehe',             // 11. OSINT email
+    'ghunt_debutant',     // 12. OSINT Google
+    'mvt',                // 13. Mobile spyware
+    'cellebrite_reader',  // 14. Mobile commercial
+    'plaso',              // 15. Timeline forensique
+    'wireshark',          // 16. Réseau
+    'velociraptor',       // 17. Endpoint distant
+    'xways_debutant',     // 18. Outil commercial disque
+    'regripper',          // 19. Registry Windows expert
+    'volatility3',        // 20. Mémoire RAM
+    'cli_expert',         // 21. CLI expert
+    'hashcat',            // 22. Cassage de hash GPU
+    'john_ripper',        // 23. Cassage de hash CPU
+    'maigret',            // 24. OSINT username avancé
+    'ghunt_moyen',        // 25. OSINT Google expert
+    'phoneinfoga',        // 26. OSINT téléphone
+    'autopsy_avance',     // 27. Autopsy expert (point d'orgue)
+    'iped_avance',        // 28. IPED expert
+  ];
+
+  const LEVEL_LABELS = {
+    debutant: '🌱 Débutant',
+    standard: '🔧 Standard',
+    expert:   '🚀 Expert'
+  };
+
+  let activeLevel = 'all';
+  let activePhase = 'all';
+  let sortPedagogical = false;
+
+  // ── Injecte les badges niveau sur chaque carte ──
+  function injectBadges() {
+    document.querySelectorAll('.tuto-card[data-level]').forEach(function (card) {
+      // Éviter doublons si fonction appelée 2 fois
+      if (card.querySelector('.tuto-card-badges')) return;
+
+      const lvl = card.getAttribute('data-level');
+      const badges = document.createElement('div');
+      badges.className = 'tuto-card-badges';
+      badges.innerHTML = '<span class="tuto-badge tuto-badge-lvl-' + lvl + '">' + (LEVEL_LABELS[lvl] || lvl) + '</span>';
+      card.appendChild(badges);
+    });
+  }
+
+  // ── Filtrage des cartes ──
+  function applyFilters() {
+    const cards = document.querySelectorAll('.tuto-card[data-tutoriel-id]');
+    let visible = 0;
+    cards.forEach(function (card) {
+      const lvl = card.getAttribute('data-level');
+      const phase = card.getAttribute('data-phase');
+      const matchLvl = (activeLevel === 'all' || lvl === activeLevel);
+      const matchPhase = (activePhase === 'all' || phase === activePhase);
+      if (matchLvl && matchPhase) {
+        card.classList.remove('filtered-out');
+        visible++;
+      } else {
+        card.classList.add('filtered-out');
+      }
+    });
+    const count = document.getElementById('tuto-filter-count');
+    if (count) {
+      count.textContent = visible + ' tutoriel' + (visible > 1 ? 's' : '') + ' visible' + (visible > 1 ? 's' : '');
+    }
+  }
+
+  // ── Tri pédagogique ──
+  function applySort() {
+    const grid = document.getElementById('tuto-index-grid');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.tuto-card[data-tutoriel-id]'));
+
+    if (sortPedagogical) {
+      // Trier selon PEDAGOGICAL_ORDER
+      cards.sort(function (a, b) {
+        const idA = a.getAttribute('data-tutoriel-id');
+        const idB = b.getAttribute('data-tutoriel-id');
+        const orderA = PEDAGOGICAL_ORDER.indexOf(idA);
+        const orderB = PEDAGOGICAL_ORDER.indexOf(idB);
+        return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+      });
+      // Réinjecte dans le DOM dans le bon ordre + numérote
+      cards.forEach(function (card, i) {
+        card.setAttribute('data-order', i + 1);
+        grid.appendChild(card);
+      });
+      grid.classList.add('sort-pedagogical');
+    } else {
+      // Réordonner selon l'ordre alphabétique des IDs (ordre par défaut du HTML)
+      // En réalité on rétablit l'ordre DOM initial — on a stocké l'ordre d'origine
+      cards.sort(function (a, b) {
+        return (parseInt(a.dataset.originalOrder) || 0) - (parseInt(b.dataset.originalOrder) || 0);
+      });
+      cards.forEach(function (card) {
+        card.removeAttribute('data-order');
+        grid.appendChild(card);
+      });
+      grid.classList.remove('sort-pedagogical');
+    }
+  }
+
+  // ── Init ──
+  document.addEventListener('DOMContentLoaded', function () {
+    // Sauvegarde l'ordre DOM initial pour restauration
+    document.querySelectorAll('.tuto-card[data-tutoriel-id]').forEach(function (card, i) {
+      card.dataset.originalOrder = i;
+    });
+
+    injectBadges();
+    applyFilters();
+
+    // Boutons niveau
+    document.querySelectorAll('[data-filter-level]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('[data-filter-level]').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        activeLevel = btn.getAttribute('data-filter-level');
+        applyFilters();
+      });
+    });
+
+    // Boutons phase
+    document.querySelectorAll('[data-filter-phase]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('[data-filter-phase]').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        activePhase = btn.getAttribute('data-filter-phase');
+        applyFilters();
+      });
+    });
+
+    // Bouton tri pédagogique
+    const sortBtn = document.getElementById('tuto-sort-toggle');
+    if (sortBtn) {
+      sortBtn.addEventListener('click', function () {
+        sortPedagogical = !sortPedagogical;
+        sortBtn.setAttribute('aria-pressed', sortPedagogical ? 'true' : 'false');
+        sortBtn.textContent = sortPedagogical ? '↺ Ordre par défaut' : '📖 Parcours pédagogique';
+        applySort();
+      });
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
