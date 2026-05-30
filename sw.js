@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v133';
+const CACHE_VERSION = 'cas-in-v134';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1753,6 +1753,11 @@ const STATIC_ASSETS = [
   './data/npcs.json',
   './data/npc-arcs.json',
   './og-image.svg',
+  // v132e — og-images dédiées par hub (Open Graph + Twitter Card)
+  './og-image-apprendre.svg',
+  './og-image-tutoriels.svg',
+  './og-image-scene.svg',
+  './og-image-quiz.svg',
   './favicon.ico',
   './icon-192.png',
   './icon-512.png',
