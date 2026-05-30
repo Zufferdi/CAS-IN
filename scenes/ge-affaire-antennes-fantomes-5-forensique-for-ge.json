@@ -1,0 +1,174 @@
+{
+  "id": "ge-affaire-antennes-fantomes-5-forensique-for-ge",
+  "title": "Acte 5 — La forensique au FOR-GE : 6 téléphones, 4 modems, 2 laptops LUKS",
+  "icon": "🔬",
+  "difficulty": "expert",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "Imagerie complète propre. SDR analysé, srsRAN config extraite, payload SMS templates trouvés. Modems 4G : 47'000 SMS envoyés en 11 jours. Laptop 1 déchiffré (faiblesse mot de passe). Preuves matérielles solides.",
+    "degraded": "Imagerie OK mais laptops résistants (LUKS fort). Modems et SDR analysés. Preuves matérielles suffisantes mais sans les fichiers du chef.",
+    "failure": "Erreurs de chaîne de garde, laptops illisibles, équipement RF endommagé en transport. Dossier matériel affaibli, contestation défense imminente."
+  },
+  "tags": ["sms-blaster", "imsi-catcher", "phishing", "smishing", "rf", "fausse-cellule", "geneve", "ge", "saga-antennes-fantomes", "expert", "acte-5", "forensique", "for-ge", "luks", "srsran", "sdr", "modems-4g"],
+  "legalRefs": [
+    "Art. 246 CPP (perquisition de documents et enregistrements)",
+    "Art. 145 CPP (droit à la contre-expertise)",
+    "Art. 184 CPP (rapport d'expertise)",
+    "Art. 263 CPP (séquestre)"
+  ],
+  "intro": "Mercredi matin, 08h00. Laboratoire FOR-GE. Le <strong>commandant Mathieu Reverchon</strong> a passé la nuit à organiser la réception : 6 téléphones Android, 4 modems 4G Huawei E3372, 2 laptops Lenovo ThinkPad (chiffrement LUKS Linux probable), 1 SDR Ettus USRP B210, 3 disques externes USB, 1 batterie 100Ah, 1 routeur GL-iNet.<br><br>Sur le tableau blanc : l'ordre de priorité d'analyse à fixer avant 09h00. Reverchon : <strong>« Procureur, on a 11 éléments. On peut en faire 3 par jour maximum si on veut respecter la chaîne de garde rigoureuse — hash MD5+SHA-256 cumulés, témoin du labo + un témoin externe (avocat de la défense ou OFCOM), PV de chaque opération. Le tout doit tenir devant Maître Jacottet qui ne nous fera AUCUN cadeau. Par quoi on commence ? »</strong>",
+  "alertLevel": "🔬 FOR-GE · 11 éléments · 3/jour max · MD5+SHA256+PV · TLP:AMBER",
+  "objectives": [
+    {"icon": "🔒", "text": "Préserver la chaîne de garde sur les 11 éléments"},
+    {"icon": "📱", "text": "Extraire les preuves d'utilisation (modems 4G, SDR)"},
+    {"icon": "🔐", "text": "Tenter le déchiffrement des laptops LUKS"}
+  ],
+  "steps": [
+    {
+      "phase": "🎯 08h30 — Définir l'ordre de priorité",
+      "situation": "11 éléments. Reverchon propose : (A) modems 4G d'abord (logs SMS envoyés — preuve directe), (B) SDR en parallèle (config srsRAN, payload templates), (C) téléphones Android à suivre (communications opérationnelles), (D) laptops LUKS en dernier (risque d'échec).",
+      "law": "<strong>Art. 184 CPP</strong> (rapport d'expertise) · <strong>Art. 197 CPP</strong> (proportionnalité)",
+      "question": "<strong>Quelle priorité valides-tu ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Modems 4G + SDR en parallèle</strong> (jour 1) — preuve technique de l'infraction radio + smishing. (2) <strong>Téléphones Android perso</strong> (jour 2) — communications opérationnelles. (3) <strong>Disques externes</strong> (jour 3) — données stockées. (4) <strong>Laptops LUKS</strong> en parallèle, équipe dédiée — tentatives multiples, déchiffrement aboutit ou non.",
+          "ok": true,
+          "pts": 23,
+          "fb": "✅ <strong>Priorisation rationnelle.</strong> Les modems 4G donnent rapidement (1-2h) la preuve matérielle d'envoi des SMS — c'est le poumon du dossier. Le SDR en parallèle donne l'infraction radio. Les laptops LUKS sont mis en parallèle (équipe dédiée, ne bloque pas la chaîne).",
+          "legal": "Pratique FOR-GE · Doctrine forensique DFIR.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Laptops d'abord, en priorité absolue : c'est là que sera l'identité du chef, les comptes, les listes de victimes.",
+          "ok": false,
+          "pts": 7,
+          "fb": "⚠️ <strong>Pari risqué.</strong> Les LUKS modernes (PBKDF2 + Argon2) résistent au bruteforce sauf mot de passe trivial. Y consacrer la priorité absolue = bloquer les autres analyses 1-2 semaines avec résultat incertain. Pendant ce temps, le TMC doit voir des preuves matérielles dans 7 jours.",
+          "legal": "Art. 220 CPP (continuité de la détention).",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Téléphones personnels en priorité — ils donneront les conversations entre les 3 prévenus.",
+          "ok": false,
+          "pts": 9,
+          "fb": "⚠️ <strong>Bonne approche mais pas optimale.</strong> Les opérateurs de smishing utilisent Signal/Telegram (auto-destruction). Tu obtiendras des métadonnées mais souvent pas le contenu. Les modems 4G donnent la preuve matérielle directe.",
+          "legal": "Pratique FOR-GE 2024.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📱 Jour 1 — Analyse des 4 modems 4G",
+      "situation": "Reverchon revient à 17h : <strong>les 4 modems sont des prépayés Lebara et Lyca</strong>, achetés en cash dans 4 kiosques Pâquis/Cornavin sur 6 mois. Les SIM ont chacune envoyé entre <strong>9'000 et 14'200 SMS sortants</strong> en 11 jours (cumul ~47'000 SMS). Logs opérateurs confirment : tous SMS de format identique, content varie selon \"campagne\" (PostFinance/UBS/CFF/Sunrise). Coût téléphonique : ~2'800 CHF en SMS premium. Source de fonds inconnue (cash).",
+      "law": "<strong>Art. 273 CPP</strong> (données chez opérateurs) · <strong>Art. 246 CPP</strong>",
+      "question": "<strong>Que demandes-tu en parallèle aux opérateurs ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Réquisition art. 273 CPP</strong> à Lebara CH et Lyca CH : historique complet des 4 SIM. (2) <strong>Identification des destinataires</strong> (sample 1000) — corrélation avec les 89+ plaintes. (3) <strong>Demande aux kiosques</strong> : caméras des achats (conservées 30-90 jours). (4) <strong>OFCOM en parallèle</strong> : trace radio des modems en backhaul du SMS Blaster.",
+          "ok": true,
+          "pts": 23,
+          "fb": "✅ <strong>Triangulation parfaite.</strong> 4 axes complémentaires : opérateur (preuve documentaire), destinataires (corrélation plaintes), caméras kiosques (identification physique des acheteurs), OFCOM (orchestration modems↔SDR). Avec ces 4 axes, l'argumentation à l'audience est imparable.",
+          "legal": "Art. 273/246 CPP · Pratique cross-check.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Tu demandes uniquement la liste des destinataires (sample 1000), le reste viendra plus tard.",
+          "ok": false,
+          "pts": 9,
+          "fb": "⚠️ <strong>Approche minimaliste.</strong> Sans caméras kiosques (écrasées en 30-90 jours), tu perds l'identification physique. Retarder = perdre des preuves volatiles.",
+          "legal": "Art. 246 CPP (urgence saisie caméras).",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Tu cherches d'abord à identifier le chef via les fonds avant de demander quoi que ce soit aux opérateurs.",
+          "ok": false,
+          "pts": 5,
+          "fb": "⚠️ <strong>Mauvaise séquence.</strong> Le suivi cash est extrêmement long et n'aboutit souvent pas. Pendant ce temps, les preuves chez opérateurs s'effacent. Inverse : preuves opérateurs maintenant, cash en parallèle long terme.",
+          "legal": "Priorisation temporelle.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📡 Jour 2 — Le SDR et la config srsRAN",
+      "situation": "Le SDR Ettus B210 analysé par OFCOM (Schmid). Configuration : <strong>srsRAN 23.10 modifié</strong>, simulation eNodeB LTE, MCC=228 MNC=01 (Swisscom imitation). <strong>Templates de SMS</strong> dans `/opt/smsblast/templates.json` (cleartext) : 4 templates (PostFinance, UBS, CFF, Sunrise) avec liens phishing. <strong>Logs srsenb.log</strong> : 11 jours d'historique, timestamps précis, comptage 1200-3000 phones par session de 15 min. Le SDR est un \"smoking gun\".",
+      "law": "<strong>Art. 22 LTC</strong> · <strong>Art. 246 CPP</strong>",
+      "question": "<strong>Comment exploites-tu ces preuves ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Rapport OFCOM</strong> art. 184 CPP avec preuve de l'imitation Swisscom (MCC/MNC frauduleux). (2) <strong>Corrélation</strong> timestamps srsenb.log avec les 89+ plaintes. (3) <strong>Imagerie disque SDR</strong> avec hash + témoin OFCOM + témoin avocat défense (pour anticiper art. 145 CPP). (4) <strong>Saisie firmware Ettus</strong> pour analyse différée.",
+          "ok": true,
+          "pts": 24,
+          "fb": "✅ <strong>Exploitation forensique de référence.</strong> Le rapport OFCOM art. 184 transforme la preuve technique en preuve juridiquement admissible. La corrélation timestamps établit le lien direct. La présence d'un témoin avocat défense est une mesure préventive inattaquable.",
+          "legal": "Art. 184/145 CPP · Pratique OFCOM/FOR-GE 2024.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Tu utilises les preuves directement sans rapport OFCOM formel : la défense ne contestera pas des faits techniques aussi évidents.",
+          "ok": false,
+          "pts": 7,
+          "fb": "⚠️ <strong>Sous-estimation de la défense.</strong> Maître Jacottet est un spécialiste de l'art. 141 CPP — il contestera SYSTÉMATIQUEMENT les preuves techniques sans rapport d'expertise formel art. 184 CPP.",
+          "legal": "Art. 184 CPP (nécessité du rapport).",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Tu n'invites pas l'avocat de la défense à l'imagerie : procès-verbal interne + témoin labo suffisent.",
+          "ok": false,
+          "pts": 10,
+          "fb": "⚠️ <strong>Choix défendable mais qui crée un angle d'attaque.</strong> Sans présence défense, Jacottet plaidera : \"nous n'avons pas pu vérifier que l'imagerie a été faite correctement, contre-expertise art. 145 CPP\". Mieux : invitation formelle, présence facultative.",
+          "legal": "Art. 145/184 CPP · Pratique préventive.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔐 Jour 3-4 — Les laptops LUKS",
+      "situation": "Les 2 laptops Lenovo ThinkPad sont chiffrés LUKS 2 + LVM. Après 36h : <strong>laptop 1 (Suisse, mainteneur)</strong> a un mot de passe modéré (12 caractères alphanumériques), bruteforce GPU cluster a abouti après 28h — déchiffré ! Contenu : configs srsRAN détaillées, scripts d'automatisation SMS, <strong>comptabilité Excel</strong> avec montants en EUR vers comptes IBAN bulgares, <strong>contacts WhatsApp Business</strong> avec un \"M.D.\" qui pourrait être le chef à Sofia. <strong>Laptop 2 (Bulgare, chef présumé)</strong> : passphrase 32+ caractères, Argon2id, résistant. Bruteforce vain.",
+      "law": "<strong>Art. 263/246 CPP</strong> · pas de backdoor légale en CH",
+      "question": "<strong>Que fais-tu du laptop 2 résistant ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Acceptation de l'échec</strong> sur le déchiffrement du laptop 2 : pas de \"backdoor\" légale en Suisse. (2) <strong>Mise sous scellés</strong> pour conservation longue durée. (3) <strong>Exploitation maximale du laptop 1</strong> : reconstruction du réseau via WhatsApp + IBAN bulgares (acte 6). (4) <strong>Pression psychologique sur le Bulgare</strong> : interrogatoire avec démontage du laptop 1.",
+          "ok": true,
+          "pts": 22,
+          "fb": "✅ <strong>Pragmatisme procédural.</strong> Pas de backdoor légale en Suisse (contrairement à UK ou Australie). L'acceptation de l'échec sur le laptop 2 est juridiquement saine. Le laptop 1 compense largement : comptabilité EUR + WhatsApp + IBAN bulgares = matériel pour l'acte 6.",
+          "legal": "Pas d'art. coercition crypto en CH · Art. 158/213 CPP.",
+          "critical": false,
+          "next": null
+        },
+        {
+          "text": "Tu ordonnes au prévenu Bulgare de fournir la passphrase sous peine de prolongation de détention provisoire : c'est dans son intérêt de collaborer.",
+          "ok": false,
+          "pts": 4,
+          "fb": "❌ <strong>Faute procédurale grave.</strong> Le droit au silence (art. 113 CPP) inclut le droit de ne pas se mettre en cause par la fourniture de moyens d'accès aux preuves. Conditionner la détention à la passphrase = atteinte au droit au silence. La défense saisira le TMC : libération + inexploitabilité + plainte disciplinaire.",
+          "legal": "Art. 113 CPP · ATF 138 IV 47.",
+          "critical": true,
+          "next": null
+        },
+        {
+          "text": "Tu confies le laptop 2 à fedpol pour analyse cryptanalytique avancée — délais 6-12 mois.",
+          "ok": false,
+          "pts": 12,
+          "fb": "⚠️ <strong>Décision défendable mais à valeur limitée.</strong> Sur LUKS Argon2id avec passphrase > 24 char, même fedpol/NCSC n'aboutiront pas en moins de plusieurs années. Décision sans coût mais sans bénéfice attendu.",
+          "legal": "Pratique fedpol/NCSC cryptanalyse.",
+          "critical": false,
+          "next": null
+        }
+      ]
+    }
+  ],
+  "debrief": "<p><strong>La chaîne de garde forensique = la colonne vertébrale du dossier.</strong> 11 éléments à analyser, chaque opération nécessitant : hash MD5+SHA-256, témoin labo + témoin externe, procès-verbal détaillé. C'est lourd mais c'est ce qui rend les preuves inattaquables. La pratique FOR-GE 2024 a été professionnalisée après plusieurs cassations sur des dossiers fragiles.</p><p><strong>Le SDR Ettus B210 : pourquoi c'est un \"smoking gun\".</strong> Le B210 est un SDR à 1400 CHF, parfaitement légal à l'achat. Couplé avec srsRAN (open-source), il devient un émetteur LTE complet. Les configurations qu'il contient (MCC/MNC frauduleux, templates SMS, logs d'émission) sont des preuves directes. Pas de \"on l'a acheté par curiosité\" qui tienne devant un srsenb.log avec 47'000 SMS envoyés en 11 jours.</p><p><strong>LUKS : la limite des forensiques en Suisse.</strong> Pas de loi suisse n'oblige un prévenu à fournir sa passphrase (contrairement au RIPA UK section 49). Le droit au silence prime. Le succès sur le laptop 1 tient à une faiblesse opérationnelle du prévenu — pas une faiblesse de LUKS. Le laptop 2 reste fermé, et c'est juridiquement acceptable.</p><p><strong>Ce qui se passe ensuite.</strong> Acte 6 : avec les IBAN bulgares + contacts WhatsApp du laptop 1, l'enquête remonte vers Sofia et la Moldavie.</p>",
+  "npcs": ["procureur_mp_ge_cybercrime", "forensicien_for_ge", "ofcom_spectrum_lead_be", "inspectrice_brigade_financiere_ge"],
+  "regionDetail": {"code": "GE", "flag": "🇨🇭", "name": "Canton de Genève"},
+  "region": "GE",
+  "realCase": false,
+  "role": "dfir"
+}
