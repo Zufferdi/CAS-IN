@@ -4,6 +4,77 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.0-jolification] — 2026-05-30
+
+🎨 **Vague de jolification : refonte UX + réorganisation + performance + sécurité.** Cette section consolide la cascade de 13 deltas (v131a → v132l) déployés ensemble. CACHE_VERSION final : `cas-in-v141`.
+
+### Ajouté
+
+- **4 hubs thématiques symétriques** (`apprendre.html`, `pratiquer.html`, `enqueter.html`, `tester.html`) — chacun avec en-tête, jauges de progression dynamiques, grille de cartes et recommandations adaptatives au profil utilisateur. Les 4 pilules de l'accueil pointent désormais vers ces hubs (et non plus directement vers tp/scene/quiz).
+- **Tutoriels.html : filtres niveau/phase + parcours pédagogique numéroté** 1-28 pour les 28 tutoriels d'outils DFIR.
+- **Page 404 custom + sitemap.xml** (178 URLs auto-générée) + robots.txt + script `scripts/generate_sitemap.py`. Jekyll `_config.yml` exclut docs/scripts/tests/ du build prod.
+- **Trophée toolkit cumulatif** (🥉 5, 🥈 15, 🏆 28) — bronze/argent jamais reverrouillés. Total achievements : 314 → 316.
+- **Partage social trophées** via Web Share API (mobile) + fallback clipboard (desktop). Bouton ↗ discret sur chaque trophée débloqué dans pages/profile + pages/succes. URL ancrée vers le trophée spécifique.
+- **og-images dédiées par hub** (4 nouveaux SVG : apprendre / tutoriels / scene / quiz) + Twitter Cards complétées + canonical URLs. **Bonus** : tutoriels.html n'avait aucune balise OG/Twitter avant — bloc complet ajouté.
+- **Lazy loading questions par thème** : `data/questions.json` (4.2 MB) découpée en 8 chunks (`data/questions/quiz-*.json`) + `data/questions-index.json` (méta-data). Chargement parallèle via HTTP/2 dans quiz-app / exam-app / cas-in-search. **Économie : 4.2 MB au boot PWA.**
+- **Index de recherche minimaliste** (`data/questions-search.json`, 425 KB) qui remplace le chargement de 4.2 MB pour la search globale. cas-in-search a une stratégie de chargement à 3 niveaux : search-index → chunks → legacy. **Économie : ~3.8 MB par recherche initiale.**
+- **Module a11y déployé sur les hubs** : `cas-in-a11y.js` ajouté à apprendre / pratiquer / enqueter / tester / 404 / offline. Skip-link + landmark `<main>` + API `CASa11y.announce()`.
+- **Content-Security-Policy** sur **183 pages** via meta tag. Default-src 'self', restrictions sur scripts/styles/fonts/images/connects, object-src/base-uri/form-action durcis, frame-ancestors 'none' (anti-clickjacking).
+- **Helper `CasInUtils.dataUrl(rel)`** pour résoudre les paths data/ depuis n'importe quelle page (racine ou sous-dossier).
+
+### Modifié
+
+- **Pilules d'accueil** : les 4 verbes (APPRENDRE / PRATIQUER / ENQUÊTER / SE TESTER) cadrent l'action sous le label. Les pilules pointent vers les hubs symétriques au lieu des apps directes.
+- **Réorganisation racine** 22 → 11 fichiers HTML. 16 pages déplacées dans `pages/` : profile, collections, sagas, npcs, exam, scene-exam, case-studies, case-study-detail, glossary, mastery, parcours, succes, tools, carriere, dictionnaire. Tous les ~74 liens internes mis à jour. `navbar.js` détecte automatiquement la profondeur de la page courante.
+- **Navbar PAGE_TITLES** étendu avec les 4 entrées de hubs.
+
+### Corrigé
+
+- **3 bugs v130** : npc-arcs.js manquant du précache SW (404 silencieux), `cas-in-unlocks.js` retiré du précache (orphelin), `rank-ceremony.js` retiré du précache (orphelin).
+- **9 scripts orphelins** supprimés (achievement-effects, animation-mascot, autocomplete-search, breadcrumb-context, cookie-banner, distinction-evolution, fiche-bookmarks, glossary-popover, swipe-gestures) — non référencés par aucune page ni le SW.
+- **Régression v131c étendue** : 13 scripts JS faisaient `fetch('data/X.json')` en relatif → cassé depuis pages/ (résolu en pages/data/X.json → 404). Helper inline `_dataUrl()` ajouté dans : collections-app, case-studies-app, sagas-app, scene-campaigns, scene-arc-context, profile-affinities, profile-atmospheres, profile-relations, profile-dashboard, completion-watcher, legal-ref-popover, cas-in-npc-data, cas-in-i18n. Conséquences : Profil/Collections/Sagas/PNJ/Études de cas/Glossaire/i18n redeviennent fonctionnels depuis les sous-dossiers.
+- **Régression v131c sur exam-app** : `pages/exam.html` (déplacé en v131c) avait son lazy load questions cassé. Fix dans v132f via le helper `_dataUrl`.
+- **Heuristiques localStorage des hubs** : compteurs corrigés avec les vraies clés du projet : `tp_solved` (catégories), `tools_used` (outils), `scene_results.pct >= 70` (seuil COMPLETION_THRESHOLD officiel), sagas via `campaigns.json` × `scene_results`, `qs` (questions vues, pas `cas_quiz_run_buffer` qui est journalier), `casIn_examHistory` (exam-app, pas `examHist` qui est quiz-exam-mode).
+- **Couleur `--dim` WCAG AA** : `#6e7681` (ratio 4.12 ❌) → `#7d8590` (5.07 ✅) en dark, `#6b7a90` (4.10 ❌) → `#5a6878` (5.35 ✅) en light. Aligné sur la valeur de style.css déjà conforme depuis v2.59. Patch dans fiche_style.css, quiz.css, scene.css.
+- **6 pages sans `<h1>`** : `quiz.html`, `tp.html`, `pages/case-study-detail.html`, `pages/sagas.html`, `pages/succes.html` reçoivent un `<h1>` sr-only (position absolute hors écran) pour respecter WCAG SC 2.4.6.
+- **Bouton hint `💡` de quiz.html** : `aria-label="Utiliser un indice — élimine une mauvaise réponse"` ajouté en complément du `title=`.
+- **Code mort `window.Unlocks`** dans pages/profile.html et pages/carriere.html (corrige régression v131c).
+
+### Supprimé
+
+- **9 scripts orphelins** dans js/* (cf. Corrigé).
+- **Optionnel** : `data/questions.json` legacy (4.2 MB) supprimable via `scripts/cleanup-questions-legacy.sh` après confirmation que les chunks fonctionnent en prod.
+
+### Performance
+
+- Boot PWA : **-4.2 MB** (`questions.json` retirée du précache obligatoire).
+- Search globale : **-3.8 MB** par recherche initiale (index search dédié).
+- 8 chunks de questions chargés en parallèle dans quiz-app / exam-app (HTTP/2 multiplexing — potentiellement plus rapide que le monolithique).
+
+### Sécurité
+
+- **CSP** stricte (default-src 'self') sur 183 pages, anti-clickjacking (frame-ancestors 'none'), anti-base-tag override (base-uri 'self'), anti-form-injection (form-action 'self').
+
+### Accessibilité
+
+- Module `cas-in-a11y.js` désormais sur 14 pages (vs 8 avant) — skip-link partout sur les hubs principaux.
+- Contrastes WCAG AA respectés (couleur `--dim` corrigée dans 3 CSS).
+- `<h1>` sur 100 % des pages (vs 174/180 avant).
+- aria-label sur le bouton hint du quiz.
+
+### Notes techniques
+
+- **Cache SW** bumpé 12 fois pendant la cascade : v130 → v131 → v132 → v133 → v134 → v135 → v136 → v137 → v138 → v139 → v140 → v141.
+- **Heuristiques de hubs** : peuvent encore être affinées pour les sagas (actuellement requiert `narrative` dans campaigns.json et toutes scènes ≥ 70 %) et pour scene-exam (compteur binaire 0/1 faute d'historique cumulé).
+- **Tests** : aucun lien cassé sur les 180 HTML après cascade complète. Tous les JS parsent. Tous les HTML valides.
+
+### Migration
+
+- Côté utilisateur : aucune action requise. Au prochain refresh, le banner SW propose « Recharger », l'app passe à `cas-in-v141`.
+- Côté repo : déploiement par cascade séquentielle de 13 deltas (manifests individuels disponibles dans `docs/deltas/`).
+
+---
+
 ## [2.63] — 2026-05-09
 
 🧹 **Suppression de doublons morts dans `js/pages/` — récupération de deux fixes v2.60 oubliés au passage.**
