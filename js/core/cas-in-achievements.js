@@ -1550,8 +1550,32 @@
       check: () => tutoCompleted('phoneinfoga'),
       progress: () => ({ current: tutoCompleted('phoneinfoga') ? 1 : 0, target: 1 }) },
 
+    { id: 'tuto_toolkit_bronze', emoji: '🥉', name: 'Toolkit DFIR — Initié',
+      desc: 'Valider 5 tutoriels DFIR. Premier palier de maîtrise (jamais reverrouillé, palier acquis à vie).',
+      category: 'Tutoriels DFIR',
+      check: () => {
+        const ids = ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'];
+        return ids.filter(tutoCompleted).length >= 5;
+      },
+      progress: () => {
+        const ids = ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'];
+        return { current: Math.min(5, ids.filter(tutoCompleted).length), target: 5 };
+      } },
+
+    { id: 'tuto_toolkit_argent', emoji: '🥈', name: 'Toolkit DFIR — Compétent',
+      desc: 'Valider 15 tutoriels DFIR. Deuxième palier de maîtrise (jamais reverrouillé, palier acquis à vie).',
+      category: 'Tutoriels DFIR',
+      check: () => {
+        const ids = ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'];
+        return ids.filter(tutoCompleted).length >= 15;
+      },
+      progress: () => {
+        const ids = ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'];
+        return { current: Math.min(15, ids.filter(tutoCompleted).length), target: 15 };
+      } },
+
     { id: 'tuto_toolkit_dfir', emoji: '🏆', name: 'Toolkit DFIR complet',
-      desc: 'Compléter les 28 tutoriels DFIR (cluster complet : forensique disque/mémoire/mobile/réseau, CLI 3 niveaux, cassage de hash, OSINT 5 outils, Registry Windows)',
+      desc: 'Compléter les 28 tutoriels DFIR. Trophée or — peut se reverrouiller à chaque ajout de nouveau tutoriel (les paliers bronze et argent restent acquis).',
       category: 'Tutoriels DFIR',
       check: () => ['autopsy','iped','mvt','plaso','volatility3','wireshark','kape','velociraptor','ftkimager','eztools','cellebrite_reader','hashcat','bases_cli','cli_intermediaire','cli_expert','sherlock','maigret','john_ripper','autopsy_debutant','autopsy_avance','holehe','iped_debutant','iped_avance','xways_debutant','ghunt_debutant','ghunt_moyen','regripper','phoneinfoga'].every(tutoCompleted),
       progress: () => {
