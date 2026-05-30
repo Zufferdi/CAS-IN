@@ -105,6 +105,32 @@ def main():
     index_size = index_path.stat().st_size // 1024
     print(f'[ok] data/questions-index.json : {index_size} KB')
 
+    # ─────────────────────────────────────────────────────────────
+    # v132k — Index de recherche minimaliste pour cas-in-search
+    # ─────────────────────────────────────────────────────────────
+    # Pour la recherche globale, on n'a pas besoin des réponses, des explications,
+    # des options ni des références. Juste assez pour matcher (theme + chapter +
+    # début de la question) et afficher un résultat (title + meta).
+    #
+    # Économie : 4.2 MB → ~410 KB (≈ -90%) sur la requête initiale de search.
+    search_index = []
+    for i, q in enumerate(questions):
+        entry = {
+            'i': i,                                           # idx pour href quiz.html#qN
+            't': q.get('theme', ''),                          # thème (matching + affichage)
+            'c': q.get('chapter', ''),                        # chapitre
+            'q': (q.get('q', '') or '')[:120],                # titre tronqué (≤120 chars)
+            'd': q.get('diff', ''),                           # difficulté
+            'ic': q.get('theme_icon', '💊'),                  # icône thème
+        }
+        search_index.append(entry)
+    # Minifié (separators sans espace) pour économiser ~20% sur la taille
+    search_path = root / 'data' / 'questions-search.json'
+    with open(search_path, 'w', encoding='utf-8') as f:
+        json.dump(search_index, f, ensure_ascii=False, separators=(',', ':'))
+    search_size = search_path.stat().st_size // 1024
+    print(f'[ok] data/questions-search.json : {search_size} KB (search index minimaliste)')
+
     # Recap
     print(f'\n[ok] Découpage terminé : {len(questions)} → {len(by_theme)} chunks')
     print(f'     Taille totale chunks : {sum((out_dir / f"quiz-{m['slug']}.json").stat().st_size for m in themes_meta) // 1024} KB')
