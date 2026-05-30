@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+
+<script>
+/* v2.92 — Applique la préférence manuelle clair/sombre AVANT le rendu CSS
+   pour éviter le flash de thème inverse. Défaut = sombre (data-theme="dark"). */
+(function(){try{var p=localStorage.getItem('cas_theme_pref');
+document.documentElement.setAttribute('data-theme',p==='light'?'light':'dark');}catch(e){
+document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0e1a">
+<title>👥 Trombinoscope — CAS-IN</title>
+<meta name="description" content="Trombinoscope CAS-IN — 332 personnages fictifs (PNJ) pour les scénarios DFIR suisses : procureurs, inspecteurs, experts, victimes. Tous fictifs, contexte juridique réel.">
+<meta property="og:title" content="Personnages · CAS-IN">
+<meta property="og:description" content="332 PNJ fictifs pour les scénarios DFIR suisses — procureurs, inspecteurs, experts, témoins.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CAS-IN · Investigation Numérique">
+<meta property="og:image" content="https://zufferdi.github.io/CAS-IN/og-image.svg">
+<meta property="og:locale" content="fr_CH">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Personnages · CAS-IN">
+<meta name="twitter:description" content="332 PNJ fictifs pour les scénarios DFIR suisses — procureurs, inspecteurs, experts, témoins.">
+<meta name="twitter:image" content="https://zufferdi.github.io/CAS-IN/og-image.svg">
+<link rel="icon" href="../favicon.ico">
+<link rel="manifest" href="../pwa.manifest.json">
+<link rel="stylesheet" href="../style/style.css">
+<link rel="stylesheet" href="../style/scene.css">
+
+<link rel="stylesheet" href="../style/npcs.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="npcs" data-no-identity="1"></div>
+
+<div class="npc-wrap">
+
+  
+
+  <header class="npc-header">
+    <h1>👥 Trombinoscope DFIR</h1>
+    <p>Les 98 personnages que tu peux croiser au fil des enquêtes.</p>
+    <div class="npc-stats">
+      <span id="stat-total">…</span> personnages
+      <span>·</span>
+      <span id="stat-met">…</span> rencontrés
+      <span>·</span>
+      <span id="stat-shown">…</span> affichés
+    </div>
+  </header>
+
+  <div class="npc-toolbar">
+    <input type="search" class="npc-search" id="npc-search"
+           placeholder="🔎 Rechercher (nom, rôle, institution…)"
+           autocomplete="off">
+    <div class="npc-filter-group" id="filter-canton-group">
+      <span class="npc-filter-label">Canton :</span>
+    </div>
+    <div class="npc-filter-group" id="filter-category-group">
+      <span class="npc-filter-label">Catégorie :</span>
+    </div>
+    <div class="npc-filter-group" id="filter-alignment-group">
+      <span class="npc-filter-label">Camp :</span>
+    </div>
+    <div class="npc-filter-group" id="filter-met-group">
+      <span class="npc-filter-label">État :</span>
+    </div>
+    <div class="npc-filter-group" id="filter-skill-group">
+      <span class="npc-filter-label">Compétence :</span>
+    </div>
+  </div>
+
+  <main id="npc-grid" class="npc-grid">
+    <div class="npc-empty">Chargement du trombinoscope…</div>
+  </main>
+
+</div>
+
+<!-- Modal NPC détaillé -->
+<div class="npc-modal-backdrop" id="npc-modal-backdrop">
+  <div class="npc-modal" id="npc-modal" role="dialog" style="position:relative">
+    <button class="npc-modal-close" onclick="closeNpcModal()" aria-label="Fermer">×</button>
+    <div id="npc-modal-content"></div>
+  </div>
+</div>
+
+<!-- Modules requis -->
+<script src="../js/components/quiz-utils.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-npc-state.js" defer></script>
+<script src="../js/components/swiss-flags.js" defer></script>
+<!-- v2.98 — Popover universel pour références juridiques -->
+<script src="../js/components/legal-ref-popover.js" defer></script>
+<link rel="stylesheet" href="../style/legal-ref-popover.css">
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// npcs-page.js — v2.71
+// Trombinoscope filtrable des 98 PNJ + modal détaillée
+// ═══════════════════════════════════════════════════════════════
+
+const FILTERS = {
+  search: '',
+  canton: 'all',
+  category: 'all',
+  alignment: 'all',
+  met: 'all',
+  skill: 'all',
+};
+
+let NPCS = {};
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, ch => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]
+  ));
+}
+
+async function loadNpcs() {
+  try {
+    const r = await fetch('data/npcs.json');
+    if (!r.ok) throw new Error(r.statusText);
+    const data = await r.json();
+    NPCS = data.npcs || {};
+    return NPCS;
+  } catch (e) {
+    document.getElementById('npc-grid').innerHTML =
+      `<div class="npc-empty">⚠️ Impossible de charger data/npcs.json (${escapeHTML(String(e))})</div>`;
+    return null;
+  }
+}
+
+function getCantonFlag(code) {
+  if (window.SwissFlags && typeof window.SwissFlags.get === 'function') {
+    return window.SwissFlags.get(code) || '🏳️';
+  }
+  return code === 'EU' ? '🇪🇺' : code === 'INTL' ? '🌍' : '🇨🇭';
+}
+
+const CATEGORY_ICONS = {
+  police: '👮', justice: '⚖️', admin: '🏛', techie: '💻',
+  civil: '👤', criminel: '🦹', institutionnel: '🏢',
+};
+
+function buildFilters() {
+  // Compter par canton, category, alignment
+  const cantonCount = {};
+  const catCount = {};
+  const alignCount = {};
+  for (const id in NPCS) {
+    const n = NPCS[id];
+    cantonCount[n.canton || '?'] = (cantonCount[n.canton || '?'] || 0) + 1;
+    catCount[n.category || '?'] = (catCount[n.category || '?'] || 0) + 1;
+    alignCount[n.alignment || '?'] = (alignCount[n.alignment || '?'] || 0) + 1;
+  }
+
+  // Cantons (priorité aux Suisses)
+  const PRIORITY_CANTONS = ['VD','VS','GE','NE','JU','ZH','FR','BS','BE','TI','SG','SO','ZG','BL','LU','GR','AG','AR','UR','SZ','GL','NW','OW','SH','TG','CHF','CH','EU','INTL'];
+  const sortedCantons = Object.keys(cantonCount).sort((a, b) => {
+    const ia = PRIORITY_CANTONS.indexOf(a);
+    const ib = PRIORITY_CANTONS.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  const cantonGroup = document.getElementById('filter-canton-group');
+  cantonGroup.innerHTML = '<span class="npc-filter-label">Canton :</span>' +
+    `<button class="npc-chip ${FILTERS.canton === 'all' ? 'active' : ''}" data-canton="all">Tous <span class="npc-chip-count">${Object.keys(NPCS).length}</span></button>` +
+    sortedCantons.map(c => `
+      <button class="npc-chip ${FILTERS.canton === c ? 'active' : ''}" data-canton="${c}" title="${c}">
+        ${getCantonFlag(c)} ${c}
+        <span class="npc-chip-count">${cantonCount[c]}</span>
+      </button>`).join('');
+
+  // Catégorie
+  const catGroup = document.getElementById('filter-category-group');
+  const sortedCats = Object.keys(catCount).sort((a, b) => catCount[b] - catCount[a]);
+  catGroup.innerHTML = '<span class="npc-filter-label">Catégorie :</span>' +
+    `<button class="npc-chip ${FILTERS.category === 'all' ? 'active' : ''}" data-category="all">Toutes</button>` +
+    sortedCats.map(c => `
+      <button class="npc-chip ${FILTERS.category === c ? 'active' : ''}" data-category="${c}">
+        ${CATEGORY_ICONS[c] || '·'} ${c}
+        <span class="npc-chip-count">${catCount[c]}</span>
+      </button>`).join('');
+
+  // Alignment
+  const alignGroup = document.getElementById('filter-alignment-group');
+  const sortedAligns = ['ally', 'neutral', 'adversary', 'victim'].filter(a => alignCount[a]);
+  const alignLabels = { ally: '🤝 Allié', neutral: '😐 Neutre', adversary: '⚔️ Adversaire', victim: '💔 Victime' };
+  alignGroup.innerHTML = '<span class="npc-filter-label">Camp :</span>' +
+    `<button class="npc-chip ${FILTERS.alignment === 'all' ? 'active' : ''}" data-alignment="all">Tous</button>` +
+    sortedAligns.map(a => `
+      <button class="npc-chip ${FILTERS.alignment === a ? 'active' : ''}" data-alignment="${a}">
+        ${alignLabels[a] || a}
+        <span class="npc-chip-count">${alignCount[a]}</span>
+      </button>`).join('');
+
+  // État rencontre
+  const metCount = window.NpcState ? window.NpcState.getEncountered().length : 0;
+  const metGroup = document.getElementById('filter-met-group');
+  metGroup.innerHTML = '<span class="npc-filter-label">État :</span>' +
+    `<button class="npc-chip ${FILTERS.met === 'all' ? 'active' : ''}" data-met="all">Tous</button>` +
+    `<button class="npc-chip ${FILTERS.met === 'met' ? 'active' : ''}" data-met="met">Rencontrés <span class="npc-chip-count">${metCount}</span></button>` +
+    `<button class="npc-chip ${FILTERS.met === 'unknown' ? 'active' : ''}" data-met="unknown">Inconnus <span class="npc-chip-count">${Object.keys(NPCS).length - metCount}</span></button>`;
+
+  // Listeners
+  document.querySelectorAll('[data-canton]').forEach(b => b.onclick = () => { FILTERS.canton = b.dataset.canton; render(); });
+  document.querySelectorAll('[data-category]').forEach(b => b.onclick = () => { FILTERS.category = b.dataset.category; render(); });
+  document.querySelectorAll('[data-alignment]').forEach(b => b.onclick = () => { FILTERS.alignment = b.dataset.alignment; render(); });
+  document.querySelectorAll('[data-met]').forEach(b => b.onclick = () => { FILTERS.met = b.dataset.met; render(); });
+
+  // Filtre skill
+  const skillCount = {};
+  for (const id in NPCS) {
+    (NPCS[id].tech_skills || []).forEach(s => { skillCount[s] = (skillCount[s] || 0) + 1; });
+  }
+  const topSkills = Object.entries(skillCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const skillGroup = document.getElementById('filter-skill-group');
+  skillGroup.innerHTML = '<span class="npc-filter-label">Compétence :</span>' +
+    `<button class="npc-chip ${FILTERS.skill === 'all' ? 'active' : ''}" data-skill="all">Toutes</button>` +
+    topSkills.map(([s, n]) => `<button class="npc-chip ${FILTERS.skill === s ? 'active' : ''}" data-skill="${s}">${s} <span class="npc-chip-count">${n}</span></button>`).join('');
+  document.querySelectorAll('[data-skill]').forEach(b => b.onclick = () => { FILTERS.skill = b.dataset.skill; render(); });
+}
+
+function render() {
+  buildFilters();
+
+  const grid = document.getElementById('npc-grid');
+  const term = FILTERS.search.toLowerCase().trim();
+  const ids = Object.keys(NPCS).sort((a, b) => {
+    const na = NPCS[a].name || a;
+    const nb = NPCS[b].name || b;
+    return na.localeCompare(nb);
+  });
+
+  const encountered = window.NpcState ? new Set(window.NpcState.getEncountered()) : new Set();
+
+  let shown = 0;
+  let html = '';
+  ids.forEach(id => {
+    const n = NPCS[id];
+    // Skill filter
+    if (FILTERS.skill !== 'all') {
+      if (!(n.tech_skills || []).includes(FILTERS.skill)) return;
+    }
+    if (FILTERS.canton !== 'all' && n.canton !== FILTERS.canton) return;
+    if (FILTERS.category !== 'all' && n.category !== FILTERS.category) return;
+    if (FILTERS.alignment !== 'all' && n.alignment !== FILTERS.alignment) return;
+    const isMet = encountered.has(id);
+    if (FILTERS.met === 'met' && !isMet) return;
+    if (FILTERS.met === 'unknown' && isMet) return;
+    if (term) {
+      // v2.72 Niveau 10 — Search full-text : nom, rôle, institution, expertise, tech_skills, quote
+      const haystack = [
+        n.name || '',
+        n.role || '',
+        n.institution || '',
+        (n.expertise || []).join(' '),
+        (n.tech_skills || []).join(' '),
+        n.quote || '',
+        n.shortBio || '',
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(term)) return;
+    }
+    shown++;
+
+    const state = window.NpcState ? window.NpcState.get(id) : null;
+    const cardClass = isMet ? 'encountered' : 'unknown';
+
+    let bottomLine = '';
+    if (state && state.trust !== undefined) {
+      const color = state.trust <= 25 ? '#dc3c46' :
+                    state.trust <= 50 ? '#e68232' :
+                    state.trust <= 75 ? '#dcc832' : '#32b464';
+      bottomLine = `
+        <div class="npc-card-trust">
+          <span class="npc-card-trust-state">${window.NpcState.stateIcon(state.state)} ${state.state}</span>
+          <div class="npc-card-trust-bar-wrap">
+            <div class="npc-card-trust-bar" style="width:${state.trust}%;background:${color}"></div>
+          </div>
+          <span class="npc-card-trust-val">${state.trust}/100</span>
+        </div>`;
+    } else {
+      bottomLine = `<div class="npc-card-not-met">jamais rencontré</div>`;
+    }
+
+    html += `
+      <div class="npc-card ${cardClass}" onclick="openNpcModal('${id}')">
+        <div class="npc-card-header">
+          <div class="npc-card-avatar">${n.icon || '👤'}</div>
+          <div class="npc-card-info">
+            <div class="npc-card-name">${escapeHTML(n.name || id)}</div>
+            <div class="npc-card-role">${escapeHTML(n.role || '')}</div>
+          </div>
+        </div>
+        <div class="npc-card-meta">
+          ${n.canton ? `<span class="npc-meta-tag tag-canton">${getCantonFlag(n.canton)} ${n.canton}</span>` : ''}
+          ${n.category ? `<span class="npc-meta-tag tag-category">${CATEGORY_ICONS[n.category] || ''} ${n.category}</span>` : ''}
+          ${n.alignment ? `<span class="npc-meta-tag tag-alignment-${n.alignment}">${n.alignment}</span>` : ''}
+          ${n.appearances && n.appearances.length ? `<span class="npc-meta-tag tag-appearances">📍 ${n.appearances.length} scène${n.appearances.length > 1 ? 's' : ''}</span>` : ''}
+          ${n.tech_skills && n.tech_skills.length ? n.tech_skills.slice(0, 2).map(s => `<span class="npc-meta-tag tag-skill">${s}</span>`).join('') : ''}
+        </div>
+        ${bottomLine}
+      </div>`;
+  });
+
+  grid.innerHTML = shown === 0
+    ? '<div class="npc-empty">Aucun personnage ne correspond.</div>'
+    : html;
+
+  document.getElementById('stat-total').textContent = Object.keys(NPCS).length;
+  document.getElementById('stat-met').textContent = encountered.size;
+  document.getElementById('stat-shown').textContent = shown;
+}
+
+// ═════ Modal détaillée ═════
+function openNpcModal(id) {
+  const n = NPCS[id];
+  if (!n) return;
+  const state = window.NpcState ? window.NpcState.get(id) : null;
+
+  let trustBlock = '';
+  if (state) {
+    const color = state.trust <= 25 ? '#dc3c46' :
+                  state.trust <= 50 ? '#e68232' :
+                  state.trust <= 75 ? '#dcc832' : '#32b464';
+    trustBlock = `
+      <div class="npc-modal-trust-block">
+        <div class="npc-modal-trust-state">${window.NpcState.stateLabel(state.state)}</div>
+        <div class="npc-modal-trust-bar-wrap">
+          <div class="npc-modal-trust-bar" style="width:${state.trust}%;background:${color}"></div>
+        </div>
+        <div class="npc-modal-trust-meta">
+          Confiance ${state.trust}/100 · ${state.interactions ? state.interactions.length : 0} interaction${state.interactions && state.interactions.length > 1 ? 's' : ''}
+        </div>
+      </div>`;
+  } else {
+    trustBlock = `<div class="npc-modal-trust-block">
+      <div class="npc-modal-trust-state" style="color:var(--text-muted,#a8b0c0)">Jamais rencontré</div>
+      <div class="npc-modal-trust-meta">Joue une scène où ce personnage apparaît pour établir une relation.</div>
+    </div>`;
+  }
+
+  let personalityBlock = '';
+  if (n.personality) {
+    const labels = {
+      communication: 'Communication',
+      tech_level: 'Niveau tech',
+      stress_response: 'Sous stress',
+      trust_initial: 'Confiance initiale',
+    };
+    const items = Object.keys(n.personality).map(k => `
+      <div class="npc-modal-pers-item">
+        <div class="npc-modal-pers-label">${labels[k] || k}</div>
+        <div class="npc-modal-pers-val">${n.personality[k] || '—'}</div>
+      </div>`).join('');
+    personalityBlock = `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Profil psychologique</div>
+        <div class="npc-modal-personality">${items}</div>
+      </div>`;
+  }
+
+  let relationsBlock = '';
+  if (n.relations && n.relations.length > 0) {
+    // Filtrer relations pertinentes (cooccurrences >= 2 OU type spécifique)
+    const meaningful = n.relations.filter(r => r.cooccurrences >= 2 || ['mentor','mentoré','adversaire','protégé','complice'].includes(r.type));
+    if (meaningful.length > 0) {
+      const items = meaningful.slice(0, 10).map(r => {
+        const other = NPCS[r.with];
+        if (!other) return '';
+        return `
+          <li class="npc-modal-relation">
+            <span class="npc-modal-relation-icon">${other.icon || '👤'}</span>
+            <span><strong>${escapeHTML(other.name || r.with)}</strong></span>
+            <span class="npc-modal-relation-type">${r.type}</span>
+          </li>`;
+      }).filter(Boolean).join('');
+      relationsBlock = `
+        <div class="npc-modal-section">
+          <div class="npc-modal-section-title">Relations connues (${meaningful.length})</div>
+          <ul class="npc-modal-relations-list">${items}</ul>
+        </div>`;
+    }
+  }
+
+  document.getElementById('npc-modal-content').innerHTML = `
+    <div class="npc-modal-header">
+      <div class="npc-modal-avatar">${n.icon || '👤'}</div>
+      <div>
+        <div class="npc-modal-name">${escapeHTML(n.name || id)}</div>
+        <div class="npc-modal-role">${escapeHTML(n.role || '')}</div>
+        ${n.institution ? `<div class="npc-modal-role"><strong>${escapeHTML(n.institution)}</strong></div>` : ''}
+      </div>
+    </div>
+
+    ${trustBlock}
+
+    ${n.quote ? `
+      <div class="npc-modal-quote">
+        <span class="npc-modal-quote-mark">"</span>
+        ${escapeHTML(n.quote)}
+        <span class="npc-modal-quote-mark">"</span>
+        <div class="npc-modal-quote-author">— ${escapeHTML(n.name || id)}</div>
+      </div>` : ''}
+
+    ${n.shortBio ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Biographie</div>
+        <div class="npc-modal-section-body">${escapeHTML(n.shortBio)}</div>
+      </div>` : ''}
+
+    ${n.context ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Contexte d'apparition</div>
+        <div class="npc-modal-section-body">${escapeHTML(n.context)}</div>
+      </div>` : ''}
+
+    ${personalityBlock}
+
+    ${n.expertise && n.expertise.length ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Expertises</div>
+        <div class="npc-modal-section-body">${n.expertise.map(e => `<span class="npc-meta-tag tag-category">${escapeHTML(e)}</span>`).join(' ')}</div>
+      </div>` : ''}
+
+    ${n.tech_skills && n.tech_skills.length ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Compétences techniques</div>
+        <div class="npc-modal-section-body">${n.tech_skills.map(s => `<span class="npc-meta-tag tag-skill">${escapeHTML(s)}</span>`).join(' ')}</div>
+      </div>` : ''}
+
+    ${n.appearances && n.appearances.length ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Scènes associées (${n.appearances.length})</div>
+        <div class="npc-modal-section-body npc-appearances">
+          ${(() => {
+            // v2.98 (C3) — enrichi : titre réel + statut de complétion
+            let results = {};
+            try { results = JSON.parse(localStorage.getItem('scene_results') || '{}'); } catch {}
+            // Lookup table de titres depuis l'index si dispo
+            const titles = window.__sceneTitlesCache;
+            return n.appearances.map(sid => {
+              const r = results[sid];
+              let cls = 'npc-appearance-link';
+              let icon = '○';
+              if (r) {
+                if (r.pct >= 90) { cls += ' npc-appearance-perfect'; icon = '⭐'; }
+                else if (r.pct >= 60) { cls += ' npc-appearance-done'; icon = '✓'; }
+                else { cls += ' npc-appearance-tried'; icon = '⚠'; }
+              }
+              const title = titles && titles[sid] ? titles[sid] : sid.replace(/-/g, ' ');
+              const meta = r ? `<span class="npc-appearance-meta">${r.pct}%</span>` : '';
+              return `<a href="../scene.html#scene=${encodeURIComponent(sid)}" class="${cls}" title="${escapeHTML(title)}">
+                <span class="npc-appearance-icon">${icon}</span>
+                <span class="npc-appearance-title">${escapeHTML(title)}</span>
+                ${meta}
+              </a>`;
+            }).join('');
+          })()}
+        </div>
+      </div>` : ''}
+
+    ${relationsBlock}
+
+    ${n.fictional === false ? `
+      <div class="npc-modal-section">
+        <div class="npc-modal-section-title">Personnage réel</div>
+        <div class="npc-modal-section-body">${n.publicProfile ? escapeHTML(n.publicProfile) : 'Personnalité publique utilisée dans son rôle officiel.'}</div>
+      </div>` : ''}
+  `;
+
+  document.getElementById('npc-modal-backdrop').classList.add('open');
+}
+
+function closeNpcModal() {
+  document.getElementById('npc-modal-backdrop').classList.remove('open');
+}
+
+document.getElementById('npc-modal-backdrop').addEventListener('click', e => {
+  if (e.target.id === 'npc-modal-backdrop') closeNpcModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeNpcModal();
+});
+
+// ═════ Init ═════
+async function init() {
+  await loadNpcs();
+  // v2.98 (C3) — charge l'index scènes pour titres dans la modale
+  try {
+    const r = await fetch('scenes/index.json');
+    if (r.ok) {
+      const idx = await r.json();
+      const cache = {};
+      idx.forEach(s => { if (s.id && s.title) cache[s.id] = s.title; });
+      window.__sceneTitlesCache = cache;
+    }
+  } catch (_) { /* graceful */ }
+  // Reconstruction rétroactive si pas encore fait
+  if (window.NpcState && window.NpcState.getEncountered().length === 0) {
+    // Pas de rebuild auto - laisse l'utilisateur décider
+  }
+  render();
+
+  document.getElementById('npc-search').addEventListener('input', e => {
+    FILTERS.search = e.target.value;
+    render();
+  });
+  document.getElementById('npc-search').addEventListener('keydown', e => {
+    if (e.key === 'Escape' && e.target.value) {
+      e.target.value = '';
+      FILTERS.search = '';
+      render();
+    }
+  });
+
+  // v2.95 — Deep-link #npc=<id> : ouvre automatiquement la modale du PNJ
+  // au chargement (utilisé par profile-relations.js pour pointer vers un
+  // personnage précis depuis l'onglet Relations).
+  function handleHashDeepLink() {
+    const m = (location.hash || '').match(/^#npc=([\w-]+)/);
+    if (!m) return;
+    const id = decodeURIComponent(m[1]);
+    if (NPCS && NPCS[id] && typeof openNpcModal === 'function') {
+      openNpcModal(id);
+    }
+  }
+  handleHashDeepLink();
+  window.addEventListener('hashchange', handleHashDeepLink);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 50);
+}
+</script>
+<script src="../js/core/cas-in-theme-toggle.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+</body>
+</html>
