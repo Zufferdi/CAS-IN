@@ -1,0 +1,67 @@
+name: Validate catalog parity (scenes ↔ campaigns)
+
+# Vérifie l'intégrité du catalogue à chaque modification touchant :
+#   - les fichiers de scènes (scenes/*.json)
+#   - le fichier de campagnes (data/campaigns.json)
+#   - les scripts apply_saga_*.py
+#
+# Détecte spécifiquement :
+#   1. Les scènes ORPHELINES (sur disque mais aucune campagne ne les référence)
+#      → invisibles dans l'écran "Dossiers / Sagas" de l'UI
+#   2. Les scènes FANTÔMES (référencées dans campaigns mais absentes du disque)
+#      → liens cassés au runtime
+#   3. Les doublons d'id ou d'order
+#   4. Les conventions next non-standard (warning)
+#
+# Cas d'usage : empêcher la récurrence du bug du 2 juin 2026 où 78 scènes
+# (11 sagas CH) étaient sur disque mais sans entry dans campaigns.json,
+# rendant les sagas invisibles dans la navigation utilisateur.
+
+on:
+  push:
+    paths:
+      - 'scenes/**.json'
+      - 'data/campaigns.json'
+      - 'scripts/apply_saga_*.py'
+      - 'scripts/check_campaigns_parity.py'
+      - '.github/workflows/validate-catalog.yml'
+  pull_request:
+    paths:
+      - 'scenes/**.json'
+      - 'data/campaigns.json'
+      - 'scripts/apply_saga_*.py'
+  workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
+
+permissions:
+  contents: read
+
+# Empêche deux runs sur la même branche en parallèle
+concurrency:
+  group: validate-catalog-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check campaigns parity
+        run: |
+          python3 scripts/check_campaigns_parity.py
+        # Exit code 1 si scènes orphelines détectées → fail build
+
+      - name: Suggest fix on failure
+        if: failure()
+        run: |
+          echo "::error::Catalog parity check failed."
+          echo "::notice::Most likely cause : new scenes added without running their apply_saga_*.py script."
+          echo "::notice::To fix locally, run : bash repair_all_sagas.sh"
+          echo "::notice::Or run the specific script for the missing saga, e.g. python3 scripts/apply_saga_data_brokers.py"
+          exit 1
