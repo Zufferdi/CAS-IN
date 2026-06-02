@@ -1,0 +1,78 @@
+name: Regenerate sitemap
+
+# Régénère sitemap.xml depuis le contenu actuel du repo et commit le résultat.
+#
+# Pourquoi ce workflow : le sitemap actuel liste 121 fiches mais 0 scène sur 476,
+# alors qu'elles sont accessibles publiquement et indexables par Google.
+#
+# Déclencheurs :
+#   - workflow_dispatch (manuel)
+#   - push touchant scenes/, fiches/ ou tutoriels/ (auto)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scenes/**.json'
+      - 'fiches/**.html'
+      - 'tutoriels/**.html'
+      - 'data/campaigns.json'
+      - 'scripts/generate_sitemap.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: regenerate-sitemap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, 'auto-rebuild') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Régénérer sitemap.xml
+        run: |
+          if [ ! -f "scripts/generate_sitemap.py" ]; then
+              echo "❌ scripts/generate_sitemap.py introuvable"
+              exit 1
+          fi
+          python3 scripts/generate_sitemap.py
+
+      - name: Détecter changements
+        id: diff
+        run: |
+          if git diff --quiet sitemap.xml; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "::notice::Sitemap déjà à jour, rien à committer."
+          else
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Lignes ajoutées/retirées :"
+              git diff --stat sitemap.xml
+          fi
+
+      - name: Configurer git
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit et push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git add sitemap.xml
+          git commit -m "chore(sitemap): auto-rebuild after content changes
+
+          Workflow : Regenerate sitemap
+          Run    : ${{ github.run_id }}"
+          git push

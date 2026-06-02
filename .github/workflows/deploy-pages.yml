@@ -1,11 +1,11 @@
 name: Deploy to GitHub Pages
 
 # Workflow custom de déploiement GitHub Pages.
-# Remplace le mécanisme automatique "Deploy from a branch" qui souffre
-# d'erreurs intermittentes "Internal server error" côté GitHub.
+# Version optimisée : construit un dossier _site/ propre avant upload pour
+# exclure ce qui n'a pas vocation à être servi (docs PDF, scripts Python, tests,
+# fichiers cachés). Économie typique : 13 Mo non servis sur GitHub Pages.
 #
 # Pré-requis : Settings → Pages → Source = "GitHub Actions"
-# (et non plus "Deploy from a branch").
 #
 # Déclencheurs :
 #   - push sur la branche 3.0 (auto)
@@ -29,16 +29,60 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Build _site/ — copie le repo sans ce qui n'est pas servi
+        run: |
+          set -e
+          mkdir -p _site
+
+          # rsync : copie tout SAUF les exclusions
+          # Exclus :
+          #   docs/         → PDFs sources juridiques (5,6 Mo) + guides Interpol (5,5 Mo)
+          #                   non référencés depuis aucune page HTML
+          #   scripts/      → scripts Python de build/validation (1,3 Mo)
+          #   tests/        → tests Playwright (96 Ko)
+          #   references/   → notes de référence (40 Ko)
+          #   .git*         → métadonnées git, hooks, workflows
+          #   playwright.config.js, package.json → config de dev
+          #   *.md à la racine SAUF README.md
+          rsync -a \
+              --exclude='/docs/' \
+              --exclude='/scripts/' \
+              --exclude='/tests/' \
+              --exclude='/references/' \
+              --exclude='/.git/' \
+              --exclude='/.git-hooks/' \
+              --exclude='/.github/' \
+              --exclude='/.editorconfig' \
+              --exclude='/.gitignore' \
+              --exclude='/playwright.config.js' \
+              --exclude='/package.json' \
+              --exclude='/repair_all_sagas.sh' \
+              --exclude='/_site/' \
+              ./ _site/
+
+          # Conserver explicitement README.md (rsync l'a déjà copié,
+          # ce commentaire pour clarté — GitHub Pages le sert mais ce n'est
+          # pas grave car aucune page ne le link)
+
+          echo ""
+          echo "═══ Contenu _site/ ═══"
+          du -sh _site/
+          echo ""
+          echo "═══ Top-level _site/ ═══"
+          ls -la _site/ | head -30
+          echo ""
+          echo "═══ Comparaison avec repo brut ═══"
+          before=$(du -s . --exclude=_site | cut -f1)
+          after=$(du -s _site | cut -f1)
+          echo "Repo brut : ${before} KB"
+          echo "_site/    : ${after} KB"
+          echo "Économie  : $((before - after)) KB"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -46,9 +90,15 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Le repo entier est uploadé tel quel — c'est un site statique
-          path: '.'
+          path: '_site'
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
