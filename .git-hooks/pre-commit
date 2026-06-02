@@ -1,1 +1,41 @@
+#!/usr/bin/env bash
+# .git-hooks/pre-commit — Validation locale avant commit CAS-IN.
+#
+# Empêche le commit si scènes orphelines ou liens cassés dans campaigns.json.
+#
+# Installation : bash scripts/install_hooks.sh
+#
+# Désactivation ponctuelle : git commit --no-verify
 
+set -e
+
+# Repérer la racine du repo (différent de cwd dans certains contextes git)
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# Ne valider que si scenes/ ou data/campaigns.json sont stagés
+CHANGED=$(git diff --cached --name-only | grep -E '^(scenes/|data/campaigns\.json|scripts/apply_saga_)' || true)
+if [ -z "$CHANGED" ]; then
+    exit 0
+fi
+
+echo "──────────────────────────────────────────────────────────"
+echo "  pre-commit — Validation parité scènes ↔ campaigns"
+echo "──────────────────────────────────────────────────────────"
+
+if ! python3 scripts/check_campaigns_parity.py --quiet; then
+    echo ""
+    echo "❌ Commit bloqué : scènes orphelines ou liens cassés détectés."
+    echo ""
+    echo "   Réparation possible :"
+    echo "     bash repair_all_sagas.sh"
+    echo "   ou pour une saga précise :"
+    echo "     python3 scripts/apply_saga_<nom>.py"
+    echo ""
+    echo "   Pour bypasser ce hook (NON recommandé) :"
+    echo "     git commit --no-verify"
+    exit 1
+fi
+
+echo "  ✅ Parité OK"
+exit 0
