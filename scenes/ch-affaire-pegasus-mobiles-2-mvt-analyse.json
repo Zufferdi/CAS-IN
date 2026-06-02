@@ -1,0 +1,211 @@
+{
+  "id": "ch-affaire-pegasus-mobiles-2-mvt-analyse",
+  "title": "Le silence des téléphones #2 — MVT, IoCs et méthodologie",
+  "icon": "🔬",
+  "difficulty": "hard",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "Aline opère MVT sur les 10 backups iOS avec rigueur scientifique. Findings rigoureusement documentés : 6/10 cibles avec indicateurs de compromission Pegasus, 2/10 avec autre spyware (Predator probable), 2/10 sans indicateurs (tentatives détectées par Apple mais infection non confirmée). Triple vérification Amnesty Tech + Citizen Lab parallèle.",
+    "degraded": "Analyse complète mais une erreur de classification sur 1 backup (faux positif initial puis rectifié) — pas de conséquence publique mais discussion méthodologique sérieuse avec Donncha.",
+    "failure": "Aline survalorise des findings ambigus (signaux faibles présentés comme infection confirmée), saute le triple-regard pour gagner temps. Donncha refuse de co-signer le rapport technique. Crédibilité de l'enquête fragilisée."
+  },
+  "tags": ["DFIR", "MVT", "MOBILE FORENSICS", "IoC", "PEGASUS", "STIX2", "BACKUP iOS", "ANALYSE TECHNIQUE"],
+  "legalRefs": [
+    {"label": "ISO/IEC 27037", "title": "Identification, collecte, acquisition de preuves numériques"},
+    {"label": "RFC 3227", "title": "Guidelines for evidence collection"},
+    {"label": "Méthodologie Amnesty Tech 2021", "title": "Forensic Methodology Report: How to catch NSO Pegasus"},
+    {"label": "Citizen Lab Pegasus reports", "title": "Hashes domaines + identifiants processus"},
+    {"label": "STIX2", "title": "Structured Threat Information Expression — format IoCs"},
+    {"label": "Pratique chain of custody journalistique", "title": "Documentation traçabilité"}
+  ],
+  "intro": "<p>Lundi 22 juin 2026, 09h00. <strong>Amnesty Berlin, salle Lab 3</strong>. Une semaine après le briefing initial. Les 10 cibles consentantes ont fourni leurs <strong>backups iOS chiffrés</strong> (générés sur leurs propres Mac sous supervision Access Now). Vous êtes au cœur de la phase technique de l'enquête.</p><p>Sur la table : 10 backups identifiés <strong>BCK-001 à BCK-010</strong> :</p><table border='1' style='border-collapse:collapse;font-size:0.85em'><tr><th>ID</th><th>Profil</th><th>Origine</th></tr><tr><td>BCK-001</td><td>Avocate CICR (sénior, dossier Sahel)</td><td>Confédération Suisse</td></tr><tr><td>BCK-002</td><td>Fonctionnaire ONU Droits humains</td><td>Confédération Suisse / résident</td></tr><tr><td>BCK-003</td><td>Militant ouïghour exilé</td><td>Réfugié CH 2018</td></tr><tr><td>BCK-004</td><td>Journaliste turque exilée</td><td>Réfugiée CH 2020</td></tr><tr><td>BCK-005</td><td>Avocat droits humains (suisse, dossiers Maroc)</td><td>Confédération Suisse</td></tr><tr><td>BCK-006</td><td>Militant catalan exilé</td><td>UE-CH 2017</td></tr><tr><td>BCK-007</td><td>Opposante saoudienne exilée</td><td>Réfugiée CH 2019</td></tr><tr><td>BCK-008</td><td>Militante azerbaïdjanaise exilée</td><td>Réfugiée CH 2022</td></tr><tr><td>BCK-009</td><td>Avocat international (dossiers ONG MENA)</td><td>Suisse, double nationalité</td></tr><tr><td>BCK-010</td><td>Diplomate retraité ex-mission ONU</td><td>Confédération Suisse</td></tr></table><p>Méthodologie cadrée la semaine précédente :</p><ul><li><strong>MVT</strong> version 2.6.0 avec IoCs <strong>STIX2</strong> publics de Citizen Lab + IoCs internes Amnesty (NDA)</li><li><strong>Aline opère</strong> sur BCK-001, 003, 005, 007, 009 (les 5 impairs)</li><li><strong>Donncha + Bjørn opèrent</strong> sur BCK-002, 004, 006, 008, 010 (les 5 pairs)</li><li><strong>Triple vérification</strong> : chaque backup avec indicateur 'high confidence' est re-analysé par l'autre équipe</li><li><strong>Citizen Lab Toronto</strong> en backup vérification pour findings critiques (John Scott-Railton en CC chiffrée si besoin)</li><li><strong>Chain of custody journalistique</strong> documentée à chaque étape (Aline tient un journal forensique horodaté)</li></ul><p>Aujourd'hui : démarrage analyses. 6-8 semaines prévues pour conclusion.</p>",
+  "alertLevel": "🔬 BERLIN JUIN-JUILLET 2026 · 10 BACKUPS iOS · DOUBLE-REGARD · MVT + IoCs STIX2 · 6-8 SEMAINES · TRIPLE VÉRIFICATION",
+  "objectives": [
+    "Opérer MVT correctement sur 5 backups iOS (rôle Aline)",
+    "Maintenir la chain of custody journalistique parfaite",
+    "Documenter chaque finding avec niveau de confiance approprié",
+    "Coordonner avec Amnesty équipe pour double-regard systématique",
+    "Identifier les cas-frontière qui nécessitent Citizen Lab tertiaire",
+    "Préparer le rapport technique final (livrable Amnesty + base journalistique RTS)"
+  ],
+  "debrief": "<p>L'<strong>analyse MVT pour journaliste-DFIR</strong> mobilise des compétences techniques précises. Cet acte cadre la méthodologie reproductible.</p><p><strong>Mobile Verification Toolkit (MVT) — fonctionnement</strong></p><p>MVT est un outil en ligne de commande Python développé par Amnesty Tech (2021, maintenu par contributeurs depuis). Composé de :</p><ul><li><code>mvt-ios</code> — pour analyser backups iOS (chiffrés ou non)</li><li><code>mvt-android</code> — pour analyser appareils Android</li><li><strong>Modules de parsing</strong> pour fichiers iOS : <code>datausage.sqlite</code> (consommation data par app), <code>NetUsage.sqlite</code>, <code>InteractionC.sqlite</code> (interactions Siri), <code>knowledgeC.db</code> (CoreDuet — activité), <code>SMS.db</code>, <code>CallHistory</code>, <code>Safari history</code>, etc.</li><li><strong>Format input IoCs</strong> : STIX2 (Structured Threat Information eXpression) — domaines, hashes processus, identifiants iMessage, certificats TLS</li><li><strong>Output</strong> : timeline JSON avec entrées flaggées si match IoC</li></ul><p>Pour cette enquête, IoCs utilisés :</p><ul><li><strong>Citizen Lab IoCs publics</strong> (GitHub citizenlab/malware-indicators) — domaines NSO Pegasus, certificats TLS infrastructure</li><li><strong>Amnesty Tech IoCs internes NDA</strong> — observés sur cas analysés mais pas encore publiés</li><li><strong>IoCs Predator</strong> (Intellexa, partenariat Cytrox) — sous NDA Citizen Lab</li><li><strong>IoCs autres spyware</strong> : Hermit (RCS Lab Italy), Reign (QuaDream Israel — défunct)</li></ul><p><strong>Backup iOS — caractéristiques</strong></p><p>iTunes/Finder backup iOS contient une grande partie du contenu utile :</p><ul><li>Fichiers système (info.plist, manifest.db)</li><li>Bases de données sqlite (SMS, contacts, Safari, etc.)</li><li>Photos, vidéos (sauf si HEVC streamed)</li><li><strong>Pas tous les processus en mémoire</strong> — MVT analyse ce qui PERSISTE dans backup, pas les processus actifs ni la RAM</li><li>Métadonnées exhaustives (timestamps, datausage par app, network usage)</li></ul><p>Limitation importante : Pegasus moderne est <em>zero-click + in-memory</em>. Beaucoup de traces effacées rapidement post-attaque (anti-forensic). MVT trouve ce qui reste : (a) artefacts d'arrivée (iMessage, FaceTime hooks), (b) traces réseau (DataUsage), (c) processus suspects observés post-exploit, (d) crashes système caractéristiques.</p><p><strong>Niveaux de confiance</strong></p><p>Citizen Lab/Amnesty utilisent une échelle de confiance reconnaissable :</p><ul><li><strong>High confidence</strong> — multiples IoCs convergents (≥3 indicateurs indépendants), période cohérente, attribution Pegasus claire</li><li><strong>Medium confidence</strong> — IoCs convergents (1-2), période cohérente, attribution probable mais autres spyware non exclus</li><li><strong>Low confidence / anomalies</strong> — signaux faibles, méritent investigation supplémentaire, ne suffisent pas pour conclure</li><li><strong>No findings</strong> — pas d'indicateurs détectés (mais ne prouve pas absence d'infection — possible anti-forensic complet)</li></ul><p>Pour publication, seuls les findings 'high' et 'medium' sont communiqués comme confirmation. Les 'low' sont mentionnés comme anomalies à creuser. Les 'no findings' sont rapportés honnêtement.</p><p><strong>Chain of custody journalistique</strong></p><p>Pour résister à contestation (NSO + États clients vont contester), documenter :</p><ul><li>Réception backup : date, heure, mode (clé USB chiffrée, SecureDrop, etc.), signature consentement cible</li><li>Hash SHA-256 du backup à réception</li><li>Conservation : chiffrée LUKS sur poste isolé, accès limité Aline + équipe Amnesty NDA</li><li>Analyse : opérateur (Aline / Donncha / Bjørn), date, version MVT, IoCs utilisés</li><li>Re-vérification : opérateur secondaire, date, conclusions</li><li>Citizen Lab tertiaire si applicable : date, opérateur, conclusions</li><li>Hash post-analyse (intégrité backup préservée)</li><li>Destruction finale : NIST 800-88, date, témoin</li></ul><p>Cette traçabilité rend l'enquête défendable juridiquement. Citizen Lab utilise un protocole similaire pour ses publications.</p><p><strong>Cas-frontière à anticiper</strong></p><p>Plusieurs scénarios complexes à traiter :</p><ul><li><strong>Faux positif possible</strong> — un IoC matche mais le contexte ne colle pas (par exemple, processus système renommé identiquement). Triple vérification + analyse contextuelle obligatoires.</li><li><strong>Multi-spyware</strong> — la même cible peut avoir été ciblée par plusieurs États avec différents spyware. Distinguer Pegasus, Predator, Hermit, Reign.</li><li><strong>Anti-forensic</strong> — Pegasus moderne efface les traces. Absence ne prouve pas absence d'infection. Communication prudente.</li><li><strong>Apple TN envoyée mais aucun IoC détecté</strong> — Apple a détecté ciblage côté infrastructure (Apple ID, push) mais l'exploitation a échoué ou les traces sont effacées. Reporter honnêtement.</li><li><strong>Multi-période d'infection</strong> — une cible infectée 2018, ré-infectée 2022, ré-infectée 2024. Cartographier les périodes.</li></ul>",
+  "steps": [
+    {
+      "phase": "🔧 09h15 — Premier launch MVT",
+      "situation": "Vous démarrez sur BCK-001 (avocate CICR). Backup iOS chiffré (passphrase fournie par la cible). Commande type : <code>mvt-ios decrypt-backup -p [passphrase] -d /workdir/bck001_decrypted /backups/BCK-001.zip</code>. Avant de lancer, Donncha demande : 'Aline, tu prends quel niveau de verbosité MVT et quel set d'IoCs ?'",
+      "law": "<strong>Méthodologie MVT</strong>.<br><strong>Sélection IoCs</strong>.<br><strong>Documentation</strong>.",
+      "question": "<strong>Configuration MVT initiale ?</strong>",
+      "choices": [
+        {
+          "text": "Configuration rigoureuse : (1) <strong>Verbosity</strong> : -v DEBUG pour avoir tous les logs détaillés (nécessaire pour reproductibilité + défense méthodologique). (2) <strong>IoCs</strong> : combinaison Citizen Lab publics (citizenlab/malware-indicators GitHub) + Amnesty internes NDA via <code>--iocs-folder</code>. (3) <strong>Output</strong> : dossier dédié par backup (workdir/BCK-001/) avec sub-folders : raw, parsed, findings, timeline. (4) <strong>Pre-flight</strong> : hash SHA-256 du backup avant décryption, log de la commande exacte exécutée (date, heure, opérateur, version MVT). (5) <strong>Documentation parallèle</strong> : carnet forensique horodaté (logbook Aline + logbook Donncha).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Configuration scientifique. (1) Verbosity DEBUG = reproductibilité. (2) Combinaison IoCs publics + NDA = couverture maximum. (3) Output structuré = analyses ultérieures aisées. (4) Pre-flight = chain of custody. (5) Documentation parallèle = double traçabilité. Donncha apprécie l'approche. Donne le go.",
+          "legal": "Méthodologie scientifique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Configuration simple : juste MVT sans IoCs spécifiques, on verra ce qui ressort.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Méthodologie insuffisante. Sans IoCs, MVT ne fera que parser les bases sqlite sans détection de ciblage spécifique. Aucun finding pertinent ne ressortira. Configuration sans IoCs = analyse de routine, pas une vraie hunt Pegasus.",
+          "legal": "Méthodologie.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Utiliser uniquement les IoCs Amnesty NDA (les plus à jour) pour gagner du temps.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Couverture incomplète. Les IoCs Amnesty NDA sont précieux mais ne remplacent pas les IoCs Citizen Lab publics (qui ont leur propre profondeur historique). La combinaison est nécessaire pour couverture maximum. Économiser 30 minutes = potentiellement manquer des findings.",
+          "legal": "Méthodologie.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🎯 24 juin 14h30 — Premier finding majeur sur BCK-001",
+      "situation": "MVT a tourné 4 heures sur BCK-001. Output : <strong>3 IoCs Pegasus matchent</strong>. Plus précisément : (a) connexion à <code>*-cdn.appdata.io</code> (domaine Pegasus 2024 Citizen Lab), (b) processus <code>roleaboutd</code> exécuté en juillet 2024 (process Pegasus connu Amnesty), (c) crash <code>com.apple.coretelephony</code> avec pattern Pegasus le 14 août 2024. <strong>Niveau de confiance preliminary : HIGH</strong>. Question : étape suivante avant communication ?",
+      "law": "<strong>Triple vérification</strong>.<br><strong>Confirmation peer-review</strong>.<br><strong>Documentation finding</strong>.",
+      "question": "<strong>Procédure après ce finding HIGH ?</strong>",
+      "choices": [
+        {
+          "text": "Procédure rigoureuse : (1) <strong>Documentation immédiate</strong> du finding : 3 screenshots MVT output, exports JSON, période d'infection probable (juin-août 2024 minimum), processus exacts identifiés. (2) <strong>Re-vérification par Donncha</strong> sur même backup avec version MVT légèrement différente (cross-version check). (3) <strong>Demande triple vérification Citizen Lab Toronto</strong> (Bill Marczak ou John Scott-Railton) avec backup partagé via canal sécurisé. (4) Pas de communication à la cible avant triple confirmation. (5) Logbook Aline horodaté : finding noté + statut 'pending triple verification'. (6) Pas de communication externe.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Procédure modèle. La triple vérification (Aline + Amnesty + Citizen Lab) est exactement ce que la pratique scientifique requiert pour findings publiables. Le délai 'pending triple verification' (1-2 jours supplémentaires) est minime vs solidité éditoriale obtenue.",
+          "legal": "Triple vérification.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Communiquer immédiatement à l'avocate CICR — elle attend.",
+          "ok": false,
+          "pts": -20,
+          "fb": "⚠️ Précipitation. Communication avant triple vérification = (a) si finding s'avère faux positif après peer-review, la cible aura été inquiétée pour rien et la confiance détruite, (b) la cible pourrait paniquer et prendre des mesures qui détruisent les preuves. L'attente 1-2 jours est négligeable.",
+          "legal": "Pratique scientifique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Tweeter immédiatement : 'On a trouvé Pegasus à Genève, scoop à venir !'",
+          "ok": false,
+          "pts": -40,
+          "fb": "❌❌❌ Faute professionnelle gravissime. (1) Sans triple vérification. (2) Sans information préalable de la cible. (3) Sans information de Vauthier et Le Temps. (4) NSO et États clients alertés. (5) OPSEC complètement violée. (6) Discrédit Amnesty Tech (qui ne signera pas le rapport conjoint). (7) Citizen Lab refusera coopération future. Carrière potentiellement compromise.",
+          "legal": "Faute déontologique grave.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 30 juin 10h00 — Triple vérification Citizen Lab",
+      "situation": "Bill Marczak (Citizen Lab Toronto) répond à votre demande : <em>« Aline, j'ai analysé indépendamment BCK-001. Je confirme tes findings sur les 3 IoCs. Je trouve aussi un 4ème indicateur : une connexion à <code>ipv6-cdn.[domain].com</code> en mai 2024 qui correspond à de l'infrastructure Pegasus que nous trackons (non publique). Période d'infection probable que je situe avril-octobre 2024. Niveau de confiance final : HIGH avec degré de certitude maximum. Tu peux citer Citizen Lab comme confirmation indépendante. »</em>. Question : structure du rapport pour BCK-001 ?",
+      "law": "<strong>Documentation finding consolidé</strong>.<br><strong>Co-attribution Aline + Amnesty + Citizen Lab</strong>.",
+      "question": "<strong>Format du rapport BCK-001 ?</strong>",
+      "choices": [
+        {
+          "text": "Format scientifique standard : (1) <strong>Header</strong> : ID backup, dates analyse, équipes impliquées (Aline / Amnesty Tech / Citizen Lab), version MVT, IoCs sets utilisés. (2) <strong>Findings détaillés</strong> : 4 IoCs Pegasus identifiés avec descriptions techniques, screenshots MVT, période d'infection probable (avril-octobre 2024 minimum). (3) <strong>Niveau de confiance</strong> : HIGH avec justification (3 confirmations indépendantes). (4) <strong>Limitations</strong> reconnues : possibilité d'infections antérieures non détectées (anti-forensic), possibilité de ré-infections post-octobre 2024. (5) <strong>Méthodologie reproductible</strong> documentée. (6) Hash backup avant/après, intégrité préservée. (7) Signatures Aline + Donncha + Bjørn + Bill Marczak.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Rapport scientifique exemplaire. (1) Header = traçabilité. (2) Findings détaillés = défense juridique. (3) Confidence justifié = honnêteté. (4) Limitations reconnues = rigueur. (5) Méthodologie reproductible = standard scientifique. (6) Hash = chain of custody. (7) Signatures = co-attribution. Rapport publiable en annexe de l'article + base juridique solide.",
+          "legal": "Standards scientifiques.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Format simplifié : juste un résumé en 2 pages, pas besoin de détails techniques.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Documentation insuffisante. (1) Sans détails techniques, l'enquête ne peut pas être défendue face à NSO + États clients. (2) Sans hashes et méthodologie, la chain of custody est fragile. (3) Sans signatures explicites, la co-attribution n'est pas opposable. Le format scientifique est exactement ce qu'il faut.",
+          "legal": "Documentation déontologique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Rapport spectaculaire pour usage TV : photos dramatiques + langage simple, on garde le technique pour les notes de bas de page.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Confusion des formats. Le rapport scientifique (livrable Amnesty + base juridique) est différent du reportage TV (livrable RTS public). Confondre les deux = (a) rapport scientifique inutilisable juridiquement (manque détails), (b) reportage TV illisible (trop technique). Deux formats distincts requis.",
+          "legal": "Distinction formats.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🎭 8 juillet 11h00 — Cas-frontière sur BCK-002",
+      "situation": "BCK-002 (fonctionnaire ONU droits humains). MVT identifie un seul IoC potentiel : un processus appelé <code>mobileasset</code> avec un comportement réseau anormal le 23 mars 2025. Citizen Lab confirme : <em>« Aline, ce processus est légitime iOS dans 99% des cas. Mais l'observation à 23h47 GMT avec ce pattern d'export 47MB en 8 minutes est inhabituelle. Pas suffisant pour conclure Pegasus. Pourrait être Pegasus avec anti-forensic agressif, pourrait être un autre malware moins documenté, pourrait être tout simplement un comportement légitime mal compris. Confidence : LOW. »</em>. Question : comment traiter BCK-002 ?",
+      "law": "<strong>Honnêteté méthodologique</strong>.<br><strong>Présentation level of confidence</strong>.",
+      "question": "<strong>Comment classer BCK-002 dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Honnêteté méthodologique stricte : (1) BCK-002 classé <strong>LOW CONFIDENCE / ANOMALIES NON CONCLUANTES</strong>. (2) Mention dans le rapport : 'Anomalies détectées non concluantes — pourrait être Pegasus avec anti-forensic, autre spyware moins documenté, ou comportement légitime non identifié.' (3) Recommandation à la cible : (a) changer de téléphone par précaution, (b) accepter monitoring continu (Lookout, iVerify) sur nouvel appareil, (c) re-analyse possible si nouvelles informations. (4) Dans le reportage RTS : mention agrégée 'sur les 10 cibles, X confirmées Pegasus high confidence, Y avec anomalies LOW non concluantes, Z sans findings'. Pas de spéculation publique sur BCK-002 spécifiquement.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Honnêteté scientifique exemplaire. Pas de spéculation. Le LOW CONFIDENCE est rapporté tel quel. La cible est informée des limites. Le reportage présente la nuance. C'est exactement la pratique Citizen Lab et Amnesty Tech — ne jamais publier comme confirmé ce qui n'atteint pas le seuil HIGH ou MEDIUM.",
+          "legal": "Honnêteté méthodologique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Classer en MEDIUM CONFIDENCE — c'est suggestif, on peut s'autoriser.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Sur-attribution. Citizen Lab a explicitement dit LOW. Forcer MEDIUM = (a) trahir l'évaluation peer-review, (b) attaquer juridiquement (NSO/État client va contester sur ce point précis), (c) discrédit méthodologique entier de l'enquête (si un cas est sur-évalué, tous les autres deviennent suspects).",
+          "legal": "Honnêteté méthodologique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Exclure BCK-002 du rapport — pas la peine de mentionner les cas ambigus.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Sélection biaisée. Mentionner uniquement les findings convergents = (a) rapport non représentatif (les anomalies font partie de la réalité), (b) le fonctionnaire ONU mérite information complète, (c) la profession DFIR documente toujours les LOW pour transparence. Le LOW honnête est meilleur que l'omission.",
+          "legal": "Transparence.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📊 12 août 16h00 — Bilan analyses des 10 backups",
+      "situation": "Bilan après 6 semaines d'analyses :",
+      "law": "<strong>Synthèse findings</strong>.<br><strong>Préparation publication</strong>.",
+      "question": "<strong>Comment structurer la synthèse des 10 findings ?</strong>",
+      "choices": [
+        {
+          "text": "Synthèse différenciée : (1) <strong>HIGH CONFIDENCE Pegasus</strong> (6 cibles) : BCK-001 avocate CICR (avril-oct 2024), BCK-004 journaliste turque (multiple périodes 2021-2024), BCK-005 avocat suisse droits humains (2023), BCK-007 opposante saoudienne (2022-2024), BCK-008 militante azerbaïdjanaise (2024), BCK-009 avocat international ONG MENA (2023). (2) <strong>HIGH CONFIDENCE autre spyware</strong> (2 cibles) : BCK-003 militant ouïghour (Predator/Intellexa probable 2024), BCK-006 militant catalan (Hermit/RCS Lab Italy 2022). (3) <strong>LOW CONFIDENCE</strong> (1 cible) : BCK-002 fonctionnaire ONU (anomalies non concluantes). (4) <strong>NO FINDINGS</strong> (1 cible) : BCK-010 diplomate retraité (mais Apple TN reçue — possible anti-forensic complet ou tentative échouée). Total Pegasus high confidence : 6 cibles confirmées en CH avec périodes documentées sur 2022-2024.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Synthèse exemplaire. (1) Différenciation par niveau de confiance. (2) Périodes documentées. (3) Multi-spyware reconnu (Pegasus + Predator + Hermit). (4) LOW et NO FINDINGS honnêtement reportés. (5) Total clair : 6 Pegasus high confidence + 2 autres spyware + 1 LOW + 1 NO FINDINGS. Cette structure résiste à la contestation NSO + États clients.",
+          "legal": "Synthèse scientifique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Synthèse globale : '8 cibles sur 10 confirmées par spyware étatique' (en regroupant les niveaux).",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Sur-simplification trompeuse. Regrouper HIGH + MEDIUM + LOW dans une seule catégorie 'confirmées' = (a) trahir la nuance scientifique, (b) attribuer à NSO ce qui pourrait être Predator/Hermit, (c) inflation des chiffres. La rigueur impose différenciation explicite.",
+          "legal": "Précision.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Présenter chaque cible individuellement sur 10 pages sans synthèse globale.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Manque de synthèse. 10 cas détaillés sans synthèse = lecteur perdu. Le rapport doit avoir DOUBLE format : (a) synthèse claire en exec summary + (b) détails par cible en annexes. Pas l'un sans l'autre.",
+          "legal": "Lisibilité.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "journaliste",
+  "region": "CH"
+}
