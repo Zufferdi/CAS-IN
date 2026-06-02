@@ -1,0 +1,142 @@
+name: Repair catalog (manual)
+
+# Workflow manuel de réparation du catalogue CAS-IN.
+#
+# Déclenchement : onglet Actions → "Repair catalog (manual)" → bouton "Run workflow"
+#
+# Que fait ce workflow ?
+#   1. Checkout de la branche cible (v.3.0-jolification-phase par défaut)
+#   2. Exécute repair_all_sagas.sh qui ré-applique les 11 scripts apply_saga_*.py
+#      (idempotent, sans risque sur un catalogue déjà propre)
+#   3. Régénère métadonnées (search-index, counts, README, scenes/index.json)
+#   4. Commit + push le résultat directement sur la branche
+#
+# Usage typique : après ajout de nouvelles scènes via Upload files dans
+# l'interface GitHub, les scènes sont sur disque mais data/campaigns.json
+# n'est pas à jour. Ce workflow répare en un clic, sans terminal local.
+#
+# Idempotent : si rien à réparer, le workflow se termine sans rien commiter.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branche cible à réparer'
+        required: true
+        default: 'v.3.0-jolification-phase'
+        type: string
+      commit_message:
+        description: 'Message de commit (si réparation effective)'
+        required: false
+        default: 'fix(catalog): auto-repair via Repair catalog workflow'
+        type: string
+
+permissions:
+  contents: write  # nécessaire pour committer le résultat de la réparation
+
+# Empêche deux runs sur la même branche en parallèle
+concurrency:
+  group: repair-catalog-${{ inputs.target_branch }}
+  cancel-in-progress: false  # ne pas annuler une réparation en cours
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branche cible
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+          # token avec write access pour pouvoir push après commit
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: État initial — diagnostic avant réparation
+        run: |
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  ÉTAT INITIAL — avant réparation"
+          echo "═══════════════════════════════════════════════════════════════"
+          grep "CACHE_VERSION = '" sw.js | head -1 || true
+          python3 -c "
+          import json, os, glob
+          if os.path.exists('data/campaigns.json'):
+              d = json.load(open('data/campaigns.json'))
+              camps = d.get('campaigns', d) if isinstance(d, dict) else d
+              print(f'Campagnes totales : {len(camps)}')
+          disk = set(os.path.basename(f).replace('.json','') for f in glob.glob('scenes/*.json') if 'index' not in f)
+          print(f'Scènes sur disque : {len(disk)}')
+          "
+          echo ""
+          if [ -f "scripts/check_campaigns_parity.py" ]; then
+              python3 scripts/check_campaigns_parity.py --quiet || true
+          fi
+
+      - name: Exécuter repair_all_sagas.sh
+        run: |
+          if [ ! -f "repair_all_sagas.sh" ]; then
+              echo "❌ repair_all_sagas.sh introuvable à la racine du repo"
+              echo "::error::Le fichier repair_all_sagas.sh doit être présent à la racine."
+              exit 1
+          fi
+          chmod +x repair_all_sagas.sh
+          bash repair_all_sagas.sh
+
+      - name: État final — diagnostic après réparation
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  ÉTAT FINAL — après réparation"
+          echo "═══════════════════════════════════════════════════════════════"
+          grep "CACHE_VERSION = '" sw.js | head -1 || true
+          if [ -f "scripts/check_campaigns_parity.py" ]; then
+              python3 scripts/check_campaigns_parity.py
+          fi
+
+      - name: Détecter changements
+        id: diff
+        run: |
+          if git diff --quiet && git diff --staged --quiet; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "::notice::Aucun changement détecté — catalogue déjà à jour."
+          else
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "::notice::Changements détectés — préparation du commit."
+              echo ""
+              echo "Fichiers modifiés :"
+              git diff --stat
+          fi
+
+      - name: Configurer git
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit et push réparation
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git add -A
+          git commit -m "${{ inputs.commit_message }}
+
+          Workflow : Repair catalog (manual)
+          Run    : ${{ github.run_id }}
+          Auteur : ${{ github.actor }}"
+          git push origin HEAD:${{ inputs.target_branch }}
+          echo "::notice::✅ Réparation committée sur ${{ inputs.target_branch }}"
+
+      - name: Résumé
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  RÉSUMÉ"
+          echo "═══════════════════════════════════════════════════════════════"
+          if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+              echo "✅ Réparation effectuée et committée sur ${{ inputs.target_branch }}"
+              echo "   Vérifier le commit : https://github.com/${{ github.repository }}/commits/${{ inputs.target_branch }}"
+          else
+              echo "ℹ️  Catalogue déjà à jour — aucun commit nécessaire."
+          fi
