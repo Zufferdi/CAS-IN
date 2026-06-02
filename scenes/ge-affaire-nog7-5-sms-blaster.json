@@ -1,0 +1,248 @@
+{
+  "id": "ge-affaire-nog7-5-sms-blaster",
+  "title": "Affaire No-G7 #5 — SMS-Blaster sur les quais",
+  "icon": "📡",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'IMSI catcher est détecté, localisé par triangulation, son opérateur interpellé. La distinction entre opération police légale (Loi sur le renseignement) et IMSI catcher hostile est tenue. Les SMS frauduleux sont qualifiés correctement (art. 143bis + 179septies CP + LTC). Les manifestants reçoivent une communication officielle de mise en garde.",
+    "degraded": "L'IMSI catcher est détecté mais Robert tarde à demander la coordination OFCOM pour la localisation par mesure d'émission. Une fenêtre opérationnelle est perdue.",
+    "failure": "Confusion entre IMSI catcher hostile et un dispositif légal d'une autre brigade police, entraînant une opération sur ses propres collègues et un scandale interne. Ou pire : pas de communication aux manifestants → des dizaines suivent les fausses consignes des SMS et se retrouvent dans une situation dangereuse."
+  },
+  "tags": ["DFIR", "GENÈVE", "G7 2026", "IMSI CATCHER", "SMS BLASTER", "OFCOM", "LTC", "RADIO FORENSIQUE", "ANTI-MANIFESTATION"],
+  "legalRefs": [
+    {"label": "Art. 179septies CP", "title": "Utilisation abusive d'une installation de télécommunication"},
+    {"label": "Art. 143bis CP", "title": "Accès indu à un système informatique"},
+    {"label": "Art. 144bis CP", "title": "Détérioration de données"},
+    {"label": "Art. 251 CP", "title": "Faux dans les titres — si SMS imite une autorité"},
+    {"label": "LTC art. 53", "title": "Loi sur les télécommunications — interférences interdites"},
+    {"label": "OST", "title": "Ordonnance sur les services de télécommunication"},
+    {"label": "Art. 269bis CPP", "title": "Government Software — usage policier strict, autorisation TMC"},
+    {"label": "Art. 22 Cst", "title": "Liberté de réunion"},
+    {"label": "Art. 4 LRens", "title": "Surveillance politique légitime interdite"}
+  ],
+  "intro": "<p>Samedi 13 juin 2026, <strong>13h47</strong>. <strong>J-1 du sommet G7</strong>, et J-zéro de la manifestation No-G7 autorisée par le Conseil d'État genevois. La manifestation est prévue le lendemain à 14h, départ Cornavin, arrivée Place des Nations. La coalition annonce 15'000 personnes attendues.</p><p>Vous êtes en astreinte à la BCFI. Vous venez de finir votre brunch quand votre téléphone explose : 7 messages en 90 secondes sur le canal Signal interne. Aebischer, Pereira, Bonfanti, Krähenbühl. Pereira tape vite : <em>« Léa, on a un problème radio. Trois rapports indépendants de manifestants et de journalistes : ils reçoivent des SMS qui ressemblent à des alertes police mais qui sont faux. Un SMS dit que la manif a été annulée et qu'il faut se disperser. Un autre dit que la police charge depuis Cornavin et qu'il faut fuir vers les Pâquis. Un autre encore qu'il y a un risque attentat et qu'il faut se rassembler à la gare. </em><strong>Tous ces SMS prétendent venir de « POLICE-GE » ou de « INFO-G7 ».</strong><em> »</em></p><p>Krähenbühl prend la suite : <em>« Bonfanti me l'a confirmé — aucun de ces SMS n'est de nous. Nous on a juste un canal alerte cantonale via SMS-Alerte officiel qui passe par les opérateurs (Swisscom, Sunrise, Salt). Là, c'est autre chose. Un dispositif d'émission locale. Probablement un </em><strong>SMS Blaster / IMSI catcher actif</strong><em>. Robert, tu viens au PC opérationnel G7, on a besoin de toi MAINTENANT. »</em></p><p>Vous filez en moto au <strong>PC OPS G7</strong> installé au Centre de gestion du trafic (CGT) à Vernier. À votre arrivée à 14h28, la salle est en effervescence. Sur l'écran principal : carte de Genève avec des marqueurs de signalements. 23 manifestants et 4 journalistes ont reçu des SMS frauduleux depuis 13h30. Tous dans une zone restreinte autour des <strong>Pâquis et de Cornavin</strong>. Bonfanti, en uniforme de commandante, vous serre la main : <em>« Robert, vous êtes le ou la spécialiste cyber. Identifiez ce dispositif, localisez-le, isolez-le. La manif est dans moins de 24 heures et on a quelqu'un qui essaie de la saboter — ou de l'instrumentaliser. Lavanchy m'attend pour un point dans deux heures. »</em></p>",
+  "alertLevel": "📡 SMS BLASTER ACTIF · PÂQUIS / CORNAVIN · 27 SMS FRAUDULEUX EN 1H · J-1 MANIFESTATION · ART 179septies CP + LTC 53",
+  "objectives": [
+    "Confirmer la nature SMS Blaster / IMSI catcher actif vs autre vecteur (compromission opérateur, SS7, etc.)",
+    "Localiser le dispositif par coordination OFCOM (mesures radio) + opérateurs (anomalies de cellule)",
+    "Identifier l'origine politique du dispositif (sabotage manifestation, étatique, criminel ?)",
+    "Communiquer officiellement aux manifestants pour neutraliser l'effet des faux SMS",
+    "Préserver les preuves radio pour la procédure pénale"
+  ],
+  "debrief": "<p><strong>L'acte 5 introduit un dispositif technique méconnu mais en montée fulgurante depuis 2022 — le SMS Blaster — et un dilemme opérationnel ardent : protéger une manifestation politique en cours dont les participants sont la cible d'une opération technique hostile.</strong></p><p><strong>Qu'est-ce qu'un SMS Blaster ?</strong> Un dispositif radio portable (boîtier de 30-50 cm, parfois plus discret type valise) qui émule une station de base GSM/4G/5G légitime (BTS — Base Transceiver Station). En émettant avec une puissance supérieure au signal opérateur normal dans une zone limitée (~200-500 m), il force tous les téléphones à proximité à se rattacher à lui (le téléphone choisit toujours la cellule au signal le plus fort). Une fois rattaché, le dispositif peut : (a) <strong>envoyer des SMS arbitraires</strong> aux téléphones rattachés, en spécifiant n'importe quel <em>Sender ID</em> (POLICE-GE, BNP, votre opérateur…), (b) <strong>intercepter</strong> les SMS sortants si la victime ne se rend pas compte du downgrade vers GSM 2G non chiffré, (c) <strong>capturer les IMSI</strong> de tous les téléphones rattachés (d'où le nom « IMSI catcher »).</p><p><strong>Cas réels documentés 2022-2026</strong> : phishing bancaire à Hong Kong, Singapour, Thaïlande (2022-2024) — des criminels envoient des SMS « votre banque » avec lien phishing aux personnes circulant en zone dense (centres commerciaux, gares). Mai 2024 : démantèlement à Londres (Met Police), récidive Paris 2024. Manifestations : usage suspecté à Hong Kong (2019-2020), confirmé Belarus (2020), suspicions en Iran (2022-2023). En 2026, les SMS Blasters sont disponibles sur le marché noir pour 3'000-15'000 USD.</p><p><strong>Cadre légal CH</strong> : utilisation d'un SMS Blaster sans autorisation = délit grave : (1) <strong>LTC art. 53</strong> — interférences avec les services de télécommunications, peine pénale + amende administrative OFCOM. (2) <strong>Art. 179septies CP</strong> — utilisation abusive d'une installation de télécommunication. (3) <strong>Art. 143bis CP</strong> — si le SMS Blaster intercepte des communications, accès indu à un système. (4) <strong>Art. 251 CP</strong> — faux dans les titres, si les SMS imitent une autorité officielle. Pour usage policier : <strong>art. 269bis CPP</strong> (« Government Software ») autorise les IMSI catchers <em>passifs</em> avec autorisation TMC, mais l'envoi de SMS frauduleux n'est <em>jamais</em> autorisé même à la police.</p><p><strong>Distinguer IMSI catcher hostile vs opération police légale</strong> : un IMSI catcher de la police cantonale GE, du Fedpol ou du SRC, dans le cadre d'une opération autorisée, serait : (a) <em>passif</em> (pas d'envoi de SMS), (b) déclaré au commandement opérationnel G7 (Bonfanti est au courant de toute opération radio dans son périmètre), (c) coordonné avec l'OFCOM. <strong>Si Bonfanti dit « ce n'est pas nous », ça ne vient pas non plus du Fedpol/SRC sans qu'elle le sache (coordination obligatoire en opération multi-corps G7).</strong></p><p><strong>Détection technique</strong> : (1) <strong>Mesure d'émission radio</strong> — l'OFCOM dispose de stations mobiles de mesure (CRYM, Centre de mesure radio). En localisant la zone où un signal GSM/4G est anormalement fort (puissance supérieure à la cellule opérateur), on triangule. (2) <strong>Coopération opérateurs</strong> — Swisscom, Sunrise et Salt voient dans leurs OAM les anomalies de rattachement (téléphones qui se rattachent puis disparaissent en masse dans une zone donnée). (3) <strong>Apps de détection</strong> côté téléphone — <em>AIMSICD</em>, <em>SnoopSnitch</em>, <em>Cell Spy Catcher</em> — utilisables sur certains smartphones rootés mais non fiables à 100 %. (4) <strong>Pattern des SMS</strong> — pas de Message-ID standard, originating opérateur invalide, headers GSM-7 non standards.</p><p><strong>Localisation et neutralisation</strong> : une fois le périmètre identifié (Pâquis ~Cornavin), l'OFCOM peut envoyer un véhicule de mesure radio qui détecte la source par puissance reçue + direction-finding. Le dispositif peut être en véhicule (voiture, van), à pied (sac à dos), ou en altitude (drone, fenêtre d'appartement). La neutralisation requiert intervention physique (police GE) coordonnée avec la sécurisation des preuves radio.</p><p><strong>Communication aux manifestants</strong> : le plus urgent. Avant même de localiser le dispositif, il faut <em>casser l'efficacité</em> des SMS frauduleux. Communication officielle via : (a) <strong>SMS-Alerte cantonal</strong> légitime (qui passe par les opérateurs en clair, plus puissant côté réseau), (b) <strong>réseaux sociaux police</strong> (compte X @policegeneve, Mastodon), (c) <strong>presse</strong> (RTS info, Léman Bleu en breaking), (d) <strong>communication directe aux organisateurs No-G7</strong> (qui ont leur propre canal Telegram légitime de 4'500+ membres et peuvent retransmettre en temps réel). <strong>Coopérer avec la coalition No-G7 pour protéger les manifestants est non seulement légal — c'est l'attitude professionnelle attendue.</strong></p><p><strong>Hypothèses sur l'origine du SMS Blaster</strong> : (A) Acteur étatique étranger profitant du sommet pour tester ou perturber. (B) Provocateurs (groupe d'extrême-droite ou autre) cherchant à saboter la manifestation. (C) Criminels opportunistes (phishing classique « banque ») sans lien avec G7. (D) Acteur isolé ou plus rare : SRC ou autre service sans coordination — improbable mais à exclure. Distinguer ces hypothèses par le <em>contenu</em> des SMS frauduleux est révélateur : ici, ils visent à <strong>manipuler le comportement des manifestants</strong>, donc hypothèses A ou B prioritaires.</p>",
+  "steps": [
+    {
+      "phase": "🚨 14h35 — Confirmer la nature SMS Blaster (vs autres vecteurs)",
+      "situation": "Vous arrivez au PC OPS. Aebischer vous tend son ordinateur. Il a déjà collecté les 27 SMS frauduleux reportés. Vous voyez le contenu, les Sender IDs (POLICE-GE, INFO-G7), les horaires. Mais avant d'invoquer un SMS Blaster, vous devez exclure d'autres vecteurs.",
+      "law": "<strong>Diamond Model</strong> — Pivot par caractérisation technique.<br><strong>ITU-T M.3010</strong> — TMN architecture (logs opérateurs).<br><strong>SS7</strong> — protocole legacy connu pour SMS spoofing.",
+      "question": "<strong>Comment confirmer / infirmer l'hypothèse SMS Blaster ?</strong>",
+      "choices": [
+        {
+          "text": "Appeler Swisscom, Sunrise, Salt pour demander les logs SS7 de la zone — pour exclure un spoofing SS7 distant (qui passerait par leur réseau).",
+          "ok": true,
+          "pts": 20,
+          "fb": "✅ Bonne première étape — distinguer un SMS Blaster local d'un spoofing SS7 distant (qui passe par les opérateurs et leurs logs). Si les SMS frauduleux N'apparaissent PAS dans les logs SS7 des opérateurs, alors ils n'ont pas transité par leur réseau → confirmation locale / émission radio. Si SI → réquisition pour identifier l'origine SS7. Demande de logs via Fedpol (Service de surveillance de la correspondance — SCPT).",
+          "legal": "LSCPT art. 22 — Réquisition opérateurs.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Présumer immédiatement SMS Blaster sans vérifier l'hypothèse SS7 — c'est le scénario probable, on gagne du temps.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Cette présomption peut être correcte mais elle peut aussi être fausse. Si c'est un SS7 spoofing (acteur distant via opérateur compromis quelque part), votre dispositif anti-SMS-Blaster sur place ne donnera rien et vous perdez 2 heures critiques.",
+          "legal": "Méthodologie d'enquête.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Saisir un téléphone d'un manifestant qui a reçu un SMS pour le mettre sous scellé et l'analyser au labo.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Disproportionné et politiquement explosif. Saisir un téléphone d'un manifestant qui est <em>victime</em> d'un SMS frauduleux serait : (a) injustifié au sens art. 197 CPP (le manifestant n'est pas suspect), (b) une atteinte à un manifestant que la police est en train d'essayer de protéger, (c) un scandale médiatique immédiat. À la place : demander à 2-3 victimes <em>volontaires</em> de partager un screenshot avec leur consentement écrit.",
+          "legal": "Art. 197 CPP — Proportionnalité.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📞 14h52 — Vérifier l'absence d'opération police légale",
+      "situation": "Avant de mobiliser l'OFCOM et de déclarer publiquement « SMS Blaster hostile », il faut <strong>absolument</strong> exclure que ce soit une opération légale d'un autre service (Fedpol, SRC, brigade voisine, opération inter-cantons). Si la BCFI court après son propre service ou un service confédéral, c'est un scandale interne majeur.",
+      "law": "<strong>Art. 269bis CPP</strong> — Government Software, autorisation TMC.<br><strong>Art. 4 LRens</strong> — SRC interdit sur activité politique légitime.<br><strong>Coordination opérations multi-corps G7</strong> — Bonfanti centralise.",
+      "question": "<strong>Que faites-vous avant de monter le dispositif anti-SMS-Blaster ?</strong>",
+      "choices": [
+        {
+          "text": "Demander confirmation à Bonfanti et à Lavanchy qu'aucune opération police/Fedpol/SRC autorisée n'est en cours sur la zone Pâquis/Cornavin avec IMSI catcher ou émission radio.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Réflexe indispensable. Bonfanti centralise toutes les opérations radio dans le périmètre G7 (coordination intercantonale + Fedpol + SRC). Si elle dit « non, ce n'est pas nous », alors vous êtes face à un acteur hostile. Si elle dit « attendez, je vérifie auprès de la SRC », vous évitez de mobiliser l'OFCOM contre vos propres collègues. Cette vérification prend 15 minutes — un investissement qui prévient un scandale.",
+          "legal": "Coordination opérationnelle G7.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Court-circuiter Bonfanti pour aller plus vite — appeler directement l'OFCOM.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Erreur de coordination. Si l'OFCOM débarque sur une opération SRC autorisée que Bonfanti connaissait, vous créez un incident interne grave. La coordination via le commandement (Bonfanti) ajoute 15 min mais sécurise.",
+          "legal": "Procédure opérationnelle multi-corps.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Supposer que c'est forcément hostile — la BCFI n'a pas à se justifier auprès des autres services.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Présomption risquée. Le SRC a la possibilité d'opérer sur le territoire dans certaines conditions (renseignement extérieur sur acteurs étrangers présents au G7), avec coordination Conseil fédéral. Vous ne pouvez pas l'exclure sans vérifier.",
+          "legal": "LRens — Compétences SRC.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🛰 15h22 — Mobiliser l'OFCOM pour la localisation radio",
+      "situation": "Bonfanti confirme : aucune opération légale connue dans la zone. Les opérateurs (Swisscom CRR, Sunrise SOC, Salt NMC) confirment ne pas voir ces SMS dans leurs logs SS7 — c'est bien de l'émission locale. Vous appelez l'OFCOM (Office fédéral de la communication) à Bienne. <strong>Mauricio Sandoval</strong>, ingénieur radio à la cellule mesure mobile.",
+      "law": "<strong>LTC art. 26-27</strong> — OFCOM, autorité de surveillance des fréquences.<br><strong>Coopération OFCOM ↔ police cantonale</strong> — protocole standard.",
+      "question": "<strong>Quelle demande faites-vous à l'OFCOM ?</strong>",
+      "choices": [
+        {
+          "text": "Demande formelle d'intervention radio-localisation : véhicule de mesure mobile sur zone Pâquis/Cornavin, identification source d'émission anormale GSM/4G, partage des relevés en temps réel via canal sécurisé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Demande structurée. L'OFCOM a la compétence et le matériel (véhicule de mesure mobile équipé spectre analyseur + antennes directionnelles). En 30-60 min, ils peuvent localiser la source par direction-finding. Sandoval vous proposera d'envoyer une équipe à Cornavin dans 35 min. Vous coordonnez avec une équipe police GE prête à intervenir au point de localisation.",
+          "legal": "LTC art. 26-27 + Coopération.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Demande générale 'OFCOM peut-il aider sur SMS frauduleux ?' sans spécifications techniques.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ Trop vague. L'OFCOM aura besoin de savoir précisément (a) zone géographique, (b) type d'émission suspectée (GSM/4G), (c) urgence opérationnelle. Une demande précise accélère leur réponse.",
+          "legal": "Pratique professionnelle.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Pas l'OFCOM, mais Armasuisse (cyber-défense armée) avec ses capacités de guerre électronique.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Mauvais choix. Armasuisse Cyber-Défense a effectivement des capacités électroniques mais (a) elle agit pour la Confédération, pas un canton, (b) son intervention sur sol GE pour un dossier cantonal nécessite réquisition fédérale (DDPS), (c) c'est disproportionné. L'OFCOM est l'autorité civile compétente.",
+          "legal": "Répartition compétences fédérales/cantonales.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📢 15h45 — Communication urgente aux manifestants",
+      "situation": "Pendant que l'OFCOM se déploie, les SMS frauduleux continuent. À 15h35, deux nouveaux signalements : un SMS demande aux manifestants de se rassembler à la <strong>Place du Molard</strong> à 16h00 pour 'recevoir des consignes coordination'. C'est <em>évidemment</em> faux — la manifestation est demain. Si 200 personnes y vont, ça crée un attroupement non autorisé et un risque opérationnel. <strong>Il faut casser l'efficacité des SMS frauduleux MAINTENANT.</strong>",
+      "law": "<strong>Art. 22 Cst</strong> — Liberté de réunion (protéger l'exercice du droit).<br><strong>Droit à l'information du public</strong>.<br><strong>Coopération police ↔ organisateurs manifestation</strong>.",
+      "question": "<strong>Stratégie de communication immédiate ?</strong>",
+      "choices": [
+        {
+          "text": "Communication officielle : (a) Compte X @policegeneve mise en garde immédiate, (b) SMS-Alerte cantonal à toute la zone, (c) appel direct aux organisateurs No-G7 pour qu'ils relaient sur leur Telegram (4'500+ membres), (d) communiqué presse RTS / Léman Bleu / Tribune en breaking.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Stratégie multi-canal correcte. (1) Réseaux sociaux police = rapide, large audience. (2) SMS-Alerte cantonal légitime = touche toute la zone via opérateurs. (3) Coopération avec les organisateurs No-G7 = canal direct vers les manifestants, et démonstration que la police les protège plutôt que de les combattre. (4) Médias = légitimation publique. Le compteur 'efficacité SMS frauduleux' s'effondre dans l'heure. Bonus politique : la coalition No-G7 verra que la police a coopéré pour les protéger — facilite la suite du dispositif.",
+          "legal": "Art. 22 Cst — Protection active du droit.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Pas de communication publique — discrétion opérationnelle, on capture le dispositif d'abord, on communiquera après.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Erreur grave. Pendant que vous attendez l'OFCOM, les SMS continuent et des manifestants vont peut-être réellement se rendre Place du Molard à 16h. Si la situation dérape (attroupement, incident, accident), votre 'discrétion' aura été directement responsable. La protection de la population prime sur la discrétion opérationnelle ici.",
+          "legal": "Devoir de protection (art. 215 CPP — fonction policière).",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Communication uniquement par les médias officiels (X police), pas par les organisateurs (politiquement compromettant pour la police).",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Trop frileux. Coopérer avec les organisateurs No-G7 pour protéger les manifestants <em>n'est pas politiquement compromettant — c'est professionnel</em>. La séparation 'eux/nous' ici est précisément ce que l'attaquant cherche à exploiter. Le contre-message le plus fort vient quand le canal Telegram No-G7 lui-même relaie l'alerte police.",
+          "legal": "Coopération institutionnelle.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🎯 17h08 — Localisation et interpellation",
+      "situation": "L'OFCOM a triangulé : source d'émission anormale 4G à puissance ~+20 dBm au-dessus de la cellule opérateur, dans un véhicule utilitaire (van) garé rue de Berne. Une équipe police GE est positionnée à 100 m. Vous êtes en liaison radio avec le chef d'équipe, le lieutenant Mouron. Il vous demande : 'On intervient comment ?'",
+      "law": "<strong>Art. 215 CPP</strong> — Pouvoirs police.<br><strong>Art. 219 CPP</strong> — Appréhension.<br><strong>Art. 263 CPP</strong> — Séquestre.<br><strong>ISO/IEC 27037</strong> — Acquisition électronique radio.",
+      "question": "<strong>Plan d'intervention ?</strong>",
+      "choices": [
+        {
+          "text": "Approche discrète, sécurisation périmètre, ouverture du van + interpellation des occupants + séquestre du dispositif <em>en émission</em> (avec photo de l'écran de contrôle, signal radio en cours mesuré par OFCOM, chaîne de custody photo + radio + technique).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Approche multi-couches. (1) Sécurisation = pas d'incident violent ni de prise d'otage par fuite. (2) Interpellation art. 219 CPP (présomption d'auteur d'infraction grave 179septies CP + 251 + LTC 53). (3) Séquestre du dispositif <em>en émission</em> avec preuves multiples = preuve incontestable du dispositif actif. (4) Documentation OFCOM des signaux = double couche de preuve indépendante de la police. Le dossier sera blindé devant le juge.",
+          "legal": "Art. 215+219+263 CPP + ISO 27037.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Tir d'avertissement et brouillage radio pour neutraliser le dispositif immédiatement, sans interpellation.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Disproportionné et improductif. Le brouillage radio (qui serait fait par OFCOM/Armasuisse, pas la police) (a) viole les principes ITU sur les fréquences, (b) détruit toutes les preuves d'émission, (c) ne permet pas d'identifier les opérateurs. L'interpellation préserve les preuves ET les humains.",
+          "legal": "ITU radio regulations + Proportionnalité.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Surveillance prolongée pour identifier les commanditaires éventuels avant interpellation — 24-48h.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Tactiquement défendable mais opérationnellement intenable. La manifestation est demain. Laisser le dispositif émettre 24-48h = continuer à mettre en danger les manifestants. L'intérêt à la protection immédiate prime. L'identification des commanditaires se fera par l'analyse forensique post-saisie (matériel, comptes, communications).",
+          "legal": "Proportionnalité opérationnelle.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 19h30 — Analyse post-saisie et attribution",
+      "situation": "Le dispositif est saisi à 17h35. Deux occupants interpellés (un homme 34 ans nationalité bulgare, une femme 28 ans nationalité serbe — pas de casier connu en CH). Le van : matériel SDR (USRP B210 + LimeSDR), antennes directionnelles, ordinateur Linux avec OpenBTS + YateBTS configurés, base de données de Sender IDs frauduleux (POLICE-GE, INFO-G7, SECU-G7), 2 téléphones de pilotage. Sur l'ordinateur, des logs montrant ~340 SMS envoyés en 4 heures dans la zone. Vous devez faire le rapport d'attribution provisoire à Lavanchy.",
+      "law": "<strong>Diamond Model</strong> — Pivot pour attribution.<br><strong>STIX confidence</strong>.<br><strong>EIMP</strong> — Pour suite éventuelle internationale.",
+      "question": "<strong>Hypothèse d'attribution la plus probable, sur la base des indices ?</strong>",
+      "choices": [
+        {
+          "text": "Étatique hostile (Russie, Iran, autre) — vu la sophistication et le timing G7.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Possible mais non démontré. Un dispositif SMS Blaster sophistiqué coûte 10-15 kCHF — pas hors de portée d'un acteur non étatique. Les deux interpellés sont bulgare/serbe, ce qui pourrait suggérer un acteur des Balkans (mercenaires connus dans certains conflits) mais aussi possiblement des criminels privés. Attribution à un État sans preuve directe est risquée.",
+          "legal": "Standards attribution CTI.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Mercenaires (criminels privés sous-traitants) loués pour saboter / instrumentaliser la manifestation. Commanditaire à identifier par analyse forensique des téléphones et ordinateur (paiements crypto, contacts, communications).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Hypothèse cohérente avec les indices. (1) Profil des interpellés (étrangers, mobilité opérationnelle, professionnalisme) suggère mercenaires plutôt qu'activistes locaux. (2) Matériel chèrement custom mais pas militaire = budget privé conséquent, pas étatique exclusif. (3) <em>Contenu</em> des SMS (manipuler les manifestants dans des directions chaotiques) suggère un commanditaire qui veut <strong>discréditer la manifestation No-G7</strong> ou <strong>provoquer un incident</strong> — pourrait être étatique, mais pourrait aussi être un groupe politique opposé en CH ou à l'étranger. Analyse approfondie nécessaire — pas de conclusion hâtive.",
+          "legal": "Diamond Model + EIMP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Acteurs No-G7 eux-mêmes — pour créer un mythe de répression policière.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Hypothèse incohérente avec les faits. Les SMS frauduleux <em>nuisent</em> à la manifestation No-G7 (annulation false, fausses consignes désordonnées). C'est précisément ce qu'un acteur <em>hostile à la mobilisation</em> ferait. Attribuer aux militants eux-mêmes serait un amalgame conspirationniste et politiquement dévastateur si rendu public. Aebischer et Lavanchy refuseraient cette conclusion.",
+          "legal": "Méthodologie d'attribution.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "police",
+  "region": "GE"
+}

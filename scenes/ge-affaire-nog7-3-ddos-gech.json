@@ -1,0 +1,175 @@
+{
+  "id": "ge-affaire-nog7-3-ddos-gech",
+  "title": "Affaire No-G7 #3 — DDoS sur ge.ch",
+  "icon": "🌊",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Le DDoS est correctement caractérisé (volumétrique L7), les PCAP préservés, l'attribution distinguée entre activisme et acteur étatique. Les hypothèses sont hiérarchisées et la coordination Fedpol/govCERT.ch est déclenchée proprement.",
+    "degraded": "Robert attribue trop vite à l'activisme No-G7 sans considérer les indicateurs APT/Russie. Le service est rétabli mais l'analyse est biaisée.",
+    "failure": "Le PCAP n'est pas préservé en temps réel (rotation des logs), perte des évidences. Ou attribution publique prématurée à No-G7 qui crée un scandale procédural et politique."
+  },
+  "tags": ["DFIR", "GENÈVE", "G7 2026", "DDoS", "PCAP", "ATTRIBUTION", "APT", "GOVCERT"],
+  "legalRefs": [
+    {"label": "Art. 143bis CP", "title": "Accès indu à un système informatique"},
+    {"label": "Art. 144bis CP", "title": "Détérioration de données — applicable au DDoS"},
+    {"label": "Loi LSI", "title": "Loi sur la sûreté intérieure"},
+    {"label": "Art. 74e LSI", "title": "Notification pour infrastructure critique"},
+    {"label": "Convention Budapest art. 5", "title": "Cybercriminalité — atteinte à l'intégrité du système"},
+    {"label": "ISO/IEC 27037", "title": "Acquisition forensique réseau"},
+    {"label": "RFC 3227", "title": "Lignes directrices sur la collecte et l'archivage des preuves"}
+  ],
+  "intro": "<p>Mercredi 10 juin 2026, 04h32. <strong>5 jours avant le sommet</strong>. Votre téléphone vibre. Patrick Aebischer : « Léa, debout. Le site sommet-g7-evian.ge.ch est par terre depuis 22h12 hier. Notre SOC sous-traitant (Switch-CERT) confirme : DDoS volumétrique. Le canton est tombé d'accord pour activer le mode incident. On t'attend au cantonal. »</p><p>Vous arrivez à 05h15 au <strong>Centre cantonal de cybersécurité (CCSC)</strong>, à Lancy. Salle d'incident : Aebischer, Krähenbühl, Pierre <strong>Magnin</strong> (RSSI de l'État de GE), Élodie <strong>Brunner</strong> (Switch-CERT, en visio), et une représentante de l'<strong>OFCS / NCSC.ch</strong> — <strong>Sara Voutaz</strong>. Sur l'écran principal : un Grafana avec un graphe vert puis rouge à 22h12. Pic de 47 Gbps. SYN flood + slow Loris + amplification DNS depuis ~38'000 IPs distinctes.</p><p>Magnin résume : « Page sommet-g7-evian.ge.ch <em>down</em> depuis 6 heures. La page contient les infos circulation, déviations, et FAQ pour la population pendant le G7. Symboliquement et opérationnellement gênante. Le service principal ge.ch et les services métiers restent up. CDN Cloudflare a absorbé une partie mais nos serveurs origins sont noyés. »</p><p>Voutaz prend la parole : « Question d'attribution immédiate. Trois hypothèses sur la table : (1) <em>hacktivisme</em> aligné No-G7 — KillNet-like, scriptkiddies coordonnés sur Telegram. (2) <em>Acteur étatique</em> profitant du G7 — GRU 26165 (APT28) ou GRU 74455 (Sandworm). (3) <em>Acteur opportuniste</em> mercenaire (Cyber Av3ngers, NoName057(16)). On ne peut pas se permettre d'attribuer publiquement à la mauvaise cible. »</p><p>Krähenbühl : « Robert, on te confie l'analyse forensique réseau. Tu coordonnes avec Brunner pour les PCAP et avec Aebischer pour la corrélation OSINT côté revendications. Voutaz, ton OFCS-NCSC nous épaule sur l'attribution. Magnin, tes équipes sur la mitigation. Go. »</p>",
+  "alertLevel": "🌊 DDoS 47 Gbps · sommet-g7-evian.ge.ch DOWN · 38000 IPs · 3 HYPOTHÈSES (activisme / APT / mercenaire) · PCAP PRIORITAIRE",
+  "objectives": [
+    "Préserver les PCAP et logs avant rotation (RFC 3227)",
+    "Caractériser techniquement l'attaque (vecteurs, signatures, infrastructure C2)",
+    "Distinguer les 3 hypothèses d'attribution avec preuves observables",
+    "Coordonner avec OFCS/NCSC.ch sans préempter l'attribution publique"
+  ],
+  "debrief": "<p><strong>Le réflexe forensique réseau dans un DDoS</strong> est l'antithèse du réflexe sysadmin. Le sysadmin veut <em>rétablir le service</em>. Le forensiste veut <em>préserver les preuves</em>. Selon <strong>RFC 3227</strong>, la priorité est la préservation du plus volatile — PCAP en cours, états de connexions, logs SIEM. La mitigation peut se faire en parallèle si on a la capacité de mirroring.</p><p><strong>Caractérisation technique d'un DDoS</strong> : (1) <strong>Volumétrique L3/L4</strong> — SYN flood, UDP flood, saturation bande passante. (2) <strong>Amplification</strong> — DNS amp, NTP amp, memcached, ratio 50× à 50'000×. (3) <strong>L7 applicatif</strong> — Slow Loris, HTTP flood. Un DDoS sophistiqué combine les couches. Outils : <code>tcpdump</code>, <code>tshark</code>, <code>zeek</code>, <code>suricata</code>.</p><p><strong>Attribution — distinguer les 3 hypothèses</strong> :</p><p><strong>(A) Hacktivisme</strong> : User-Agent custom (\"NoG7-Liberation\"), patterns horaires occidentaux, revendications publiques, outillage LOIC/HOIC/Slowloris, pas de stealth. Volume modéré (10-50 Gbps). Infrastructure VPS publics, machines de volontaires, proxies Tor.</p><p><strong>(B) APT étatique</strong> : botnet sophistiqué (IoT compromis, routeurs résidentiels, caméras IP), distribution géographique très large, pas de revendication ou revendication par proxy. Volume très important (200+ Gbps). Infrastructure C2 résiliente (DGA, fast flux), tools custom.</p><p><strong>(C) Mercenaires/Hacktivistes alignés</strong> : NoName057(16), Anonymous Sudan (réellement russe), Cyber Av3ngers — services DDoS-as-a-service. Telegram et X servent de chambre de revendication.</p><p><strong>Préservation PCAP</strong> : (1) Demander à Cloudflare un export des logs de la période. (2) Demander aux ISP suisses les logs NetFlow/IPFIX sur le pic. (3) Préserver les captures en miroir du SPAN port. (4) Hash SHA-256 immédiat, signature chaîne de custody.</p><p><strong>Attribution responsable</strong> : Voutaz a raison d'insister. Une attribution publique prématurée peut (a) braquer des innocents, (b) déclencher une escalade géopolitique, (c) délégitimer l'enquête. L'attribution privée peut être probabiliste. L'attribution publique doit être haute confiance avec preuves communicables.</p><p><strong>Cadre légal CH</strong> : ge.ch n'est pas formellement « infrastructure critique » au sens LSI 74e (liste restreinte : énergie, eau, télécom, transports, santé, finances) mais le canton notifie à l'OFCS pour coordination volontaire. L'art. 144bis CP est applicable mais l'attribution à des personnes physiques en CH sera difficile sans EIMP.</p>",
+  "steps": [
+    {
+      "phase": "🚨 05h30 — Premier arbitrage : préservation vs mitigation",
+      "situation": "Magnin a une décision urgente : ses équipes veulent activer une règle de blocage agressive sur le WAF qui va éliminer 90% du trafic d'attaque mais aussi écraser les buffers de connexion en cours, perdant l'état précis. Brunner peut faire du mirroring PCAP côté Cloudflare en 15 minutes. Il vous demande : on attend 15 min pour préserver, ou on mitige maintenant ?",
+      "law": "<strong>RFC 3227 §3</strong> — Hiérarchie de volatilité.<br><strong>ISO/IEC 27037 §5.4</strong> — Identification → documentation → acquisition.",
+      "question": "<strong>Quelle est votre recommandation ?</strong>",
+      "choices": [
+        {
+          "text": "Mitiger maintenant. Le service utilisateur prime, on verra pour les preuves après.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Sous pression, c'est un réflexe humain, mais c'est ce que la défense utilisera : « Police a écrasé les preuves pour rétablir le service ». De plus, mitiger sans PCAP = pas de signatures pour les futures attaques, pas d'attribution possible, pas de poursuite viable.",
+          "legal": "RFC 3227 — Hiérarchie de volatilité non respectée.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Attendre 15 minutes que Brunner active le mirroring PCAP. Service partiellement dégradé (CDN absorbe encore) le restera 15 min. Préserver les preuves, puis mitiger.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Bon arbitrage. RFC 3227 : préserver le plus volatile avant intervention. Le service est déjà down, 15 minutes de plus ne changent pas l'impact mais sauvent les preuves. Magnin acceptera car c'est une décision technique justifiée.",
+          "legal": "RFC 3227 + ISO/IEC 27037.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Demander à Magnin de couper complètement le service pour 30 minutes, le temps de tout préserver puis remettre en route propre.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Disproportionné. Couper proactivement aggrave l'impact (qui était déjà partiel via Cloudflare). 15 min de mirroring sont suffisants.",
+          "legal": "Proportionnalité opérationnelle.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 08h30 — Premières analyses PCAP",
+      "situation": "Les PCAP sont préservés (hash SHA-256 calculé, ~340 GB au total). Aebischer commence l'analyse avec tshark et zeek. Vous voyez : (a) 38'247 IPs sources distinctes, distribution mondiale très large, (b) User-Agents très variés (pas de signature 'hacktiviste' obvious), (c) ~62% du trafic = TCP SYN flood, ~28% = HTTP GET flood sur /api, ~10% = amplification DNS via résolveurs ouverts. Aebischer note : « Ça ne ressemble pas à un LOIC. Les IPs source incluent énormément de routeurs résidentiels et d'IoT — Mirai-like. »",
+      "law": "<strong>Art. 144bis CP</strong> — Détérioration de données.<br><strong>Convention Budapest art. 5</strong>.<br><strong>MITRE ATT&CK T1498</strong> — Network Denial of Service.",
+      "question": "<strong>Quelle hypothèse d'attribution la signature initiale soutient-elle le plus ?</strong>",
+      "choices": [
+        {
+          "text": "Hacktivisme No-G7 — pas de doute, ils coordonnent ça sur Telegram.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Les indicateurs vont à l'encontre. Hacktivisme No-G7 = LOIC/HOIC, machines de volontaires connectés, distribution géographique européenne dominante, revendication publique. Ici : Mirai-like, distribution mondiale, pas de revendication. Vous tomberiez dans l'amalgame politiquement explosif.",
+          "legal": "Doctrine attribution — signatures distinctives.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Botnet IoT type Mirai, exploité par un acteur sophistiqué (étatique ou mercenaire). Pas le profil hacktiviste. Coordonner avec OFCS/NCSC pour CTI partagée.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Lecture technique correcte. Les signatures (Mirai-like, distribution mondiale, sophistication) pointent vers un botnet IoT loué ou opéré par un acteur structuré. NoName057(16) et Killnet utilisent fréquemment ce type d'infrastructure. Il faut creuser le C2 et les signatures spécifiques avant d'attribuer.",
+          "legal": "MITRE ATT&CK T1498 + IOC patterns.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Sandworm/GRU à coup sûr — c'est leur style.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Trop catégorique sans preuves spécifiques. Mirai-like est compatible avec Sandworm mais aussi avec NoName057(16), Anonymous Sudan, mercenaires DDoS-as-a-service. Avant d'attribuer à un acteur étatique nommé, il faut des indicateurs spécifiques (TTPs uniques, infrastructure attribuée).",
+          "legal": "Standards d'attribution CTI (Diamond Model).",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📣 11h45 — Revendication apparaît sur Telegram",
+      "situation": "Aebischer reçoit une alerte : une revendication vient d'être postée sur un canal Telegram russophone NoName057(16). Texte : « Genève paye pour son rôle de marionnette du G7. Suite à venir. » + screenshot du Grafana cantonal (qui ne devrait pas être public) + référence aux 'agresseurs occidentaux'. Brunner confirme côté Switch-CERT : signature C2 cohérente avec NoName057(16). Voutaz s'allume : « C'est leur MO. Aligné Russie mais opéré par mercenaires/volontaires. Attribution moyenne confiance. »",
+      "law": "<strong>Diamond Model</strong> — Pivot via revendication + signature technique.<br><strong>STIX 2.1</strong> — Confidence levels.<br><strong>Convention Budapest art. 25</strong> — Coopération internationale.",
+      "question": "<strong>Comment qualifier l'attribution maintenant ?</strong>",
+      "choices": [
+        {
+          "text": "Attribution publique immédiate à NoName057(16) avec communiqué de presse cantonal.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Prématuré. 'Moyenne confiance' Voutaz ≠ haute confiance publique. NoName057(16) a une histoire de fausses revendications (groupes copy-cat). Il faut corroborer techniquement le C2, coordonner avec govCERT.ch et NCSC sur le bon timing public, ne pas devancer le SRC s'il y a un volet géopolitique. Attribuer publiquement à tort = scandale.",
+          "legal": "Standards attribution publique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Attribution interne moyenne confiance NoName057(16). Communication publique du canton à coordonner avec OFCS/NCSC sur ton neutre ('DDoS d'origine étrangère, attribution en cours'). Pas de nom public à ce stade.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Approche professionnelle. Vous gardez l'attribution interne à confiance moyenne, vous laissez le temps à la corroboration technique, et vous ne livrez pas une accusation publique sans haute confiance. Voutaz et Krähenbühl appuieront cette approche.",
+          "legal": "STIX confidence + protocole NCSC.ch.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Classer No-G7 hors de cause publiquement.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Discount aussi prématuré. À ce stade, les signatures techniques pointent vers un botnet IoT type NoName057(16), pas vers les militants No-G7. Mais l'enquête doit se poursuivre, pas se clore par un communiqué exonératif.",
+          "legal": "Maxime d'instruction — enquête à charge ET à décharge.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📑 16h00 — Note de synthèse",
+      "situation": "Fin d'après-midi. Le service est partiellement rétabli (60% via WAF + Cloudflare). PCAP préservés et hashés. Première analyse C2 confirme infrastructure compatible NoName057(16). Vous devez livrer une note de synthèse pour Lavanchy et le commandement opérationnel G7.",
+      "law": "<strong>Convention Budapest art. 25</strong> — Coopération internationale.<br><strong>EIMP</strong> — Entraide internationale en matière pénale.<br><strong>Art. 74e LSI</strong>.",
+      "question": "<strong>Quelle structure pour la note ?</strong>",
+      "choices": [
+        {
+          "text": "Conclusion ferme attribution Russie/NoName057(16). Demander saisine SRC et MPC pour 272 CP (service de renseignements).",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Trop ferme. Vous mélangez DDoS (art. 144bis CP, compétence cantonale) et service de renseignements politiques (art. 272 CP, compétence MPC). Un DDoS sans corrélation prouvée à une opération de renseignement étatique n'est pas du 272.",
+          "legal": "Distinction 144bis CP vs 272 CP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Note structurée : (1) Faits : DDoS 47 Gbps, signature Mirai-like, IPs mondiales, revendication NoName057(16). (2) Qualification provisoire : art. 144bis CP. Compétence cantonale, coordination OFCS. (3) Attribution : moyenne confiance NoName057(16), russophone, aligné Russie. Pas d'éléments suffisants pour 272 CP. (4) Demandes : EIMP via Fedpol, échange CTI avec govCERT.ch.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Note professionnelle. Vous séparez clairement les niveaux (faits, qualification, attribution, demandes), vous restez dans votre compétence cantonale, vous proposez la coordination internationale via les bons canaux. Lavanchy et le commandement peuvent décider sur cette base.",
+          "legal": "EIMP + Convention Budapest + LSI.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Note minimaliste : 'DDoS, service rétabli, dossier clos'.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Insuffisant. L'attaque DDoS est une infraction pénale qui mérite poursuite. Classer sans EIMP ni coordination = renoncer à l'enquête. De plus, NoName057(16) reviendra probablement attaquer pendant le sommet — une note de synthèse permet de préparer la riposte.",
+          "legal": "Art. 6 CPP — Maxime d'instruction.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "police",
+  "region": "GE"
+}

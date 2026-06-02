@@ -1,0 +1,176 @@
+{
+  "id": "ge-affaire-nog7-4-leak-interne",
+  "title": "Affaire No-G7 #4 — Le leak interne",
+  "icon": "📧",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'email est analysé forensiquement, les en-têtes parsés, la fuite identifiée comme provenant d'un compte mail interne avec haute confiance. La distinction entre whistleblower (319 CP / liberté de presse) et compromission externe est tenue. L'enquête respecte les sources journalistiques.",
+    "degraded": "Identification correcte mais une transmission précipitée à un collègue non habilité au secret de fonction crée un risque de fuite secondaire. Sera notée en audit.",
+    "failure": "Robert tente une réquisition Meta/Google sur les comptes journalistes pour identifier la source, violant l'art. 28a CPP (protection des sources des médias). Procédure cassée, plainte du média."
+  },
+  "tags": ["DFIR", "GENÈVE", "G7 2026", "LEAK", "EMAIL FORENSICS", "WHISTLEBLOWER", "ART 28a CPP", "SECRET DE FONCTION"],
+  "legalRefs": [
+    {"label": "Art. 320 CP", "title": "Violation du secret de fonction"},
+    {"label": "Art. 293 CP", "title": "Publication de débats officiels secrets"},
+    {"label": "Art. 28a CPP", "title": "Protection des sources des médias — droit de refuser de témoigner"},
+    {"label": "Art. 17 Cst", "title": "Liberté des médias"},
+    {"label": "Art. 162 CP", "title": "Violation du secret commercial"},
+    {"label": "RFC 5321 / 5322", "title": "SMTP / Internet Message Format — en-têtes email"},
+    {"label": "RFC 6376", "title": "DKIM — DomainKeys Identified Mail"},
+    {"label": "ISO/IEC 27037", "title": "Acquisition forensique"}
+  ],
+  "intro": "<p>Vendredi 12 juin 2026, 09h47. <strong>3 jours avant le sommet</strong>. Vous êtes à votre bureau, café à moitié bu. Krähenbühl entre sans frapper, un journal posé sur la pile : la Tribune de Genève version papier. Première page : <strong>« G7 : exclusif — le dispositif sécuritaire genevois dévoilé »</strong>. En sous-titre : « Notre rédaction a obtenu le plan opérationnel intégral de la Police cantonale — effectifs, déploiements, points de blocage. »</p><p>« Robert, on a un problème, » dit Krähenbühl. « Le commandant Bonfanti vient de me appeler. Elle est furieuse. Le document que la Tribune publie en encart 4 pages est le <strong>plan opérationnel POSEC G7</strong>, classé <em>confidentiel</em>, distribué hier soir à 47 personnes (commandement police GE/VS/VD, direction OCPPAM, Fedpol coordination, OFCS, quelques chefs de section). Et il est dans le journal ce matin. Pas une version remaniée — l'original. »</p><p>Vous demandez : « Source identifiée ? »</p><p>« La Tribune ne dira évidemment rien, art. 28a CPP. Mais le commandant veut une enquête forensique <em>immédiate</em> : email forensique, logs réseau, accès aux serveurs internes. <strong>Sans</strong> aller chercher chez le journal. Si on identifie un agent qui a transmis, c'est art. 320 CP — secret de fonction, max 3 ans. Si c'est un piratage externe — c'est art. 143bis et possiblement 272 CP. Tu prends. »</p><p>Vous allez au sous-sol, salle SOC. <strong>Tania Pereira</strong> (admin systèmes Police), <strong>Patrick Aebischer</strong> (votre OSINT senior), et la <strong>juriste cantonale Madeleine Roduit</strong> (déléguée à la protection des données, et déjà connue pour rappeler à l'ordre tout enquêteur qui dépasse les limites) vous attendent. Pereira a sorti une copie PDF de l'encart. En haut, un en-tête identifiable : <em>« Document obtenu d'une source non identifiée. »</em></p>",
+  "alertLevel": "📧 LEAK POSEC G7 PUBLIÉ TRIBUNE · 47 DESTINATAIRES INTERNES · ART 320 CP · ART 28a CPP — INTERDICTION ABSOLUE DE CHERCHER LA SOURCE CHEZ LE JOURNAL",
+  "objectives": [
+    "Identifier la source interne du leak sans violer l'art. 28a CPP (protection des sources des médias)",
+    "Analyser forensiquement le document publié pour extraire les indicateurs (microdots, métadonnées, watermarks éventuels)",
+    "Distinguer whistleblower interne, compromission externe, ou erreur de manipulation",
+    "Préserver la liberté de la presse tout en menant l'enquête sur l'auteur du leak"
+  ],
+  "debrief": "<p><strong>Le cœur de cet acte est l'équilibre entre poursuite d'une violation du secret de fonction et respect de la liberté de la presse.</strong> Ce sont deux principes constitutionnels qui se rencontrent et que la jurisprudence helvétique a soigneusement délimités.</p><p><strong>Art. 320 CP — Violation du secret de fonction</strong> : punit quiconque révèle un secret à lui confié en sa qualité de membre d'une autorité ou de fonctionnaire. Peine privative de liberté jusqu'à 3 ans. <em>L'auteur</em> peut être poursuivi. La <em>victime</em> est l'État (intérêt collectif au bon fonctionnement de l'administration).</p><p><strong>Art. 28a CPP — Protection des sources des médias</strong> : un journaliste a le <strong>droit de refuser de témoigner</strong> sur l'identité de ses sources et sur tout document permettant de les identifier. Ce droit est <em>quasi-absolu</em> sauf si le journaliste est lui-même mis en cause pour une infraction grave (et même alors, restrictions très strictes). Conséquence : <strong>le forensiste ne peut PAS</strong> (1) saisir les serveurs mail du journal, (2) demander à Meta/Google les communications privées avec un journaliste, (3) forcer la rédaction à divulguer ses canaux d'arrivée.</p><p><strong>Art. 17 Cst — Liberté des médias</strong> : garantit la liberté de la presse, de la radio, de la télévision. La CourEDH (arrêt Goodwin c. UK, 1996 et nombreux successeurs) a établi que la protection des sources est <em>essentielle</em> à cette liberté. Toute mesure d'enquête qui tendrait à révéler indirectement une source serait considérée comme une ingérence.</p><p><strong>Méthode forensique légitime — partir du document publié, pas du journal</strong> :</p><p><strong>(1) Microdots / Machine Identification Code (MIC)</strong> — si le document a été imprimé puis numérisé, les microdots de l'imprimante d'origine peuvent être présents. Visible sous lumière bleue 470nm sur l'impression originale ; sur un scan numérique haute résolution, certains points peuvent être détectables. Combiné aux logs d'impression internes (qui a imprimé quoi quand) → identification possible.</p><p><strong>(2) Stéganographie / Watermarks</strong> — certaines administrations modernes utilisent des <em>watermarks invisibles</em> dans leurs documents internes : variations imperceptibles de l'espacement entre mots, ponctuation, choix typographiques par destinataire. Chaque copie est unique. Si le canton GE applique cette technique, le watermark identifie le destinataire qui a leaké.</p><p><strong>(3) Analyse OOXML</strong> — si le document est un .docx, les métadonnées de <code>docProps/core.xml</code> (auteur, lastModifiedBy, revision, app, template) sont une mine. Si c'est un PDF, les Incremental Updates et les métadonnées XMP peuvent révéler l'origine.</p><p><strong>(4) Logs internes</strong> — quel destinataire a (a) ouvert le mail, (b) téléchargé la PJ, (c) imprimé, (d) re-transféré ? Les logs Exchange, EDR sur les postes, logs de la flotte d'impression — tous internes, tous accessibles sans réquisition externe.</p><p><strong>(5) DLP / Audit M365</strong> — Microsoft 365 Unified Audit Log capture les opérations sur les fichiers SharePoint, OneDrive, Teams. <code>FileDownloaded</code>, <code>FileSyncDownloadedFull</code>, <code>FileAccessed</code> par compte utilisateur. C'est la source forensique reine pour un leak interne via M365.</p><p><strong>Hypothèses à hiérarchiser</strong> :</p><p><strong>(A) Whistleblower interne</strong> : un employé de l'administration estime que le dispositif est disproportionné et alerte la presse. Reste art. 320 CP en théorie, mais la jurisprudence est nuancée : si le whistleblower a d'abord tenté la voie interne (CG, hiérarchie, contrôle parlementaire) sans succès, et que l'intérêt public à la divulgation est <em>prépondérant</em>, le juge peut atténuer voire libérer. Cas Snowden, cas Falciani — débats nourris.</p><p><strong>(B) Compromission externe</strong> : un acteur a accédé à un compte mail destinataire (phishing, credential stuffing, infostealer). Art. 143bis CP + 144bis CP. Pourrait être lié au DDoS de l'acte 3 (NoName057(16) qui escalade) ou indépendant.</p><p><strong>(C) Erreur de manipulation</strong> : un destinataire a transmis par erreur (mauvais autocomplete dans l'Outlook). Moins probable vu la précision du leak, mais à exclure.</p><p><strong>Approche éthique vis-à-vis du journal</strong> : ne <em>jamais</em> contacter directement le journal pour demander la source. Ne <em>jamais</em> tenter une approche détournée (réquisition fournisseurs internet du journaliste, surveillance, etc.). Si la source est identifiée par les <em>moyens internes</em> ci-dessus, c'est juridiquement clean. La défense ne pourra pas argumenter sur 28a CPP. La presse ne pourra pas accuser la police d'attaque contre la liberté de presse.</p>",
+  "steps": [
+    {
+      "phase": "🚫 10h15 — La tentation directe",
+      "situation": "Krähenbühl vient de quitter le SOC. Pereira vous propose : « Léa, j'ai accès à Microsoft Defender XDR. On peut voir si des comptes destinataires ont été compromis. Mais je peux aussi, techniquement, regarder qui a téléchargé la PJ sur le LMS de la Tribune si on accède à leurs logs publics. Et un de mes collègues a déjà géré une infra pour la Tribune l'an dernier... »",
+      "law": "<strong>Art. 28a CPP</strong> — Protection des sources des médias.<br><strong>Art. 17 Cst</strong> — Liberté des médias.<br><strong>CourEDH Goodwin c. UK</strong> (1996) — Protection essentielle des sources.",
+      "question": "<strong>Que répondez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "« Pour les comptes internes, on a le droit. Pour la Tribune, ABSOLUMENT PAS. On ne touche pas à leur infrastructure, on ne contacte pas leur prestataire ex-employeur, on ne fait rien qui pourrait être qualifié de tentative de remonter la source. »",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Position juridiquement et déontologiquement nette. Vous dessinez clairement la ligne : (1) Tout artefact interne (M365 audit, EDR, logs réseau de notre périmètre) = légitime, on a la propriété et la base légale. (2) Tout artefact qui touche au journal = interdit absolu. Le mélange des deux peut faire perdre la procédure entière. Roduit (déléguée à la protection des données) en sera soulagée et votre dossier tiendra devant les tribunaux et la CourEDH.",
+          "legal": "Art. 28a CPP + Art. 17 Cst + Goodwin c. UK.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "« Bonne idée, regardons les logs de la Tribune via le collègue. C'est de l'OSINT sur des logs hébergés. »",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌❌ <strong>FAUTE TRÈS GRAVE</strong>. Aller voir l'infrastructure d'un média par un canal détourné, c'est une <strong>tentative de remonter la source</strong> — précisément ce que l'art. 28a CPP interdit. C'est aussi très probablement un <strong>accès illicite</strong> (art. 143bis CP) du collègue contre son ancien employeur. Si découvert, c'est : (1) procédure cassée, (2) sanctions disciplinaires lourdes, (3) plainte de la Tribune avec couverture médiatique massive, (4) condamnation potentielle de la Suisse à Strasbourg. Roduit aurait déjà appelé l'inspection des polices.",
+          "legal": "Art. 28a CPP + Art. 143bis CP + Art. 17 Cst.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« On ne fait rien tout de suite, on attend de voir si la Tribune sort d'autres documents pour comprendre l'ampleur. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Attentisme problématique. On a un délit (art. 320 CP) commis, un dispositif G7 dans 3 jours dont les détails sont publiés (risque opérationnel concret), et des moyens forensiques internes parfaitement légitimes à disposition. Ne rien faire, c'est manquer à l'art. 6 CPP (maxime d'instruction).",
+          "legal": "Art. 6 CPP — Maxime d'instruction.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 11h00 — Analyse forensique du document publié",
+      "situation": "Vous récupérez auprès de la rédaction (qui coopère sur ce point) un PDF haute résolution du document publié — c'est public désormais, pas de violation 28a. Aebischer ouvre le PDF avec pdfinfo, pdfid.py et examine sa structure.",
+      "law": "<strong>ISO 32000 — PDF</strong>.<br><strong>ISO/IEC 27037</strong> — Acquisition forensique.<br><strong>Yellow Dot Tracking / MIC</strong>.",
+      "question": "<strong>Quelles analyses prioritaires sur ce PDF ?</strong>",
+      "choices": [
+        {
+          "text": "Métadonnées XMP + Incremental Updates + analyse des images (microdots si scan d'impression) + recherche de watermarks invisibles (espacement / ponctuation per destinataire si l'admin GE en applique).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Approche complète. (1) Les <strong>métadonnées XMP</strong> peuvent contenir <code>Producer</code>, <code>Author</code>, <code>CreationDate</code>, <code>ModifyDate</code> — utiles si le PDF a transité par un poste interne. (2) Les <strong>Incremental Updates</strong> du PDF révèlent l'historique de modifications. (3) Si le doc a été imprimé puis scanné, les <strong>microdots</strong> de l'imprimante origine peuvent être visibles. (4) Si l'admin GE applique des <strong>watermarks invisibles</strong> par destinataire, c'est la signature directe qui identifie qui a leaké. Cette dernière technique est documentée publiquement (Christensen et al., 'Document Watermarking for Leak Detection'). Toutes ces analyses se font <em>sur l'artefact public</em>, pas sur l'infrastructure du journal.",
+          "legal": "Méthodologie forensique documentaire.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Juste recherche de chaînes de caractères avec strings et grep.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Insuffisant. Les chaînes peuvent révéler des choses mais c'est une analyse de surface. Vous passez à côté des métadonnées structurées, des microdots, des watermarks éventuels.",
+          "legal": "Méthodologie forensique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "OCR du PDF pour extraire le texte et le comparer caractère par caractère au document original interne.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ Utile mais limité. La comparaison textuelle ne révèle pas la source. Combinée avec l'analyse des watermarks invisibles (variations imperceptibles), ça devient productif — mais l'OCR seul est secondaire.",
+          "legal": "Méthodologie.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🎯 13h30 — Le watermark trouvé",
+      "situation": "Bonne nouvelle : l'OCPPAM applique effectivement depuis 2024 des watermarks invisibles sur les documents POSEC : variations imperceptibles d'espacement après certains mots-clés, unique par destinataire. L'admin de l'OCPPAM (qui a la clé) compare le document publié aux 47 versions distribuées. Match : c'est la version distribuée à un <strong>commandant adjoint d'une police communale d'une commune lémanique</strong>. Vous avez votre suspect interne.",
+      "law": "<strong>Art. 320 CP</strong> — Violation du secret de fonction.<br><strong>Art. 197 CPP</strong> — Mesures de contrainte : proportionnalité.<br><strong>Art. 30 CPP</strong> — Compétence ratione loci.",
+      "question": "<strong>Action immédiate ?</strong>",
+      "choices": [
+        {
+          "text": "Communiquer l'identification immédiatement à la presse pour montrer notre efficacité.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Erreur grave. (1) La présomption d'innocence (art. 32 al. 1 Cst) protège le suspect tant qu'il n'est pas jugé. (2) Communication publique avant audition = atteinte à la personnalité et probable suspension de poste injustifiée. (3) Vous donnez à la défense un angle pour faire annuler la procédure (procès médiatique). Le commandant Bonfanti et Lavanchy seront furieux.",
+          "legal": "Art. 32 Cst — Présomption d'innocence.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Transmettre l'identification à Lavanchy par voie chiffrée, ouverture d'instruction art. 320 CP, perquisition + audition selon procédure ordinaire. Pas de communication publique. Préserver les éléments d'enquête interne.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Procédure correcte. Identification interne → procureur → instruction → perquisition autorisée → audition. Pas de presse. Pas de surenchère. La procédure tient juridiquement. Le suspect aura ses droits de défense intacts. Si le watermark seul est l'élément central, la défense pourra contester son fiabilité — il faudra corroborer avec d'autres éléments (logs M365 audit du destinataire, EDR, géolocalisation du téléphone professionnel, etc.).",
+          "legal": "Art. 309-311 CPP + Art. 197 CPP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Audition immédiate du suspect par téléphone, sans avocat, pour confession rapide.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Violations multiples : (1) art. 158 CPP — information des droits avant toute audition. (2) art. 159 CPP — droit à un défenseur. (3) Audition par téléphone d'un fonctionnaire pour un délit = nullité procédurale. Toute déclaration obtenue serait inexploitable.",
+          "legal": "Art. 158-159 CPP.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ 16h30 — La motivation du suspect",
+      "situation": "Le suspect est entendu en présence de son avocat le lendemain. Il reconnaît avoir transmis le document à la Tribune. Sa motivation : il considère que le dispositif POSEC est disproportionné, qu'il prévoit l'usage de matériel anti-émeute lourd contre une manifestation pacifique autorisée, et que la transparence démocratique exige que la population sache. Il a d'abord tenté de saisir la hiérarchie (deux mails à son commandant, restés sans suite) avant de leaker. Lavanchy vous demande comment cadrer le rapport au procureur.",
+      "law": "<strong>Art. 320 CP</strong> — Violation du secret de fonction.<br><strong>Jurisprudence whistleblower</strong> — ATF 144 IV 277 (cas Falciani et suites).<br><strong>Art. 17 Cst</strong> — Liberté des médias.<br><strong>CEDH art. 10</strong> — Liberté d'expression.",
+      "question": "<strong>Comment qualifier l'acte dans le rapport au procureur ?</strong>",
+      "choices": [
+        {
+          "text": "Art. 320 CP simple, peine maximale recommandée — un fonctionnaire qui leake mérite l'exemplarité.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Trop catégorique. La jurisprudence helvétique sur les whistleblowers (ATF 144 IV 277 et suites) admet que l'intérêt public à la divulgation peut atténuer voire libérer si : (a) la voie interne a été tentée préalablement sans succès, (b) l'information est d'intérêt public majeur, (c) la divulgation est proportionnée. Le suspect coche au moins (a). Au juge d'apprécier — pas à vous de préempter une condamnation maximale.",
+          "legal": "ATF 144 IV 277 — Whistleblower.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Rapport factuel à Lavanchy : art. 320 CP confirmé, mais documenter les éléments susceptibles d'atténuation (voie interne tentée, motivation invoquée d'intérêt public). Laisser le juge décider de la qualification finale et de la peine. Pas de prise de position politique du rapport.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Rôle correct du forensiste/enquêteur. Vous établissez les faits, vous documentez les circonstances (à charge ET à décharge — art. 6 CPP), vous laissez la qualification finale et l'appréciation des circonstances atténuantes au juge. Vous ne tombez pas dans le piège de qualifier moralement (« il méritait »). La jurisprudence whistleblower évolue, Lavanchy aura tous les éléments pour décider d'une mise en accusation ou d'un classement avec injonction.",
+          "legal": "Art. 6 CPP + ATF 144 IV 277.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Classement immédiat — le whistleblower est protégé, pas la peine de poursuivre.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Au-delà de votre rôle. Le classement est une décision du procureur (art. 319 CPP), pas de l'enquêteur. De plus, le statut whistleblower en droit suisse n'est <em>pas</em> une exonération automatique — c'est une circonstance que le juge évalue. Recommander un classement préempte la décision procureur.",
+          "legal": "Art. 319 CPP — Classement par le procureur.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "police",
+  "region": "GE"
+}
