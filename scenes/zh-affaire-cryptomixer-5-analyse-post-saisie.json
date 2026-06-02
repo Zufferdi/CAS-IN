@@ -1,0 +1,246 @@
+{
+  "id": "zh-affaire-cryptomixer-5-analyse-post-saisie",
+  "title": "Le Mixeur de la Bahnhofstrasse #5 — 12 téraoctets d'histoire",
+  "icon": "🧮",
+  "difficulty": "hard",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "L'analyse post-saisie est conduite avec rigueur méthodologique. Les 12 To de données sont segmentés, hashés, partagés selon les besoins de chaque axe (clients criminels, victimes, opérateurs). Les corrélations avec les enquêtes ransomware en cours permettent l'identification de centaines de victimes susceptibles d'être indemnisées.",
+    "degraded": "L'analyse avance mais une partie des données contient des informations personnelles sensibles non liées au dossier (faux clients banals utilisant le service par curiosité) — la gestion de ces données pose un problème nLPD à arbitrer.",
+    "failure": "Brunner-Tobler partage les données brutes avec des partenaires étrangers sans accord JIT formalisé pour chaque transmission — violation des principes EIMP et nLPD. Ou décide de poursuivre tous les 'clients' du mixer sans distinction (chasse aux sorcières)."
+  },
+  "tags": ["DFIR", "ZURICH", "BLOCKCHAIN", "POST-SAISIE", "DATA ANALYSIS", "VICTIMES", "RANSOMWARE", "INDEMNISATION"],
+  "legalRefs": [
+    {"label": "Art. 70 CP", "title": "Confiscation"},
+    {"label": "Art. 73 CP", "title": "Allocation au lésé"},
+    {"label": "Art. 305bis CP", "title": "Blanchiment — qualification utilisateurs"},
+    {"label": "Art. 6 CPP", "title": "Maxime d'instruction — à charge ET à décharge"},
+    {"label": "nLPD", "title": "Protection des données — utilisateurs légitimes/illégitimes"},
+    {"label": "Convention Budapest art. 26", "title": "Communication spontanée"},
+    {"label": "Doctrine Recoba", "title": "Distinguer financement infraction principale et blanchiment"}
+  ],
+  "intro": "<p>Mardi 16 décembre 2025, 14h00. <strong>5 semaines après l'opération LIMMAT-MIX</strong>. Le laboratoire forensique du MP-ZH (sous-sol Sihl, accès biométrique, NDA stricte) est devenu votre seconde maison. Vogel, Kuhn, trois analystes blockchain Chainalysis sous mandat formel, et un statisticien externe (Université de Zurich, Pr. Lorenz, sous serment ad hoc) travaillent depuis 5 semaines sur les 12 To de données saisies.</p><p>Vogel projette son screen. « Madame, on a une vue d'ensemble. Les 12 To se décomposent en : (1) <strong>3.2 To</strong> de logs serveur (Nginx, application Python custom, bitcoind nodes) couvrant 2018-2025 (avant 2018 = backups partiels). (2) <strong>4.8 To</strong> de base de données opérationnelle : table 'mixes' avec ~340'000 transactions, table 'wallets' avec ~89'000 adresses de réception, table 'payouts' avec ~410'000 sorties. (3) <strong>1.7 To</strong> de communications internes opérateurs (emails chiffrés OpenPGP, chats Element/Matrix self-hosted, notes développeur). On a obtenu une bonne partie des clés de déchiffrement via la perquisition Hambourg. (4) <strong>1.3 To</strong> de divers (snapshots VMs, configs, monitoring). »</p><p>Il continue. « De cette analyse émergent <strong>3 catégories de clients</strong> du mixer : </p><ul><li><strong>Catégorie A — Criminels confirmés</strong> (~15% des transactions, ~73% des volumes) : adresses sources matchant des clusters Chainalysis identifiés comme ransomware (Conti, LockBit, Akira, Play, Royal), marketplaces darknet, forums underground. <strong>Estimation : 230M EUR de fonds clairement criminels.</strong></li><li><strong>Catégorie B — Suspects mais non confirmés</strong> (~45% des transactions) : adresses sources qui pourraient être criminelles (patterns suspects) mais sans attribution claire. Beaucoup de petites transactions ($500-5000) qui pourraient être : (a) du <em>pig butchering</em> (arnaques investissement), (b) des phishing modestes, (c) de la vente illicite (drogue), (d) ou de la simple paranoïa de privacy.</li><li><strong>Catégorie C — Privacy-seekers légitimes</strong> (~40% des transactions, ~12% des volumes) : adresses sources qui ne matchent aucun cluster criminel connu. Vraisemblablement des utilisateurs qui voulaient simplement masquer leur historique blockchain (sphère privée, salaire crypto, peur de doxxing).</li></ul><p>Vogel pose la question critique. « Madame la procureure : qu'est-ce qu'on fait avec les catégories B et surtout C ? Si on poursuit tous les 'clients' du mixer sans distinction, on tombe dans la chasse aux sorcières. Si on en exclut trop, on rate des criminels. Et il y a la question des <strong>victimes potentielles</strong> : on a identifié dans la catégorie A les flux d'au moins 47 incidents ransomware documentés — les ransons que les victimes ont payées et que les attaquants ont blanchies via Cryptomixer. Peut-on tracer ces fonds pour <strong>restituer aux victimes</strong> ? »</p>",
+  "alertLevel": "🧮 12 TO ANALYSÉS · 340K MIXES · 3 CATÉGORIES CLIENTS · 47 INCIDENTS RANSOMWARE TRACÉS · QUESTION INDEMNISATION VICTIMES",
+  "objectives": [
+    "Discriminer méthodologiquement les 3 catégories de clients (criminels / suspects / légitimes)",
+    "Identifier les victimes traçables et préparer la restitution (art. 70-73 CP)",
+    "Gérer la protection des données nLPD pour les utilisateurs catégorie C non incriminés",
+    "Partager les éléments criminels pertinents avec les juridictions concernées (Convention Budapest art. 26)",
+    "Préparer la qualification finale art. 305bis CP des opérateurs (en se basant sur ce que ces opérateurs savaient)"
+  ],
+  "debrief": "<p>L'<strong>analyse post-saisie d'un mixer démantelé</strong> est une opération forensique de très grande échelle qui combine défi technique et défi juridique majeur. Le piège central : transformer une enquête contre les <em>opérateurs du mixer</em> en chasse aux sorcières contre tous les <em>utilisateurs</em>.</p><p><strong>Distinguer opérateurs et utilisateurs</strong></p><p>Les opérateurs du mixer (Petrov, Brandt, et co-conspirateurs) sont poursuivis pour <strong>art. 305bis CP — blanchiment</strong>. La preuve à apporter : (a) ils savaient ou pouvaient savoir que les fonds traités provenaient d'infractions, (b) ils ont mis en place et opéré un service destiné à masquer cette origine. La jurisprudence helvétique (notamment ATF 145 IV 335 et autres) qualifie le blanchiment dès que l'auteur agit avec <em>dol éventuel</em> — il accepte la possibilité que les fonds soient criminels et continue.</p><p>Les <strong>utilisateurs</strong> du mixer, eux, sont dans des situations très différentes :</p><ul><li><strong>Catégorie A</strong> : utilisateurs criminels qui blanchissent des produits de leurs propres infractions. Ils commettent eux aussi du blanchiment art. 305bis CP (auto-blanchiment, depuis la révision de 2015 art. 305bis al. 1bis). Mais leur identité reste à établir pour chacun — pas automatique. Pour la grande majorité, le mixer protège leur identité, qui ne pourra être révélée qu'au cas par cas par enquête approfondie (chainalysis sur leur cluster, IP au moment du mix, etc.).</li><li><strong>Catégorie B</strong> : suspects mais non confirmés. Indices, pas preuves. Sans preuve solide, pas de poursuite — sinon violation art. 32 Cst (présomption d'innocence).</li><li><strong>Catégorie C</strong> : utilisateurs légitimes. <strong>Utiliser un mixer n'est pas en soi une infraction en droit suisse</strong> (contrairement à certaines juridictions comme les USA où Tornado Cash a été sanctionné). Tant qu'un utilisateur mélange ses propres fonds légitimes (sphère privée, salaire crypto, peur de doxxing), il ne commet aucune infraction. Le procureur n'a aucun droit de poursuivre.</li></ul><p><strong>nLPD et catégorie C</strong></p><p>Les données saisies contiennent des informations sur ~340'000 transactions, soit potentiellement des dizaines de milliers de personnes. Pour la catégorie C (utilisateurs légitimes), <strong>vous détenez des données personnelles sans base légale pour les exploiter au-delà de l'enquête sur les opérateurs</strong>. La nLPD (art. 5 — principes, art. 6 — licéité) impose : (a) <em>finalité</em> — les données doivent servir l'enquête, pas être utilisées à d'autres fins, (b) <em>proportionnalité</em> — minimisation, (c) <em>conservation</em> — limitée à la durée nécessaire. À terme, les données catégorie C devront être supprimées ou pseudonymisées, sauf si elles révèlent par exception une infraction concrète. Brunner-Tobler doit documenter cette posture pour le PFPDT (qui pourra contrôler).</p><p><strong>Identifier les victimes (art. 70-73 CP)</strong></p><p>Le côté positif de la saisie : 23.4M CHF en BTC sécurisés peuvent partiellement <strong>indemniser les victimes</strong>. Procédure : (1) Tracer les flux entrants depuis des adresses identifiées comme provenant d'incidents ransomware/escroqueries documentés. (2) Établir un lien clair entre la victime initiale (ex. PME ZH qui a payé 800K EUR de rançon en BTC à LockBit en 2024) et les fonds passés par Cryptomixer. (3) Quantifier la proportion : si les BTC saisis représentent X% des fonds totaux blanchis par le mixer, et que la rançon de la PME représente Y% des fonds entrants criminels, alors la victime peut prétendre à X×Y% des BTC saisis.</p><p>Le mécanisme juridique : <strong>art. 70 CP</strong> — confiscation au profit de l'État, puis <strong>art. 73 CP</strong> — allocation au lésé (la victime peut demander que les valeurs confisquées lui soient attribuées). Procédure : la victime doit se constituer partie plaignante (art. 118 CPP) ou être identifiée d'office par le MP. Les démarches sont longues mais possibles. Précédent : dans l'affaire Hydra Market (2022), une partie des fonds saisis a été restituée à des victimes traçables aux USA.</p><p><strong>Partage international des éléments criminels (Convention Budapest art. 26)</strong></p><p>Pour la catégorie A, beaucoup de fonds proviennent d'incidents ransomware survenus dans d'autres juridictions (FBI USA pour Conti, BKA pour LockBit en partie, AFP Australie, etc.). La <strong>Convention de Budapest art. 26</strong> permet la <em>communication spontanée d'informations</em> entre États parties, hors procédure EIMP formelle, dès lors que l'information peut servir une enquête dans le pays récepteur. Brunner-Tobler peut donc transmettre via Europol J-CAT : « voici les adresses sources de la transaction X de votre dossier ransomware, et voici comment elle est passée par Cryptomixer ».</p><p><strong>Cette opération démultiplie la valeur de la saisie</strong> : non seulement on a démantelé un mixer, mais on contribue à 47+ enquêtes ransomware ailleurs.</p>",
+  "steps": [
+    {
+      "phase": "📊 14h30 — Méthodologie de catégorisation des clients",
+      "situation": "Vogel présente sa méthodologie de catégorisation. Vous devez la valider avant qu'elle ne devienne le fondement de toutes les décisions ultérieures. Sa méthode : (1) Tous les hashes de transactions sortantes du mixer sont cross-référencés avec les clusters Chainalysis identifiés comme criminels (ransomware, darkmarket, sanctions, etc.). (2) Score de risque par transaction. (3) Si score haut → catégorie A. Si moyen → B. Si bas/aucun match → C. Score basé sur 8 indicateurs pondérés.",
+      "law": "<strong>Art. 182 CPP</strong> — Expertise.<br><strong>nLPD principes</strong>.<br><strong>Doctrine catégorisation données</strong>.",
+      "question": "<strong>Validez-vous la méthodologie de catégorisation ?</strong>",
+      "choices": [
+        {
+          "text": "Valider, sous réserve de : (1) documentation complète des 8 indicateurs pondérés (recevabilité art. 182 CPP). (2) Audit par le Prof. Lorenz (statisticien externe) pour vérifier l'absence de biais et la robustesse. (3) Seuils de catégorisation auditables. (4) Possibilité de re-catégorisation manuelle pour cas-limite. (5) Documentation des cas-frontière pour traçabilité.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Approche structurée. Une catégorisation automatique sur 340K transactions doit être méthodologiquement transparente — la défense pourra contester. Documenter les indicateurs, faire auditer par un expert externe indépendant, garder les seuils traçables, permettre la re-catégorisation manuelle pour les cas litigieux = solidité méthodologique. Le rapport Lorenz validera la méthode.",
+          "legal": "Art. 182 CPP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Valider sans audit indépendant — Vogel est expert, on lui fait confiance.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Confiance personnelle ≠ rigueur procédurale. Une catégorisation qui détermine si quelqu'un est poursuivi ou non doit pouvoir être auditée par un tiers indépendant. Sinon la défense plaidera 'opacité algorithmique' et fragilisera tout le dossier.",
+          "legal": "Pratique scientifique.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Rejeter — on ne peut pas catégoriser automatiquement, c'est forcément subjectif.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Sur 340K transactions, l'analyse manuelle exhaustive est impossible. Une catégorisation par méthode est nécessaire, à condition qu'elle soit documentée et auditable.",
+          "legal": "Pragmatisme + audit.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🛡 16h00 — Gestion des utilisateurs catégorie C",
+      "situation": "La catégorie C (~40% des transactions) représente vraisemblablement des utilisateurs légitimes utilisant Cryptomixer pour des raisons de privacy sans intention criminelle. Vous détenez maintenant leurs données personnelles (adresses Bitcoin, IPs partielles, parfois emails). Question : quelle posture nLPD ?",
+      "law": "<strong>nLPD art. 5-6</strong>.<br><strong>nLPD art. 12</strong> — Conservation limitée.<br><strong>PFPDT</strong>.",
+      "question": "<strong>Quelle posture vis-à-vis des données catégorie C ?</strong>",
+      "choices": [
+        {
+          "text": "Pseudonymisation immédiate dans la base d'enquête (catégorie C accessible uniquement par dérogation expresse). Documentation de cette posture dans le dossier procédural. Information du PFPDT du traitement et de la procédure de minimisation. Suppression définitive à clôture d'enquête sauf élément criminel apparu entre-temps.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Posture nLPD professionnelle. Vous reconnaissez : (a) la nécessité de garder les données pour le moment (preuves contextuelles), (b) le devoir de minimiser leur exploitation (pseudonymisation), (c) la transparence vis-à-vis du PFPDT, (d) la suppression à terme. Cette posture sera saluée par le PFPDT et bloque toute critique 'surveillance de masse des utilisateurs crypto'.",
+          "legal": "nLPD art. 5+6+12.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Exploiter toutes les données catégorie C aussi — peut-être qu'avec analyse approfondie, des criminels apparaissent.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Fishing expedition. Sans indice spécifique, exploiter les données de 40% d'utilisateurs probablement légitimes = surveillance disproportionnée, violation nLPD, atteinte à la sphère privée (art. 13 Cst). Le PFPDT et la presse vous tomberont dessus.",
+          "legal": "nLPD + Art. 13 Cst.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Supprimer immédiatement toutes les données catégorie C pour ne garder que A et B.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Trop rapide. Les données catégorie C peuvent : (a) servir à montrer l'usage légitime du service par certains (à décharge des opérateurs : 'le mixer servait aussi à des fins légitimes'), (b) être recatégorisées si de nouveaux éléments criminels émergent les concernant. Pseudonymisation oui, suppression immédiate non.",
+          "legal": "Conservation conditionnelle.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🎯 17h30 — Tracer les victimes ransomware",
+      "situation": "Vogel a identifié dans la catégorie A des flux issus de 47 incidents ransomware documentés sur 2022-2025. Parmi eux : 8 incidents en Suisse (3 ZH, 2 GE, 1 BE, 1 BS, 1 VD), 12 en Allemagne, 9 aux USA, 6 en France, 4 au UK, 8 autres pays. Vous voulez procéder à la restitution aux victimes (art. 70-73 CP). Comment structurer cela ?",
+      "law": "<strong>Art. 70 CP</strong>.<br><strong>Art. 73 CP</strong> — Allocation au lésé.<br><strong>Art. 118 CPP</strong> — Partie plaignante.<br><strong>EIMP</strong>.",
+      "question": "<strong>Stratégie d'identification + restitution aux victimes ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Pour les victimes CH : contact direct via les autorités cantonales de plainte. Information de leur statut potentiel de lésé. Demande de constitution comme partie plaignante (art. 118 CPP) avec preuve de la transaction. (2) Pour victimes étrangères : transmission via Convention Budapest art. 26 aux autorités nationales concernées + possibilité de constituer partie plaignante en CH (lésé étranger reconnu). (3) Quantification stricte : montant restituable = (BTC saisi / BTC total mixé) × montant initial de la victime. (4) Procédure d'attribution validée par tribunal en fin de procès.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Procédure complète et juste. Vous transformez une opération de saisie en restitution effective aux victimes — c'est l'aboutissement social positif de l'enquête. Quantification stricte évite l'arbitraire. La procédure passe par le tribunal final qui valide l'allocation. Le précédent crée une jurisprudence pour les futures opérations similaires.",
+          "legal": "Art. 70+73 CP + 118 CPP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Restituer uniquement aux victimes suisses, les autres n'ont qu'à se débrouiller avec leur pays.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Discrimination injustifiée. Le critère n'est pas la nationalité de la victime mais sa qualité de lésé prouvable. Les BTC saisis sont fongibles — peu importe que la victime soit suisse ou allemande, dès lors que sa transaction est identifiable dans les flux. De plus, signal politique très négatif pour les coopérations internationales futures.",
+          "legal": "Égalité de traitement + EIMP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Ne pas se compliquer — les BTC saisis vont à la caisse de l'État zurichois, point.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Art. 70 CP prévoit la confiscation, mais art. 73 CP prévoit l'allocation au lésé. Renoncer à art. 73 = priver les victimes d'une indemnisation possible. C'est une perte de valeur sociale et un mauvais signal pour les futures victimes de ransomware (pourquoi porter plainte si l'État garde les fonds saisis ?).",
+          "legal": "Esprit art. 73 CP.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🌍 19h00 — Partage international via Convention Budapest art. 26",
+      "situation": "Pour les 47 incidents ransomware identifiés, il y a une opportunité majeure : partager les éléments avec les autorités d'enquête des pays concernés. Convention Budapest art. 26 permet la communication spontanée d'informations utiles à une enquête étrangère, sans EIMP formelle. Quelle approche ?",
+      "law": "<strong>Convention Budapest art. 26</strong>.<br><strong>Europol J-CAT</strong>.<br><strong>NDA partage sensible</strong>.",
+      "question": "<strong>Comment organiser le partage international ?</strong>",
+      "choices": [
+        {
+          "text": "Communications structurées via Europol J-CAT, par paquets thématiques (un paquet par groupe ransomware : Conti package, LockBit package, etc.). Chaque paquet contient : adresses sources identifiées, montants, dates, lien avec Cryptomixer prouvé. Transmission via canal sécurisé Europol. Pas de transmission directe bilatérale (pour maintenir la traçabilité).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Approche optimale. Le canal Europol J-CAT (a) garantit la traçabilité des transmissions, (b) permet le partage à plusieurs juridictions simultanément, (c) protège les éléments sensibles via NDA, (d) évite les transmissions bilatérales non documentées. Les juridictions destinataires pourront exploiter dans leurs propres enquêtes.",
+          "legal": "Convention Budapest art. 26 + J-CAT.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Transmissions bilatérales directes selon les liens existants (FBI pour Conti USA, BKA pour LockBit DE, etc.).",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Possible mais moins structuré. Le canal bilatéral risque (a) de manquer de traçabilité formelle, (b) de créer des asymétries (certaines juridictions reçoivent l'info plus tôt que d'autres), (c) de complexifier la coordination si des enquêtes parallèles existent. Le canal Europol est plus structuré.",
+          "legal": "Pratique opérationnelle.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Ne pas partager — protéger l'avantage informationnel de CH.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Approche fermée et contre-productive. (1) La Convention de Budapest fait de la communication spontanée un esprit (CH est partie depuis 2012). (2) Si CH ne partage pas, les autorités étrangères iront chercher l'information autrement, peut-être moins proprement. (3) Signal négatif pour les futures coopérations dont la CH bénéficiera. (4) Les victimes étrangères ratent leur chance d'indemnisation.",
+          "legal": "Esprit Convention Budapest.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ 21h00 — Qualifier les opérateurs : connaissance du caractère criminel",
+      "situation": "Pour la qualification finale art. 305bis CP des opérateurs (Petrov, Brandt, Reichmuth si retrouvé), il faut prouver leur <em>connaissance</em> du caractère criminel des fonds. Les saisies révèlent : (a) Brandt a des chats internes où il dit explicitement 'nos meilleurs clients sont les ransomware groups', (b) il connaît les patterns Chainalysis et publie des updates pour les contrer, (c) il a refusé de coopérer avec des demandes de KYC. Petrov n'est mentionné dans aucun chat technique — son rôle est purement administratif (signature contrats, ouverture comptes, ramassage du courrier).",
+      "law": "<strong>Art. 305bis CP</strong>.<br><strong>Art. 12 CP</strong> — Intention vs négligence.<br><strong>Dol éventuel</strong>.<br><strong>ATF 145 IV 335</strong>.",
+      "question": "<strong>Qualification respective de Brandt et Petrov ?</strong>",
+      "choices": [
+        {
+          "text": "Brandt : art. 305bis CP avec dol direct (preuves textuelles de la connaissance) + circonstances aggravantes (al. 2 lit. b — bande, al. 2 lit. c — métier). Petrov : art. 305bis avec dol éventuel à débattre (pouvait-il ne pas savoir, vu son rôle ? circonstances atténuantes : possible exploitation par les autres). Allègement possible si coopération.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Qualification différenciée et juste. Brandt connaissait clairement le caractère criminel — dol direct. Aggravantes applicables (structure organisée = bande, durée + bénéfices réguliers = métier). Petrov dans une zone plus grise : son rôle administratif peut être qualifié de dol éventuel (il acceptait la possibilité que les fonds soient criminels sans s'informer) — mais ses circonstances personnelles (exploitation possible) peuvent atténuer. Le juge tranchera, votre rapport pose les éléments à charge ET à décharge.",
+          "legal": "ATF 145 IV 335 + Art. 12 CP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Brandt et Petrov : tous les deux 305bis al. 2 plein, peines maximales recommandées.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Manque de nuance. Le degré de culpabilité est très différent. Recommander la peine max pour Petrov sans considérer son rôle effectif et ses circonstances = atteinte au principe de proportionnalité de la peine (art. 47 CP).",
+          "legal": "Art. 47 CP — Individualisation peine.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Brandt seul, Petrov est un homme de paille manipulé, à libérer.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Trop indulgent. Un homme de paille qui accepte sciemment de prêter son nom à des opérations qu'il sait ou peut savoir suspectes commet bel et bien une infraction (au minimum dol éventuel). Petrov pourrait plaider une faible peine via reconnaissance des faits et coopération, mais non-poursuite serait inadéquat.",
+          "legal": "Art. 305bis CP — Dol éventuel.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📜 22h30 — Note de synthèse fin de phase d'analyse",
+      "situation": "Vous synthétisez 5 semaines d'analyse pour transmission à Albertini + parties impliquées (Wehrli, Dietrich, partenaires Europol). La note doit présenter l'état des découvertes, les actions menées (catégorisation, restitution victimes, partages internationaux), et les prochaines étapes (mise en accusation finale).",
+      "law": "<strong>Pratique du PV d'enquête</strong>.<br><strong>Maxime d'instruction art. 6 CPP</strong>.",
+      "question": "<strong>Structure de la note de synthèse ?</strong>",
+      "choices": [
+        {
+          "text": "Note structurée en 6 parties : (1) Bilan opération LIMMAT-MIX (faits, saisies). (2) Catégorisation clients (méthodologie + résultats). (3) Identification et restitution victimes (47 incidents, 23M CHF disponibles pour allocation). (4) Partages internationaux (Convention Budapest art. 26, paquets transmis). (5) Qualification opérateurs (Brandt dol direct + aggravantes, Petrov dol éventuel à débattre, Reichmuth en recherche). (6) Prochaines étapes (mise en accusation, procès estimé 2026-2027). Annexes techniques (rapport Lorenz, échantillons logs).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Note exhaustive et structurée. Tous les éléments procéduraux, méthodologiques, et stratégiques sont présents. Permettra à Albertini de transmettre au PG, aux partenaires JIT de prendre leurs propres décisions, et au défenseur de Brandt/Petrov d'avoir une vue complète conforme à l'égalité des armes.",
+          "legal": "Pratique opérationnelle.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Note minimaliste 'enquête avance, plus de détails en réunion'.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Insuffisant pour la traçabilité procédurale et la coordination internationale. Une note structurée est attendue à ce stade.",
+          "legal": "Documentation procédurale.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Note triomphaliste 'plus grosse opération crypto de l'histoire suisse'.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Ton inapproprié dans une note procédurale interne. Les superlatifs viendront éventuellement dans la communication post-procès, pas dans la documentation d'enquête.",
+          "legal": "Sobriété procédurale.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "magistrat",
+  "region": "ZH"
+}

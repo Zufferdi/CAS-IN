@@ -1,0 +1,246 @@
+{
+  "id": "zh-affaire-cryptomixer-2-identification-infrastructure",
+  "title": "Le Mixeur de la Bahnhofstrasse #2 — L'infrastructure à Glattbrugg",
+  "icon": "🏗️",
+  "difficulty": "hard",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "L'infrastructure physique est identifiée par réquisitions LSCPT méthodiques. Le datacenter à Glattbrugg (ZH) est confirmé. La compétence ratione loci ZH est définitivement établie. L'enquête peut passer à la phase d'identification des opérateurs.",
+    "degraded": "L'identification est faite mais la chaîne de réquisitions présente des lacunes (un mandat manquant, un horaire non timestamped) qui seront soulevés par la défense en fin de procédure.",
+    "failure": "Brunner-Tobler procède sans réquisition formelle (mail informel à Init7) ou contourne la procédure LSCPT. Les preuves d'identification sont contestables et toute la chaîne d'enquête fondée dessus peut être annulée."
+  },
+  "tags": ["DFIR", "ZURICH", "MP-ZH", "LSCPT", "RÉQUISITIONS", "OSINT", "DATACENTER", "ATTRIBUTION"],
+  "legalRefs": [
+    {"label": "LSCPT", "title": "Loi sur la surveillance de la correspondance par poste et télécommunication"},
+    {"label": "LSCPT art. 22", "title": "Renseignements sur l'usager d'un service de télécommunication"},
+    {"label": "Art. 263 CPP", "title": "Séquestre"},
+    {"label": "Art. 197 CPP", "title": "Proportionnalité des mesures de contrainte"},
+    {"label": "OSCPT", "title": "Ordonnance sur la surveillance de la correspondance"},
+    {"label": "Convention de Budapest art. 18", "title": "Production order pour données de souscripteur"},
+    {"label": "RIPE NCC database", "title": "Registre régional Internet européen — données publiques"}
+  ],
+  "intro": "<p>Mardi 11 mars 2025, 08h30. <strong>22 jours après le signalement Chainalysis</strong>. Vous êtes dans votre bureau au MP-ZH. Sur votre écran, la timeline des actes d'investigation préliminaire que la Stadtpolizei a menés depuis le 17 février.</p><p><strong>Inspector Janek Vogel</strong> arrive avec un classeur jaune marqué « OPERATION LIMMAT-MIX — vol. 1 ». Il a passé trois semaines à éplucher : (1) OSINT public sur Cryptomixer.io (clearnet et v3 Tor), (2) trois <strong>réquisitions LSCPT</strong> émises par vous à Init7 AG (Winterthur) pour identifier les détenteurs des IPs sortantes pointées par Chainalysis, (3) consultation des registres RIPE pour les blocs IP, (4) vérifications de signatures TLS et certificats Let's Encrypt.</p><p>Il étale les documents. « Madame la procureure, on a confirmation. L'infrastructure principale tourne sur un cluster de trois serveurs hébergés au <strong>datacenter Equinix ZH4 à Glattbrugg</strong> (canton de Zurich). Le client : <strong>Helvetia Hosting Services AG</strong>, société sise à Zoug (canton ZG), inscrite au registre du commerce le 14 mars 2017. Bénéficiaire économique déclaré : <strong>Mihail Petrov</strong>, ressortissant bulgare avec permis B suisse depuis 2016, domicilié à Adliswil (ZH). »</p><p>Vous tournez la page. Vogel continue : « Petrov est en réalité probablement un homme de paille. Son train de vie déclaré au registre fiscal ZH = 87'000 CHF/an, pas compatible avec la complexité de l'infrastructure. Pas de profil technique connu (LinkedIn anodin, formation HES en marketing). On suspecte un opérateur réel masqué derrière. »</p><p>Vogel termine : « Et il y a un détail intéressant. Les <em>backups</em> du système sont synchronisés vers un second cluster, dont l'IP est à <strong>Francfort, Allemagne</strong> — hébergé par Hetzner. Donc on a probablement une <strong>opération coordonnée DACH</strong> (D-A-CH = Allemagne-Autriche-Suisse). Le BKA Francfort est probablement intéressé. »</p><p>Vous regardez la timeline procédurale. Tout semble propre. Mais avant de passer à la phase d'identification des opérateurs réels (perquisitions, surveillance), il faut <strong>auditer la chaîne de réquisitions</strong> : aucune lacune ne doit subsister, car la défense exploitera la moindre faille.</p>",
+  "alertLevel": "🏗️ INFRA CONFIRMÉE GLATTBRUGG ZH · HELVETIA HOSTING (ZG) · BÉNÉFICIAIRE PETROV (BG) · BACKUPS FRANCFORT · AUDIT CHAÎNE RÉQUISITIONS",
+  "objectives": [
+    "Auditer la chaîne de réquisitions LSCPT pour s'assurer qu'aucune lacune ne fragilise le dossier",
+    "Confirmer définitivement la compétence ratione loci ZH (datacenter physique)",
+    "Distinguer le bénéficiaire économique formel (Petrov, possiblement homme de paille) du ou des opérateurs réels",
+    "Préparer la coordination opérationnelle avec le BKA Francfort sur la composante DACH",
+    "Décider du moment de l'ouverture formelle d'instruction"
+  ],
+  "debrief": "<p>Cet acte porte sur la <strong>rigueur procédurale des réquisitions</strong> et la <strong>doctrine de l'attribution dans un dossier crypto</strong>. Deux pièges classiques.</p><p><strong>Premier piège — La chaîne de réquisitions LSCPT</strong> : la <strong>Loi fédérale sur la surveillance de la correspondance par poste et télécommunication (LSCPT)</strong> régit l'obtention de données auprès des fournisseurs (FAI, hébergeurs, opérateurs téléphoniques). Art. 22 LSCPT : <em>renseignements simples</em> sur l'usager d'un service (qui détient l'abonnement, IP statique, etc.) → procédure simplifiée par le <strong>Service SCPT</strong> de fedpol. Art. 269 CPP + LSCPT : <em>surveillance active</em> (interception en temps réel) → autorisation du Tribunal des mesures de contrainte (TMC). Pour identifier <em>qui détient une IP</em>, la procédure art. 22 LSCPT suffit. Pour <em>intercepter</em> les communications de cette IP, TMC obligatoire.</p><p><strong>Audit de chaîne</strong> : chaque réquisition doit avoir (a) son mandat formel signé par le MP, (b) sa réponse de l'opérateur archivée avec timestamps, (c) sa traçabilité dans le dossier (numérotation, dates, signatures). Une <em>réquisition par mail informel</em> = nulle, et toute donnée obtenue ainsi peut être contestée. Un <em>mandat oral suivi de mail</em> = acceptable si confirmé par écrit dans les 24h (art. 213 CPP). Pas de raccourcis.</p><p><strong>Deuxième piège — La doctrine de l'attribution</strong> : un bénéficiaire économique formel (Petrov ici) <em>n'est pas</em> forcément l'opérateur. Les services criminels utilisent fréquemment des hommes de paille :</p><p><strong>Indicateurs d'homme de paille</strong> : (a) train de vie déclaré incompatible avec l'activité, (b) profil technique absent ou anodin, (c) histoire de vie cohérente avec un recrutement vulnérable (étranger en situation précaire, étudiant endetté, personne âgée), (d) signatures techniques (commits Git, configs serveur, logs SSH) montrant des compétences absentes, (e) géolocalisation du suspect (téléphone, transactions bancaires, mouvements) incompatible avec les patterns d'opération.</p><p><strong>Identifier l'opérateur réel</strong> : (a) <strong>signatures techniques</strong> dans les artefacts saisis (commit messages, configs, comments dans le code), (b) <strong>OSINT</strong> sur les pseudos opérateurs Tor/dark forums associés à Cryptomixer.io, (c) <strong>surveillance financière</strong> (qui paie qui dans le réseau), (d) <strong>écoutes téléphoniques</strong> (sur Petrov si TMC accorde, pour identifier ses contacts), (e) <strong>chainalysis</strong> des hot wallets opérateurs (les bénéfices du mixer doivent bien sortir vers quelqu'un).</p><p><strong>Coordination BKA Francfort</strong> : la <strong>ZIT</strong> (Zentralstelle zur Bekämpfung der Internetkriminalität) à la Generalstaatsanwaltschaft Frankfurt am Main est <em>la</em> juridiction spécialisée en Allemagne pour ce type de dossier (elle a porté ChipMixer, Hydra, plusieurs darknet markets). Si Cryptomixer a une composante allemande (backups Hetzner Francfort), une coordination via Eurojust permet : (a) opération simultanée des deux côtés, (b) partage de preuves, (c) JIT (Joint Investigation Team — équipe commune d'enquête) si l'ampleur le justifie. Article 4 acord bilatéral CH-D 2003.</p><p><strong>RIPE et données publiques</strong> : le <strong>RIPE NCC</strong> (Réseaux IP Européens) est le registre régional Internet pour l'Europe. Sa base whois est <em>publique</em> et donne : organisation propriétaire d'un bloc IP, country code, abuse contact, dates d'allocation. C'est de l'OSINT pur, pas besoin de réquisition. Inversement, pour identifier <em>qui loue spécifiquement une IP</em> à un FAI/hébergeur, il faut une réquisition LSCPT art. 22 à ce FAI/hébergeur.</p><p><strong>Convention de Budapest art. 18</strong> : « Production order pour données de souscripteur » permet, dans le cadre de l'EIMP, d'obtenir les données souscripteur d'un fournisseur étranger via canal officiel. Plus rapide que MLAT classique car spécifique cyber. Pour les backups Francfort/Hetzner → réquisition art. 18 via BKA.</p>",
+  "steps": [
+    {
+      "phase": "📂 09h00 — Audit de la chaîne de réquisitions",
+      "situation": "Vogel ouvre le classeur. Vous voulez vérifier que chaque pas de l'identification est juridiquement étanche. Trois réquisitions ont été émises à Init7. Vogel pointe les pièces : (1) Mandat de réquisition n° STA-25-0214/3-Init7 du 24 février, signé par vous, demande de renseignements art. 22 LSCPT sur les détenteurs de 4 IPs précises. (2) Réponse Init7 du 28 février, signée par leur abuse contact et juriste, listant Helvetia Hosting Services AG comme client. (3) Réquisition complémentaire n° STA-25-0228/3-Init7-2 du 3 mars pour obtenir les détails contractuels (date début, modes paiement). Tout semble formel. Mais Vogel hésite : « Madame, il y a une chose. La réponse Init7 du 28 février est arrivée par mail simple, pas par le portail SCPT officiel. C'est OK ? »",
+      "law": "<strong>LSCPT art. 22</strong>.<br><strong>OSCPT</strong> — Ordonnance.<br><strong>Service SCPT fedpol</strong> — Portail officiel.",
+      "question": "<strong>Comment traitez-vous cette réponse Init7 par mail simple ?</strong>",
+      "choices": [
+        {
+          "text": "Accepter, c'est du même contenu. Les juristes Init7 ont signé électroniquement le mail.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Risque procédural. Les réquisitions LSCPT doivent normalement passer par le <strong>portail SCPT de fedpol</strong> qui garantit l'authenticité, l'horodatage qualifié, et la chaîne de custody. Une réponse hors-portail = (a) doute sur l'intégrité (un mail peut être modifié), (b) absence de timestamp qualifié, (c) la défense peut soulever que l'authentification manque. Il faut faire <em>régulariser</em> par Init7 — leur demander de re-soumettre la même réponse via le portail SCPT.",
+          "legal": "OSCPT — Modalités techniques.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Demander immédiatement à Init7 de re-soumettre la réponse via le portail SCPT officiel pour régularisation. Continuer parallèlement les vérifications, mais ne pas utiliser cette pièce comme socle d'un acte invasif tant qu'elle n'est pas régularisée.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Réflexe correct. Vous identifiez la faille, vous la corrigez avant qu'elle ne fragilise toute la chaîne. La régularisation prend 48h. En attendant, vous pouvez documenter, croiser avec d'autres sources (RIPE pour le whois public, Equinix datacenter pour la localisation physique), mais vous n'engagez pas d'acte invasif (perquisition) qui pourrait être contesté sur la base d'une pièce non régularisée.",
+          "legal": "OSCPT + Doctrine procédurale.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Recommencer toute l'identification depuis zéro avec une nouvelle réquisition.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Disproportionné. Une régularisation par re-soumission via le portail suffit. Tout recommencer = perdre 3 semaines pour une formalité réparable.",
+          "legal": "Proportionnalité.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🏭 10h30 — Confirmer la localisation physique",
+      "situation": "Init7 confirme Helvetia Hosting Services AG comme client. Mais l'IP loue de l'<em>infrastructure managed</em> chez Init7 — les machines physiques sont chez Init7. Vogel veut être sûr de la localisation physique exacte (le datacenter Equinix ZH4 à Glattbrugg, ou ailleurs ?). Init7 dispose de plusieurs datacenters et de slots colocation chez Equinix.",
+      "law": "<strong>Art. 22 LSCPT</strong>.<br><strong>Convention Budapest art. 18</strong>.",
+      "question": "<strong>Comment confirmer la localisation physique exacte ?</strong>",
+      "choices": [
+        {
+          "text": "Réquisition complémentaire à Init7 demandant la localisation physique précise (datacenter, rack, position) des machines hébergeant les IPs visées + numéros de série des serveurs. Avec mandat formel via portail SCPT.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Démarche structurée. Vous demandez précisément ce qui détermine la compétence ratione loci : la position physique. Init7 peut répondre avec précision (ils tiennent un inventaire de tous leurs serveurs colocation). La réponse confirmera (ou infirmera) le canton ZH. Numéros de série = identifient les machines physiques en cas de saisie future.",
+          "legal": "Art. 22 LSCPT.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Envoyer un agent en visite informelle au datacenter Equinix pour vérifier de visu.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Approche non procédurale. Un agent qui se présente à Equinix sans mandat = (a) Equinix ne peut pas confirmer sans réquisition (NDA clients), (b) si information divulguée informellement → bypass procédural exploitable par la défense, (c) risque d'alerter Helvetia Hosting Services AG via les notifications de surveillance internes Equinix.",
+          "legal": "Procédure officielle.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Supposer Glattbrugg sur la base du fait qu'Init7 a un gros slot là-bas.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Présomption. La compétence se prouve, pas se présume. Init7 a des slots dans plusieurs datacenters (Allschwil, Zurich-Binz, Lausanne) — sans précision, pas de compétence ZH étanche.",
+          "legal": "Établissement de la compétence.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🕵️ 13h45 — Analyser le profil Petrov",
+      "situation": "Réponse Init7 reçue : <strong>datacenter Equinix ZH4 Glattbrugg confirmé</strong>. Compétence ZH étanche. Vogel passe au profil Petrov. Recherche aux registres : nationalité BG, naissance 1989, permis B suisse depuis 2016, profession déclarée 'consultant marketing indépendant', revenu fiscal 2023 = 87'000 CHF, célibataire, locataire à Adliswil. Pas de casier judiciaire suisse. LinkedIn anodin. Comptes bancaires : un compte courant UBS (mouvements compatibles avec revenu déclaré, pas d'anomalie criant), un compte business pour HHS AG. Pas de patrimoine immobilier déclaré, pas de véhicule de luxe.",
+      "law": "<strong>Doctrine homme de paille</strong>.<br><strong>Art. 305bis al. 2 CP</strong> — Circonstance aggravante 'organisation'.<br><strong>OSINT enquêteur</strong>.",
+      "question": "<strong>Comment interpréter le profil Petrov ?</strong>",
+      "choices": [
+        {
+          "text": "Profil incohérent avec l'activité d'opérateur d'un mixer à 1.3 milliard. Très probablement homme de paille. L'opérateur réel est ailleurs. Approfondir : signatures techniques dans le code, OSINT sur ses contacts professionnels, surveillance financière pour identifier qui le paie.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Lecture juste. Les indicateurs s'alignent : compétences techniques absentes du CV, train de vie modeste, profil 'standard'. Un opérateur réel d'un service à 1.3 milliard aurait : (a) compétences techniques visibles, (b) revenus disproportionnés (même cachés, des traces apparaîtraient — patrimoine offshore, dépenses cash, etc.), (c) profil 'underground' (pseudos, présence forums). Hypothèse à confirmer : Petrov est probablement payé une somme modeste pour servir de prête-nom. Suivre la piste de qui le paie réellement.",
+          "legal": "Doctrine homme de paille.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Petrov est l'opérateur, l'enquête peut se concentrer sur lui directement.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Conclusion trop rapide. Le profil ne colle pas. Se concentrer sur Petrov sans creuser = (a) arrêter et juger un homme de paille pendant que les vrais opérateurs continuent ailleurs, (b) le scandale procédural si la défense démontre que Petrov ne pouvait techniquement pas être l'opérateur, (c) gaspillage des moyens. Toujours suivre les indicateurs avant de cibler.",
+          "legal": "Maxime d'instruction.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Petrov a quand même son nom au registre, donc il est légalement responsable. Pas besoin de chercher plus loin.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Confusion. La responsabilité légale formelle (administrateur déclaré) n'est pas la même chose que la responsabilité pénale pour l'infraction (art. 305bis CP requiert <em>intention de blanchir</em>). Si Petrov est un homme de paille manipulé qui ne savait pas ce qui se passait techniquement, sa responsabilité pénale est limitée. Et surtout vous ratez les vrais auteurs.",
+          "legal": "Art. 12 CP — Intention.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "🇩🇪 15h30 — Activer la coordination BKA Francfort",
+      "situation": "Les backups Hetzner à Francfort sont confirmés. Vogel a contacté son officier de liaison Europol — match positif : la ZIT Frankfurt a un dossier ouvert depuis 6 mois sur Cryptomixer.io. Ils ont identifié l'infrastructure à Glattbrugg via leurs propres canaux et étaient sur le point de demander une EIMP à la Suisse. Vous appelez votre homologue, <strong>Oberstaatsanwalt Klaus Dietrich</strong>, à la ZIT Francfort. Ton initial : courtois, ferme. Question stratégique : qui pilote ?",
+      "law": "<strong>EIMP</strong>.<br><strong>Eurojust</strong> — Coordination.<br><strong>JIT — Joint Investigation Team</strong>.<br><strong>Accord bilatéral CH-D</strong>.",
+      "question": "<strong>Comment structurez-vous la coopération avec la ZIT ?</strong>",
+      "choices": [
+        {
+          "text": "Proposer une Joint Investigation Team (JIT) via Eurojust : pilotage partagé MP-ZH (infrastructure principale en CH) + ZIT (backups + composante allemande), opération simultanée, partage des preuves, exécution coordonnée des perquisitions. Conventionner avant tout acte invasif.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Stratégie optimale. La JIT (Joint Investigation Team, prévue par l'accord 2002 entre CH et UE et par la Convention de Budapest art. 25) permet : (a) partage en temps réel des preuves sans procédure EIMP au coup par coup, (b) coordination opérationnelle (mêmes dates de perquisition, partage des renseignements), (c) répartition des qualifications (CH pourra poursuivre Petrov si compétence établie, D pourra poursuivre opérateurs résidents allemands), (d) signal politique fort (coopération vue par les régulateurs européens et US). Dietrich appréciera l'approche structurée.",
+          "legal": "JIT + Convention Budapest art. 25.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Refuser la coopération — la Suisse a la primauté car l'infrastructure principale est ici. Les Allemands attendront notre opération.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Approche fermée qui sera contre-productive. (1) La ZIT a déjà 6 mois de matériel d'enquête qui complèterait largement le vôtre. (2) Sans coordination, deux opérations parallèles risquent de se télescoper (perquisition CH alerte les opérateurs en D et vice versa). (3) L'image politique d'une Suisse qui refuse la coopération = scandale dans la presse allemande et suisse. La coopération CH-D est une priorité diplomatique.",
+          "legal": "Esprit Convention Budapest.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Transférer tout le dossier au BKA Francfort qui a plus d'expérience sur les mixers.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Renoncement à la souveraineté procédurale. Le canton ZH a une compétence ratione loci établie (datacenter Glattbrugg). Transférer = (a) renoncer à votre compétence sur une infraction commise sur sol cantonal, (b) abandonner une grande affaire au profit d'un autre pays, (c) priver la justice ZH d'un précédent doctrinal majeur. La JIT permet la coopération sans renoncer à sa compétence.",
+          "legal": "Souveraineté procédurale.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📜 17h00 — Ouvrir formellement l'instruction ?",
+      "situation": "Fin de journée. Vous avez maintenant : compétence ZH confirmée, profil Petrov caractérisé (homme de paille probable), coopération JIT en cours de structuration avec la ZIT. Question stratégique : reste-t-on en investigation préliminaire (art. 309 al. 2) ou ouvre-t-on formellement l'instruction (al. 1) ?",
+      "law": "<strong>Art. 309 CPP</strong>.<br><strong>Doctrine procédurale CH</strong>.<br><strong>Art. 318 CPP</strong> — Avis d'ouverture.",
+      "question": "<strong>Décision sur l'ouverture d'instruction ?</strong>",
+      "choices": [
+        {
+          "text": "Ouverture formelle d'instruction art. 309 al. 1 CPP <em>contre inconnu</em> ('Unbekannte') pour blanchiment art. 305bis CP, avec mention des indicateurs identifiés (Petrov comme administrateur formel). Avis d'ouverture art. 318 CPP différé pour ne pas alerter — possibilité d'invoquer art. 80 CPP (mesures secrètes).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Le moment est venu. Vous avez : compétence établie, preuves d'existence d'une infraction (blanchiment via mixer), suspect identifié (Petrov + opérateurs inconnus), coopération internationale en place. L'ouverture formelle (a) verrouille les actes procéduraux à venir, (b) permet les mesures de contrainte plus invasives (perquisitions, surveillances) à venir, (c) ouvre l'EIMP formelle, (d) marque le point de bascule où la procédure devient publique-confidentielle. L'avis d'ouverture art. 318 CPP peut être différé tant que les opérateurs ne sont pas identifiés (les inconnus ne peuvent évidemment pas être informés).",
+          "legal": "Art. 309 al. 1 + Art. 318 CPP.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Rester en investigation préliminaire encore 3 mois pour accumuler plus d'éléments.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Étirement préjudiciable. L'investigation préliminaire est faite pour la phase initiale d'évaluation. Une fois la compétence et les indices d'infraction établis, on bascule en instruction formelle. Étirer = (a) accumuler des actes d'enquête non protégés par le cadre formel, (b) ne pas pouvoir engager les mesures de contrainte nécessaires, (c) prendre le risque que les opérateurs disparaissent pendant qu'on tarde.",
+          "legal": "Art. 309 CPP — Stade procédural.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Ouverture formelle <em>nommément contre Petrov</em>.",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ Petrov est un suspect mais on doit éviter de figer la procédure sur lui seul. Ouverture contre <em>inconnu</em> permet de continuer à investiguer largement, d'identifier les opérateurs réels, et d'ajouter formellement Petrov ou d'autres au fur et à mesure. Ouvrir nommément contre Petrov immédiatement le forcerait à devenir partie (avocat, droits de la défense activés), ce qui peut compliquer la suite tactique.",
+          "legal": "Art. 309 al. 3 CPP.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    },
+    {
+      "phase": "📝 18h00 — Décision et plan d'actions",
+      "situation": "Vous décidez l'ouverture formelle contre inconnu, vous formalisez la JIT avec Dietrich pour les 8 prochaines semaines, et vous préparez la phase suivante : identification des opérateurs réels.",
+      "law": "<strong>Plan d'enquête</strong>.<br><strong>Doctrine d'attribution cybercriminalité</strong>.",
+      "question": "<strong>Quels axes d'enquête prioritaires pour les 8 prochaines semaines ?</strong>",
+      "choices": [
+        {
+          "text": "Axes parallèles : (1) Surveillance financière Petrov + entourage. (2) Analyse blockchain des hot wallets opérateurs (Vogel + Chainalysis sous mandat). (3) OSINT sur pseudos darknet associés au service. (4) Demande TMC pour surveillance technique discrète sur les serveurs Glattbrugg (Equinix mirror SPAN sans intervention sur place — métadonnées flux). (5) Coordination quotidienne ZIT-MP-ZH via canal sécurisé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ Plan d'enquête équilibré. Multiples axes simultanés pour éviter la dépendance à une seule piste. La surveillance technique discrète (mirror SPAN au niveau hébergeur, sans toucher physiquement aux machines) permet d'observer sans alerter. La phase suivante (perquisition coordonnée) pourra se déclencher quand vous aurez identifié les opérateurs réels — pas avant.",
+          "legal": "Art. 269 CPP + LSCPT.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Perquisition immédiate du datacenter Glattbrugg et du domicile de Petrov.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ Trop tôt. Perquisitionner maintenant = (a) alerter les opérateurs réels (qui peuvent être ailleurs et dans d'autres juridictions), (b) cristalliser l'enquête sur Petrov-homme de paille, (c) saisir l'infrastructure technique mais perdre l'opportunité d'identifier la chaîne complète, (d) potentiellement violer la JIT en cours de structuration avec Dietrich. Une opération de cette ampleur se prépare 3-6 mois.",
+          "legal": "Proportionnalité + JIT.",
+          "critical": false,
+          "next": "continue"
+        },
+        {
+          "text": "Attendre que la ZIT Francfort termine de son côté avant d'agir.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ Position passive. La JIT signifie travail conjoint, pas attente. Brunner-Tobler doit conduire activement l'enquête côté CH en coordination avec Dietrich, pas attendre.",
+          "legal": "Esprit JIT.",
+          "critical": false,
+          "next": "continue"
+        }
+      ]
+    }
+  ],
+  "role": "magistrat",
+  "region": "ZH"
+}
