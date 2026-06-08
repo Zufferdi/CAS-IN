@@ -8,6 +8,26 @@ Cache SW courant : **`cas-in-v144`** (depuis le 30 mai 2026, v3.0-jolification).
 
 ---
 
+## [3.4-sagas-dossier] — 2026-06-08
+
+🎨 **Harmonisation visuelle de la page Sagas avec le tableau des dossiers (campagnes).**
+
+### Modifié
+- **`js/pages/sagas-app.js`** — `renderCard()` ré-écrit pour émettre la structure `.dossier-card` (mêmes classes que la vue Campagnes) au lieu des classes `.sg-card` qui n'avaient aucun CSS. Statut harmonisé (NON OUVERT · EN COURS · CLÔTURÉ · MAÎTRISÉ) calqué sur `campaignStats()`. Lien des cartes → `#campaign=<id>` pour ouvrir la vue détaillée existante (déjà saga-aware via `c.narrative`).
+- **`scene.html`** — bloc `#screen-sagas` ré-écrit avec `.campaigns-container` + `.page-hero` ; tous les inline styles purgés des chips de filtre ; passage de `.sg-grid` à `.dossiers-grid`.
+- **`style/scene-campaigns.css`** — police titres dossiers `17px → 18.5px`, descriptions `12.5px → 13.5px`, padding cartes `20px → 22px`, min-height `380 → 400`. Breakpoint 3 colonnes `960px → 1180px` (cartes plus larges sur laptop standard). Nouvelles classes `.dossier-recit-saga` (tampon 🎬 SAGA violet) et `.dossier-recit-affaire` (tampon 📁 AFFAIRE doré). Styles propres pour `.sg-chip`, `.sg-kind-chip`, `.sg-section-header`, `.sg-summary-cell`.
+
+### Corrigé
+- Compteur `📖 Sagas (25)` codé en dur dans le bouton bascule du bandeau Scènes/Sagas → désormais dynamique (`<span id="view-btn-sagas-count">`) mis à jour par `updateKindCounts()` après chargement de `campaigns.json`. Reflète `sagas + affaires = 36` au lieu de l'ancien `25` obsolète. Idem pour les valeurs initiales `>25<` dans `#sg-total-sagas` et le `#sg-count-all` qui étaient désynchronisés des données.
+- Bouton « ← Retour au tableau » de la vue détaillée : quand l'utilisateur arrive depuis la page Sagas, il devient « ← Retour aux sagas » et ramène à `?view=sagas` (origine tracée via `sessionStorage.cas_sagas_origin` + MutationObserver sur `#screen-campaigns`).
+
+### Notes
+- Cache SW à incrémenter (`cas-in-v144 → cas-in-v145`) sur déploiement pour invalider les anciens `sagas-app.js` et `scene-campaigns.css`.
+- Aucun changement de schéma `data/campaigns.json`. Aucune migration `localStorage`.
+- Régressions vérifiées : tampon `🎬 SAGA` historique sur les vraies campagnes narratives reste appliqué via `.dossier-narrative` inchangé ; les nouvelles variantes `.dossier-recit-{saga,affaire}` ne s'appliquent qu'aux cartes de la page Sagas.
+
+---
+
 ## [3.0-jolification] — 2026-05-30
 
 🎨 **Refonte complète UX + performance + sécurité + accessibilité.** Cascade de 20 deltas séquentiels (v131a → v132p), de la branche `v.3.0-jolification-phase`. Cache SW final : `cas-in-v141` → `cas-in-v144`.
