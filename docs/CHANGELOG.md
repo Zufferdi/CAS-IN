@@ -4,7 +4,193 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
-Cache SW courant : **`cas-in-v144`** (depuis le 30 mai 2026, v3.0-jolification).
+Cache SW courant : **`cas-in-v147`** (depuis le 8 juin 2026, v3.4-scenes-audit).
+
+---
+
+## [3.4-scenes-audit] — 2026-06-08
+
+🔍 **Audit complet des 476 scènes et 58 entrées campaigns.json. 6 catégories de corrections.**
+
+### Bugs mécaniques corrigés
+
+**1. `campaigns.json` — 3 doublons d'`order`**
+Avant : orders 30, 31, 32 chacun assignés à 2 récits, ce qui rendait le tri d'affichage instable au cold reload.
+- `saga-mistral` : 30 → **22**
+- `saga-tavajjoh` : 31 → **23**
+- `saga-cologny-micro-espion` : 32 → **24**
+
+Les 3 récits sont décalés dans les trous d'order disponibles (22-25). Ordre éditorial préservé pour les 55 autres récits.
+
+**2. Champ vestige `debrey` dans `ge-affaire-cologny-3-analyse-hardware.json`**
+Un champ `debrey` (valeur vide) cohabitait avec `debrief` (valeur correcte). Vestige d'une mauvaise saisie ; supprimé.
+
+**3. Soft hyphen `\u00ad` dans `swatch-2020-ot.json`**
+Un caractère invisible (trait d'union conditionnel) entre `récep` et `tivité`. Légitime typographiquement mais source de confusion dans les JSON ; retiré.
+
+**4. Atmosphère francisées (vocabulaire EN harmonisé)**
+3 scènes utilisaient des valeurs `atmosphere` en français isolément du vocabulaire commun (`investigation`, `incident`, `legal`, `audience`...). Remappées :
+- `ch-affaire-data-brokers-7-bilan-doctrine` : `bilan` → `investigation`
+- `ch-affaire-data-brokers-6-confrontation-publication` : `exfiltration` → `investigation`
+- `ge-affaire-antennes-fantomes-7-audience-tco-geneve` : `juridique` → `audience`
+
+### Création de stubs NPCs
+
+**5. 23 NPCs manquants — stubs créés dans `data/npcs.json` (324 → 347 NPCs)**
+
+95 références dans 95 scènes pointaient vers des NPCs non définis. Le code `scene-npcs.js` filtrait silencieusement ces références avec `.filter(Boolean)`, donc les panneaux "Acteurs en présence" affichaient des listes incomplètes (parfois vides).
+
+Stubs minimaux créés (id, name, fictional=true, icon, role, institution, shortBio 1-2 phrases, expertise, context, canton, category, alignment, seniority) :
+
+- **Saga Tom (12 NPCs)** : `mineur_auteur_defi_tiktok` (Léo M., 15 ans), `famille_victime_tom_vd`, `pediatre_chuv` (Dr. C. Reymond), `mpvd_procureur_mineurs` (Me Sophie Bertholet), `kapo_vd_jeunesse_cyber`, `medecin_legiste_chuv_pediatrie`, `expert_psychiatre_adolescent` (Pr. L. Dubuis), `tmcvd_juge_dpmin`, `tiktok_eu_liaison` (M. Aoife O'Reilly), `tiktok_trust_safety_eu`, `directeur_etablissement_secondaire`, `cyberbulling_referent`
+
+- **Antennes Fantômes (8 NPCs)** : `procureur_mp_ge_cybercrime` (Me Catherine Wenger), `inspectrice_brigade_financiere_ge` (Léa Robert), `juge_tmc_ge_perquisition`, `ofcom_spectrum_lead_be` (Markus Brunner), `tech_scpt_interception` (Marc Vauthier), `ingenieur_swisscom_security` (Tatiana Müller), `forensicien_for_ge` (Dr. Pascal Hovasse), `avocat_defense_carouge_lj` (Me Laurent Juliot)
+
+- **Republik média (2 NPCs)** : `journaliste_republik_lea` (Léa Andermatt), `redaction_republik_constantin` (Constantin Seibt)
+
+- **Sarine fr (1 NPC)** : `fr_lawyer_cyber` (Me Bénédicte Riou)
+
+Tous marqués `fictional: true` pour transparence éditoriale. Les bios peuvent être enrichies a posteriori — le minimum technique est en place pour que les panneaux "Acteurs en présence" affichent correctement les chips cliquables.
+
+### Harmonisation de format
+
+**6. 12 scènes avec `alertLevel` au format enum (`high`/`élevé`/`critique`)**
+
+464 scènes utilisaient des bannières narratives riches (`🚨 FUITE CONFIRMÉE · SonntagsBlick a publié...`), 12 scènes encore l'ancien format enum. Converties en bannières narratives générées depuis le titre + tags + atmosphere :
+
+| Scène | Avant | Après (extrait) |
+|---|---|---|
+| `crypto-ag-rubikon-enquete-dfir-2020` | `high` | `🔍 OPÉRATION RUBICON : ENQUÊTE DFIR RÉTROSPECTIVE...` |
+| `drone-laufenburg-swissgrid-aargau` | `critique` | `🚨🚨 SURVOLS DRONES SUR L'ÉTOILE SWISSGRID · ARGOVIE · INFRASTRUCTURE CRITIQUE` |
+| `src-fonctionnaire-russe-kaspersky` | `critique` | `🚨🚨 ESPIONNAGE INTERNE OU CYBER-BUSINESS AS USUAL ? · BERNE · SRC` |
+| ... 9 autres | | |
+
+Emoji choisi selon l'`atmosphere` (`incident:🚨`, `raid:🚪`, `investigation:🔍`, `legal:⚖️`, `audience:🏛️`, `state:🇨🇭`, etc.). Niveau `critique` doublé (`🚨🚨`) pour conserver l'intensité.
+
+### Cache SW
+- `cas-in-v146 → cas-in-v147` pour invalider les versions cachées des 476 scènes + `npcs.json` + `campaigns.json`.
+
+### Audit clean — aucun bug détecté sur
+
+- **476 scènes JSON** toutes valides syntaxiquement
+- **Liens internes** (scene → scene, scene → fiche, scene → campaign) : 0 cassé
+- **NPCs référencés** : 347/347 désormais définis dans `data/npcs.json`
+- **Doublons** : 0 doublon de scene ID, 0 doublon de title, 0 scène apparaissant dans 2 récits, 0 doublon d'order de campagne
+- **Placeholders éditoriaux** : 0 (les 26 "XXX" détectés sont tous des **références anonymisées légitimes** — `CVE-2024-XXXXX`, `Postulat 27.XXX`, `IMO 9XXXXXX`, `CHE-XXX.XXX.XXX`, `Règlement (UE) 2027/XXX`, etc.)
+- **Encodage UTF-8** : 0 mojibake, 0 caractère de contrôle anormal
+- **Schéma `campaigns.json`** : 58/58 entrées avec tous les champs requis (id, title, subtitle, description, hook, level, order, scenes, kind, narrative, icon), tous les levels mappés, IDs uniques, hooks rédigés
+
+### Bilan v3.4 complet (tous patchs cumulés)
+- **122 fiches** (HTML 100% balanced) en 5 indexes synchronisés
+- **47 récits** + 11 collections = **58 entrées campagnes** sans doublon
+- **476 scènes** toutes référencées par une campagne, toutes NPCs cohérents
+- **347 NPCs** définis (vs 324 avant) avec 0 référence cassée
+- **Cache SW v147** invalide bien les anciennes versions chez les utilisateurs au prochain reload
+
+---
+
+## [3.4-fiches-audit] — 2026-06-08
+
+🔍 **Audit complet du contenu des 122 fiches techniques. 20 corrections sur 16 fiches.**
+
+### Bugs HTML corrigés (typos manifestes)
+- **`browser_forensique.html`** L304 : `</p<div>` → `</p><div>` (oubli du `>` intermédiaire)
+- **`documents_office_forensique.html`** L283 : `</f>` littéral en plein texte → `&lt;/f&gt;` (entité HTML correcte pour afficher la balise XML Excel `<f>=SUM(...)</f>`)
+- **`preuve.html`** L357 : `</stron<div>` → `</strong>` puis `<div>` (perte du `g>` de `strong`)
+- **`sqlite_forensique.html`** L225 : `<code>moz_places</strong>` → `<code>moz_places</code>` (copier-coller incomplet du tag de fermeture)
+- **`yara.html`** L349 : `<span>commentaire</strong>` → `<span>commentaire</span>` (copier-coller du `</strong>` voisin)
+
+### Bug fonctionnel JavaScript : scroll-progress cassé sur 6 fiches
+La barre de progression de lecture (bandeau cyan en haut de la page) ne fonctionnait pas du tout sur 6 fiches à cause d'un bloc `<script>` tronqué. La déclaration de la variable `bar` et du paramètre `d` était manquante, laissant un orphelin `bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});` qui levait une `ReferenceError` silencieuse en console.
+
+Fiches réparées :
+- `encodage.html` — bloc reconstruit ; en plus, le code JS de gestion des boutons "copier" qui suivait était également orphelin de `<script>`, donc tout `addCopyButtons()` ne s'exécutait pas non plus
+- `browser_forensique.html`, `email_forensique.html`, `macos-linux.html`, `reseau.html`, `wireshark_pcap.html` — déclarations `var bar = document.getElementById('scroll-progress')` et `var d = document.documentElement` ajoutées
+
+Le code complet aligné sur la version saine de `preuve.html` :
+```js
+var bar = document.getElementById('scroll-progress');
+if(bar) window.addEventListener('scroll', function(){
+  var d = document.documentElement;
+  bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+},{passive:true});
+```
+
+### Erreurs de structure HTML (div/main/table mal imbriqués)
+- **`eimp_entraide.html`** : un `</div>` manquant avant `</body>` (99 ouvertures pour 98 fermetures avant fix)
+- **`encodage.html`** + **`preuve.html`** + **`suisse.html`** : ordre `</div></main>` inversé en fin de page → `</main></div>`
+- **`log_forensique_avance.html`** L316, **`network_traffic_analysis_avance.html`** L322, **`tls_https_certificate_forensique.html`** L308 : `</table>` orphelin (sans `<table>` correspondant) supprimé
+- **`macos-linux.html`** : 3 problèmes cumulés — un `</div>` orphelin entre les boîtes "fact" et "fun fact Unix", un manque de wrapper externe `<div class="page">` qui causait un mauvais ordre `</main></div>` à corriger en `</div></main>`
+
+### Lien interne cassé
+- **`sms_blaster.html`** : le pill prérequis "📖 Phishing" pointait vers `phishing.html` qui n'existe pas dans le repo. Supprimé (seul `📖 Android forensique` reste en prérequis). Si une fiche phishing est créée plus tard, le lien pourra être réinséré.
+
+### Cache SW
+- `cas-in-v145 → cas-in-v146` pour que les 16 fiches modifiées remplacent les versions cachées chez les utilisateurs.
+
+### Audit clean — aucun bug détecté sur
+- Encodage UTF-8 strict (122/122 OK)
+- Mojibake (Ã©, Ã¨, etc.) : 0
+- Caractères de contrôle (NULL, BOM en milieu, ZWSP) : 0
+- Placeholders `TODO`, `FIXME`, `À COMPLÉTER`, `LOREM IPSUM` dans le contenu : 0
+- Liens internes vers d'autres fiches : 1 cassé (corrigé)
+- Liens vers scènes/campagnes : 0 cassé
+- Liens vers JS/CSS : 0 cassé
+- Titres `<h1>` dupliqués entre fiches : 0
+- Fiches anormalement courtes (< 600 mots de contenu) : 0
+- Mentions hardcodées de versions obsolètes (`v3.0`, `v144`, `120 fiches`, `35 sagas`, `46 campagnes`) dans le contenu : 0 (les 8 hits initialement signalés étaient tous des faux positifs : `art. 144bis CP`, `144 Po` limite ATA 48-bit, `ATF 144 IV 370`, etc.)
+- Dates aberrantes : 0 (les 26 hits initiaux étaient tous légitimes : `1904` epoch HFS+, `1958` Traité de Rome, `2375` port Docker, `2682` résultat de calcul hex, etc.)
+- Présence des 2 nouvelles fiches v3.4 (`analyse_post_acquisition`, `sms_blaster`) dans `manifest.json` et toutes les indexes : confirmée
+
+### Vérification finale
+- **122/122 fiches** HTML-balanced en mode `HTMLParser` strict
+- **122/122 fiches** présentes dans les 5 indexes (`manifest.json`, `fiches-titles.json`, `fiche-graph.json`, `cross-links.json`, `counts.json`)
+- 12 fichiers JSON, 3 fichiers JS, 4 fichiers HTML (`scene`, `index`, `apprendre`, `tester`) syntaxiquement valides
+
+---
+
+## [3.4-final] — 2026-06-08
+
+🎨 **Élargissement des cartes sagas + harmonisation des compteurs hardcodés.**
+
+### Modifié
+- **`style/scene-campaigns.css`** — Breakpoint 3 colonnes repoussé `1180px → 1600px`. Sur les laptops 13-15" (1280-1599px), les cartes passent de ~395-436px à ~605-665px de large (+50% à +65%). Les écrans 1920px+ gardent leurs 3 colonnes. Padding cartes `22px → 26px`, min-height `400 → 420px`, titre `18.5 → 20px`, hook `13.5 → 14px` avec padding plus généreux, description `13.5 → 14px` avec `line-clamp 5 → 6`.
+- **`index.html`, `apprendre.html`, `tester.html`** — Fallback `>120<` (fiches) remplacé par `>122<` pour cohérence visuelle avec `counts.json` (les valeurs sont déjà rechargées dynamiquement par `cas-in-counts.js`, mais le fallback initial reflète maintenant la vérité).
+- **`data/i18n/fr.json`, `en.json`, `de.json`** — `"25 sagas / 25 affaires"` → `"47 récits"` (FR), `"47 stories"` (EN), `"47 Geschichten"` (DE).
+- **`og-image-apprendre.svg`** — `120 fiches` → `122 fiches` dans l'image OpenGraph.
+- **`README.md`** — Toutes les mentions de `35 sagas / 46 campagnes / 120 fiches / 392 scènes` mises à jour vers `47 récits / 58 campagnes / 122 fiches / 476 scènes`. Footer du README repointé sur la version 3.4 + cache SW v145.
+
+### Audit pré-déploiement
+- 12 fichiers JSON validés syntaxiquement ✓
+- 3 fichiers JS validés (`node -c`) ✓
+- 4 HTML balanced (`scene.html`, `index.html`, `apprendre.html`, `tester.html`) ✓
+- Tous les fichiers critiques précachés par le SW ✓
+- 0 champ `À COMPLÉTER` restant ✓
+- 0 compteur hardcodé non synchronisé ✓
+
+---
+
+## [3.4-editorial-complet] — 2026-06-08
+
+✍️ **Finalisation éditoriale des 11 nouveaux récits + bump cache SW.**
+
+### Modifié
+- **`data/campaigns.json`** — Les 33 champs `À COMPLÉTER` (subtitle, description, hook) des 11 récits ajoutés en `[3.4-recits-orphelins]` sont remplis. Style aligné sur `saga-aurora` : subtitle court technique, description 2-3 phrases factuelles (acteurs, lieu, méthodes, suites), hook en accroche courte visible jaune sur la carte.
+- **`sw.js`** — `CACHE_VERSION` bumpé `cas-in-v144 → cas-in-v145` pour invalider les anciens `sagas-app.js`, `scene-campaigns.css`, `campaigns.json`, `manifest.json`, `fiches-titles.json`, `fiche-graph.json`, `cross-links.json`, `counts.json` mis en cache chez les utilisateurs.
+
+### Ajouté
+- **`scripts/apply_editorial_v34_recits.py`** — script idempotent qui contient les 33 textes en dur et les applique uniquement aux champs encore marqués `À COMPLÉTER`.
+
+### Bilan v3.4 complet
+Le repo passe de 36 récits visibles + 120 fiches à **47 récits + 122 fiches**, avec :
+- 0 scène orpheline (476/476 référencées)
+- 0 fiche orpheline (122/122 indexées dans tous les indexes)
+- 0 récit orphelin (47/47 affichés sur la page sagas)
+- Présentation harmonisée avec le tableau dossiers (tampons `🎬 SAGA` violet et `📁 AFFAIRE` doré)
+- Compteurs dynamiques partout (plus de "25" en dur)
+- Cache SW propre
+
+Reste à faire côté repo (optionnel) : nettoyer les compteurs hardcodés "120 fiches" dans le HTML (README, index.html, tester.html, apprendre.html) si tu ne veux pas qu'ils restent désynchronisés du `counts.json`.
 
 ---
 
