@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Analyse post-acquisition — CAS-IN Forensique</title>
+<meta name="description" content="Premiers éléments à examiner après une acquisition forensique · KAPE · Plaso · Volatility · Triage cross-OS · Manuel CAS-IN">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" aria-label="Retour en haut" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ANALYSE POST-ACQUISITION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-methodologie">Méthodologie &amp; Acquisition</a><span class="bc-sep">›</span>
+    <span class="bc-current">Analyse post-acquisition</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔍</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">SANS FOR500</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">KAPE</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Plaso</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Cross-OS</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Manuel CAS-IN</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Analyse post-acquisition — Premiers éléments à examiner</h1>
+    <div class="meta">Workflow Day-1 · 6 étapes · Triage rapide vs analyse complète · Windows / Linux / macOS / Mobile</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition forensique</a><a href="methodologie.html" class="prereq-pill">📖 Méthodologie DFIR</a><a href="hash.html" class="prereq-pill">📖 Hash &amp; intégrité</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=acquisition" class="tp-pill">🧪 💾 Acquisition</a><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a><a href="../quiz.html" class="tp-pill">💊 Quiz forensique</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="poster_windows_artefacts.html" class="related-pill">🔗 Poster artefacts Windows</a><a href="kape_velociraptor.html" class="related-pill">🔗 KAPE / Velociraptor</a><a href="timeline.html" class="related-pill">🔗 Timeline forensique</a><a href="volatility_memory_forensics.html" class="related-pill">🔗 Volatility (RAM)</a><a href="zimmerman.html" class="related-pill">🔗 Outils Zimmerman</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🔍 Une image acquise n'est qu'un point de départ</div>
+    L'image bit-à-bit est faite. Le hash est consigné. La chaîne de custody est documentée. <strong>Et maintenant ?</strong> Une erreur classique consiste à ouvrir Autopsy au hasard et fouiller. Le travail efficace suit un <strong>ordre opérationnel</strong> en 6 étapes : intégrité → identification système → triage rapide → timeline → artefacts ciblés selon l'hypothèse d'enquête → analyse profonde. Cette fiche est la passerelle vers toutes les autres : elle indique <strong>quoi regarder, dans quel ordre, avec quel outil</strong>. Elle complète <a href="methodologie.html">Méthodologie DFIR</a> qui couvre la phase <em>Examen</em> du cycle, et renvoie aux fiches détaillées pour chaque artefact.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA — LE CYCLE POST-ACQUISITION EN 6 ÉTAPES
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">🔄 Le workflow Day-1 — De l'image acquise à l'hypothèse étayée</div>
+    <div class="schema-sub">6 ÉTAPES · CHAQUE TRANSITION = DOCUMENT D'AUDIT · TRAVAIL SUR COPIE</div>
+    <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cycle post-acquisition">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#888"/>
+        </marker>
+      </defs>
+      <!-- 6 phases en cercle -->
+      <g font-family="ui-sans-serif, system-ui" font-size="11" text-anchor="middle">
+        <circle cx="120" cy="80" r="48" fill="#1e3a5f" stroke="#4a9eff" stroke-width="2"/>
+        <text x="120" y="74" fill="#fff" font-weight="700">① INTÉGRITÉ</text>
+        <text x="120" y="89" fill="#aac" font-size="10">SHA-256 · Read-only</text>
+
+        <circle cx="320" cy="80" r="48" fill="#1e3a5f" stroke="#4a9eff" stroke-width="2"/>
+        <text x="320" y="74" fill="#fff" font-weight="700">② SYSTÈME</text>
+        <text x="320" y="89" fill="#aac" font-size="10">OS · TZ · Users</text>
+
+        <circle cx="520" cy="80" r="48" fill="#1e3a5f" stroke="#4a9eff" stroke-width="2"/>
+        <text x="520" y="74" fill="#fff" font-weight="700">③ TRIAGE</text>
+        <text x="520" y="89" fill="#aac" font-size="10">KAPE · Velociraptor</text>
+
+        <circle cx="120" cy="240" r="48" fill="#3a2f1e" stroke="#d4af37" stroke-width="2"/>
+        <text x="120" y="234" fill="#fff" font-weight="700">⑥ ANALYSE</text>
+        <text x="120" y="249" fill="#aac" font-size="10">Autopsy · X-Ways</text>
+
+        <circle cx="320" cy="240" r="48" fill="#3a2f1e" stroke="#d4af37" stroke-width="2"/>
+        <text x="320" y="234" fill="#fff" font-weight="700">⑤ CIBLAGE</text>
+        <text x="320" y="249" fill="#aac" font-size="10">Hypothèse · Artefacts</text>
+
+        <circle cx="520" cy="240" r="48" fill="#3a2f1e" stroke="#d4af37" stroke-width="2"/>
+        <text x="520" y="234" fill="#fff" font-weight="700">④ TIMELINE</text>
+        <text x="520" y="249" fill="#aac" font-size="10">Plaso · log2timeline</text>
+
+        <!-- Flèches -->
+        <line x1="170" y1="80" x2="270" y2="80" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="370" y1="80" x2="470" y2="80" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="520" y1="130" x2="520" y2="190" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="470" y1="240" x2="370" y2="240" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="270" y1="240" x2="170" y2="240" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="120" y1="190" x2="120" y2="130" stroke="#666" stroke-width="1" stroke-dasharray="4,3"/>
+
+        <text x="360" y="170" fill="#888" font-size="10" font-style="italic">Boucle si nouvelle hypothèse</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 0 — INTÉGRITÉ
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">① Étape 0 — Vérifier l'intégrité avant toute chose</div>
+  <div class="sec-sub">Une analyse sur une image dont l'intégrité n'a pas été reverifiée juste avant ouverture est inattaquable par la défense.</div>
+
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">✅ À faire systématiquement</div>
+      <ul>
+        <li>Recalculer le <strong>SHA-256</strong> de l'image avec un outil tiers (<code>sha256sum</code>, <code>certutil -hashfile</code>, <code>Get-FileHash</code>)</li>
+        <li>Comparer au hash <strong>documenté dans le PV d'acquisition</strong></li>
+        <li>Travailler sur une <strong>copie de travail</strong>, jamais l'original</li>
+        <li>Monter l'image en <strong>read-only</strong> (<code>mount -o ro,loop</code> · FTK Imager mount read-only · Arsenal Image Mounter)</li>
+        <li>Documenter chaque ouverture dans le <strong>journal d'audit</strong> (date · heure · opérateur · outil · version · empreinte hash avant/après)</li>
+      </ul>
+    </div>
+    <div class="card card-red">
+      <div class="ct">⛔ Pièges qui invalident la preuve</div>
+      <ul>
+        <li>Ouvrir l'image en lecture-écriture (modifie les timestamps de montage)</li>
+        <li>Brancher le disque source sans <strong>write-blocker</strong> (USB/SATA)</li>
+        <li>Ne pas reverifier le hash avant chaque session de travail majeure</li>
+        <li>Travailler à plusieurs sur la même copie sans journal partagé</li>
+        <li>Décompresser une image E01 dans un dossier sans noter le hash de chaque fichier extrait</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">💡 Pourquoi cette étape n'est pas négociable</div>
+    Le contre-examen typique de la défense commence ainsi : <em>« Pouvez-vous prouver que l'image que vous avez analysée est exactement celle que vous avez saisie ? »</em> Sans hash recalculé et tracé à chaque ouverture, la réponse est non — et l'art. 141 al. 2 CPP devient une menace concrète. Voir <a href="hash.html">Hash &amp; intégrité</a> pour le détail des algorithmes et des outils, et <a href="methodologie.html">Méthodologie DFIR</a> pour les 5 questions du magistrat (Manuel CAS-IN ch. 29.6).
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 1 — IDENTIFICATION SYSTÈME
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">② Étape 1 — Identifier le système avant de l'examiner</div>
+  <div class="sec-sub">Sans ces 5 informations, toute timeline est inexploitable et tout artefact est interprétable de travers.</div>
+
+  <table>
+    <thead><tr><th>Information</th><th>Pourquoi c'est critique</th><th>Où la trouver (Windows)</th><th>Où la trouver (Linux/macOS)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>OS · version · build</strong></td>
+        <td>Détermine les artefacts disponibles (AmCache ≥ Win8, ETL ≥ Win10) et les outils compatibles</td>
+        <td><code>SYSTEM\CurrentControlSet\Control\Windows</code> · <code>SOFTWARE\Microsoft\Windows NT\CurrentVersion</code></td>
+        <td>Linux : <code>/etc/os-release</code> · <code>/proc/version</code><br>macOS : <code>/System/Library/CoreServices/SystemVersion.plist</code></td>
+      </tr>
+      <tr>
+        <td><strong>Fuseau horaire (Time Zone)</strong></td>
+        <td><strong>CRITIQUE</strong> — sans elle, tous les timestamps sont décalés. La plupart des artefacts Windows sont en UTC, mais pas Event Logs ni la majorité des SQLite</td>
+        <td><code>SYSTEM\CurrentControlSet\Control\TimeZoneInformation</code></td>
+        <td>Linux : <code>/etc/timezone</code> · <code>readlink /etc/localtime</code><br>macOS : <code>systemsetup -gettimezone</code></td>
+      </tr>
+      <tr>
+        <td><strong>Utilisateurs et SIDs</strong></td>
+        <td>Attribution des actions · profils à examiner · comptes locaux vs domaine vs Microsoft Account</td>
+        <td>SAM hive · <code>SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList</code></td>
+        <td>Linux : <code>/etc/passwd</code> · <code>/etc/shadow</code><br>macOS : <code>dscl . -list /Users</code> · <code>/private/var/db/dslocal/nodes/Default/users/</code></td>
+      </tr>
+      <tr>
+        <td><strong>Date dernière utilisation</strong></td>
+        <td>Cadrer la fenêtre temporelle utile · détecter une éventuelle altération post-saisie</td>
+        <td>Event Log <code>System.evtx</code> Event ID 6005/6006/6008 · NTUSER.DAT lastWrite</td>
+        <td>Linux : <code>last</code> · <code>lastlog</code> · <code>journalctl --since</code><br>macOS : <code>last</code> · unified logs</td>
+      </tr>
+      <tr>
+        <td><strong>Configuration réseau</strong></td>
+        <td>Interfaces · DHCP leases · WiFi historique · proxy → corrélation avec logs externes</td>
+        <td><code>SYSTEM\CurrentControlSet\Services\Tcpip\Parameters</code> · <code>SOFTWARE\Microsoft\WlanSvc</code></td>
+        <td>Linux : <code>/var/log/syslog</code> · NetworkManager logs<br>macOS : <code>/Library/Preferences/SystemConfiguration/</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">⏰ La timezone est <em>la</em> source d'erreur n°1</div>
+    Un timestamp <code>2024-08-15 14:32:11</code> dans un Event Log Windows est en <strong>heure locale du système</strong>, mais celui d'un fichier MFT est en <strong>UTC</strong>. Sans correction, une chronologie peut se retrouver décalée de plusieurs heures et faire passer un suspect pour innocent (ou l'inverse). Note systématiquement la TZ <strong>du système</strong> et la TZ <strong>de chaque artefact</strong>.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 2 — TRIAGE RAPIDE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">③ Étape 2 — Triage rapide : 30 minutes au lieu de plusieurs heures</div>
+  <div class="sec-sub">Plutôt que d'attendre la fin de l'indexation Autopsy (souvent 12-48h), on extrait d'abord les artefacts à forte valeur. Fiche dédiée : <a href="kape_velociraptor.html">KAPE / Velociraptor</a>.</div>
+
+  <table class="ioc-table">
+    <thead><tr><th>Outil</th><th>OS cible</th><th>Approche</th><th>Sortie typique</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>KAPE</strong> (Kroll Artifact Parser and Extractor)</td>
+        <td>Windows (image montée ou live)</td>
+        <td>Targets (collecte) + Modules (parsing) · <code>!SANS_Triage</code> est le point de départ standard</td>
+        <td>MFT · Registry hives · Event Logs · Prefetch · LNK · Jump Lists · Browser history · USN Journal</td>
+      </tr>
+      <tr>
+        <td><strong>Velociraptor</strong></td>
+        <td>Cross-OS (Win / Linux / macOS)</td>
+        <td>Offline Collector (binaire autonome) avec hunts VQL prédéfinis · sortie en <code>.zip</code> ou Elastic</td>
+        <td>Artefacts orientés <em>endpoint detection</em> · timelines · IoC hunts</td>
+      </tr>
+      <tr>
+        <td><strong>CyLR</strong></td>
+        <td>Cross-OS</td>
+        <td>Outil ligne de commande ultra-léger · idéal pour Linux/macOS où KAPE ne va pas</td>
+        <td>Logs · bash history · cron · systemd · /tmp · /var/log</td>
+      </tr>
+      <tr>
+        <td><strong>AChoir</strong></td>
+        <td>Windows (live)</td>
+        <td>Script free de collecte live · alternative open-source à KAPE</td>
+        <td>Memory · registry · event logs · browsers · network state</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cmd-block" style="margin-top:1rem">
+    <div class="cmd-title">Exemple — Triage Windows avec KAPE</div>
+<pre><code># Image montée en lettre F:
+kape.exe --tsource F: --tdest C:\Triage --tflush ^
+         --target !SANS_Triage --vhdx Triage ^
+         --mdest C:\Triage_Parsed --module !EZParser
+
+# Résultat : tous les artefacts SANS triage extraits + parsés au format CSV
+# Temps moyen : 15-30 minutes (vs 12h+ pour une analyse Autopsy complète)
+</code></pre>
+  </div>
+
+  <div class="cmd-block" style="margin-top:.5rem">
+    <div class="cmd-title">Exemple — Triage Linux avec CyLR</div>
+<pre><code># Sur image montée en /mnt/evidence (read-only)
+cylr -od /tmp/cylr_output -of evidence_$(date +%F).zip \
+     -id evidence-001 -i /mnt/evidence
+
+# Collecte : /var/log · /etc · /home/*/.bash_history · /etc/cron* · systemd timers · ssh
+</code></pre>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 3 — TIMELINE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">④ Étape 3 — Construire la timeline maître</div>
+  <div class="sec-sub">La timeline est la colonne vertébrale de toute investigation. Fiche dédiée : <a href="timeline.html">Timeline forensique</a>.</div>
+
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🛠 Outils standards</div>
+      <ul>
+        <li><strong>log2timeline / Plaso</strong> (open-source · cross-OS) : extrait événements de 200+ types de sources → fichier <code>.plaso</code></li>
+        <li><strong>psort</strong> (Plaso suite) : filtre/exporte le <code>.plaso</code> en CSV, JSON, ELK</li>
+        <li><strong>Timesketch</strong> (visualisation web) ou <strong>Timeline Explorer</strong> d'Eric Zimmerman (Windows)</li>
+        <li><strong>MFTECmd</strong> + Timeline Explorer pour une timeline NTFS pure (rapide, ciblée)</li>
+      </ul>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">⚠ Les pièges des timestamps</div>
+      <ul>
+        <li><strong>MACB</strong> : Modified · Accessed · Changed · Born — chaque événement modifie 1 à 4 timestamps</li>
+        <li><strong>$SI vs $FN</strong> : NTFS stocke 2 jeux de timestamps. <code>$STANDARD_INFORMATION</code> est modifiable par l'utilisateur (<em>timestomping</em>), <code>$FILE_NAME</code> ne l'est que par le système</li>
+        <li><strong>Last Access désactivé</strong> par défaut sur Windows 7+ (<code>NtfsDisableLastAccessUpdate</code>) → ne pas tirer de conclusion de l'absence d'accès</li>
+        <li><strong>FAT/exFAT</strong> n'a pas de timezone embarquée — interprétation locale par défaut</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cmd-block" style="margin-top:1rem">
+    <div class="cmd-title">Pipeline timeline complet — Plaso</div>
+<pre><code># 1. Extraction
+log2timeline.py --storage_file evidence.plaso /mnt/image_ro
+
+# 2. Filtrage par fenêtre temporelle (24h autour d'un événement)
+psort.py -o l2tcsv -w timeline_window.csv evidence.plaso \
+         "date > '2024-08-14 00:00:00' AND date < '2024-08-16 00:00:00'"
+
+# 3. Filtrage par source (Event Logs Security uniquement)
+psort.py -o l2tcsv -w security_events.csv evidence.plaso \
+         "source contains 'WinEvtX' AND log_source contains 'Security'"
+</code></pre>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 4 — CIBLAGE PAR HYPOTHÈSE D'ENQUÊTE (WINDOWS)
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">⑤ Étape 4 — Cibler selon l'hypothèse — Windows</div>
+  <div class="sec-sub">Les 8 grandes questions de l'enquête forensique Windows et leurs artefacts associés. Détail complet dans <a href="poster_windows_artefacts.html">Poster artefacts Windows</a>.</div>
+
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">⚡ 1. Qu'a été exécuté ?</div>
+      <p><strong>Prefetch</strong> (<code>C:\Windows\Prefetch\*.pf</code>) · <strong>AmCache</strong> (<code>Amcache.hve</code>) · <strong>ShimCache</strong> (<code>SYSTEM\AppCompatCache</code>) · <strong>UserAssist</strong> (<code>NTUSER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</code>) · <strong>BAM/DAM</strong> (Background Activity Moderator)</p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">📂 2. Qu'a été ouvert ?</div>
+      <p><strong>LNK files</strong> (<code>%AppData%\Roaming\Microsoft\Windows\Recent</code>) · <strong>Jump Lists</strong> (<code>...\AutomaticDestinations</code> + <code>...\CustomDestinations</code>) · <strong>RecentDocs</strong> (NTUSER) · <strong>OpenSavePidlMRU</strong> · <strong>Office MRU</strong></p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">🗑️ 3. Qu'a été supprimé ?</div>
+      <p><strong>Recycle Bin</strong> (<code>$Recycle.Bin\$I*</code> + <code>$R*</code>) · <strong>USN Journal</strong> (<code>$Extend\$UsnJrnl:$J</code>) · <strong>$LogFile</strong> · <strong>VSS</strong> (Shadow Copies — souvent négligées, parfois vitales)</p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">📥 4. D'où vient ce fichier ?</div>
+      <p><strong>Zone.Identifier ADS</strong> (Mark-of-the-Web) · <strong>Browser downloads DB</strong> (<a href="browser_artifacts_deep_dive.html">détail</a>) · <strong>Outlook/Thunderbird</strong> · <strong>SMB shares mounted</strong></p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">🔌 5. Quel USB a été branché ?</div>
+      <p><strong>USBSTOR</strong> (<code>SYSTEM\CurrentControlSet\Enum\USBSTOR</code>) · <strong>setupapi.dev.log</strong> · <strong>EMDMgmt</strong> · <strong>MountedDevices</strong> · Event Log <code>Microsoft-Windows-Partition</code></p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">🌐 6. Quelle activité web ?</div>
+      <p><strong>Chrome/Edge</strong> : <code>History</code>, <code>Cookies</code>, <code>Login Data</code> · <strong>Firefox</strong> : <code>places.sqlite</code> · <strong>IE/Edge legacy</strong> : <code>WebCacheV01.dat</code> · <strong>Cache</strong> · <strong>Form History</strong> (voir <a href="browser_forensique.html">Browser forensique</a>)</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">👤 7. Qui s'est connecté ?</div>
+      <p>Event Log <code>Security.evtx</code> : <strong>4624</strong> (logon) · <strong>4625</strong> (failed) · <strong>4634</strong> (logoff) · <strong>4672</strong> (privilèges) · <strong>4720</strong> (compte créé) · Logon types 2/3/10 (interactive, network, RDP)</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">📡 8. Quelle activité réseau ?</div>
+      <p><strong>Event Log</strong> Microsoft-Windows-DNS-Client · <strong>SRUM</strong> (Network Data Usage) · <strong>WLAN profiles</strong> · <strong>ARP cache historique</strong> (rare) · corrélation avec logs FW/proxy externes</p>
+    </div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">📚 Tout est dans le Registre — ou presque</div>
+    Cinq hives à parser systématiquement : <code>SYSTEM</code>, <code>SOFTWARE</code>, <code>SAM</code>, <code>SECURITY</code>, <code>NTUSER.DAT</code> (un par user) et <code>UsrClass.dat</code>. Outils : <strong>Registry Explorer</strong> (Zimmerman) · <strong>RegRipper</strong> · <strong>Autopsy Registry Module</strong>. Voir <a href="registre_windows.html">Registre Windows</a> et <a href="windows_registry_forensique_avance.html">Forensique Registre avancée</a> pour les hives transactionnelles (LOG1/LOG2) et la récupération de clés supprimées.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 4bis — CIBLAGE LINUX / macOS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">⑤ Étape 4bis — Cibler selon l'hypothèse — Linux &amp; macOS</div>
+  <div class="sec-sub">Les artefacts changent radicalement hors Windows. Fiches détaillées : <a href="linux_forensique.html">Linux forensique</a> et <a href="cmd_linux_forensique.html">Commandes Linux forensique</a>.</div>
+
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🐧 Linux — Premiers regards</div>
+      <ul>
+        <li><strong>Logs système</strong> : <code>/var/log/syslog</code>, <code>auth.log</code>, <code>kern.log</code>, <code>journalctl --since</code></li>
+        <li><strong>Historique shell</strong> : <code>~/.bash_history</code>, <code>~/.zsh_history</code>, <code>~/.python_history</code> (attention : <code>HISTFILE=/dev/null</code> = effacement volontaire)</li>
+        <li><strong>Persistance</strong> : <code>/etc/cron*</code>, <code>/etc/systemd/system/*.service</code>, <code>~/.config/systemd/user/</code>, <code>~/.bashrc</code>, <code>/etc/rc.local</code></li>
+        <li><strong>SSH</strong> : <code>~/.ssh/known_hosts</code>, <code>authorized_keys</code>, <code>config</code>, <code>/var/log/auth.log</code></li>
+        <li><strong>Connexions</strong> : <code>last</code>, <code>lastlog</code>, <code>wtmp</code>, <code>btmp</code>, <code>utmp</code></li>
+        <li><strong>Network</strong> : <code>/etc/resolv.conf</code>, NetworkManager logs, <code>iptables-save</code>, <code>nftables list</code></li>
+        <li><strong>Fichiers cachés</strong> : <code>~/.local/share/</code>, <code>~/.cache/</code>, <code>/tmp</code>, <code>/var/tmp</code></li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">🍎 macOS — Premiers regards</div>
+      <ul>
+        <li><strong>Unified Logs</strong> : <code>log show --predicate ... --last 24h</code> (remplace syslog depuis macOS Sierra)</li>
+        <li><strong>FSEvents</strong> : <code>/.fseventsd/</code> — journal de tous les changements de fichiers</li>
+        <li><strong>Spotlight metadata</strong> : <code>~/.Spotlight-V100/</code> — métadonnées indexées</li>
+        <li><strong>knowledgeC.db</strong> : <code>~/Library/Application Support/Knowledge/knowledgeC.db</code> — apps lancées, écran allumé, position, AirDrop</li>
+        <li><strong>TCC.db</strong> : <code>~/Library/Application Support/com.apple.TCC/TCC.db</code> — permissions accordées (caméra, mic, Bureau, Photos…)</li>
+        <li><strong>Préférences</strong> : <code>~/Library/Preferences/*.plist</code> (binaires — outil <code>plutil -p</code>)</li>
+        <li><strong>Quarantine</strong> : <code>~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2</code> — fichiers téléchargés</li>
+        <li><strong>Persistance</strong> : <code>~/Library/LaunchAgents/</code>, <code>/Library/LaunchDaemons/</code>, login items</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ÉTAPE 5 — RAM (si dump disponible)
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">⑥ Étape 5 — Analyse mémoire (si dump RAM disponible)</div>
+  <div class="sec-sub">Une RAM dumpée est de l'or pur — surtout pour les enquêtes malware ou chiffrement. Fiche dédiée : <a href="volatility_memory_forensics.html">Volatility</a>.</div>
+
+  <div class="cmd-block">
+    <div class="cmd-title">Volatility 3 — 8 plugins à lancer dans l'ordre</div>
+<pre><code># 1. Identifier le profil (Vol3 le détecte automatiquement)
+vol -f memory.raw windows.info
+
+# 2. Processus — vue arbre + liste
+vol -f memory.raw windows.pstree
+vol -f memory.raw windows.pslist
+vol -f memory.raw windows.psscan      # détecte processus cachés (rootkits)
+
+# 3. Connexions réseau au moment du dump
+vol -f memory.raw windows.netscan
+vol -f memory.raw windows.netstat
+
+# 4. Détection de malware courant
+vol -f memory.raw windows.malfind
+vol -f memory.raw windows.dlllist     # DLL injectées
+vol -f memory.raw windows.cmdline     # arguments des processus
+
+# 5. Extraction de credentials
+vol -f memory.raw windows.hashdump
+vol -f memory.raw windows.lsadump
+vol -f memory.raw windows.cachedump   # cached domain creds
+</code></pre>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🔑 La RAM contient ce que le disque ne donnera jamais</div>
+    Clés de chiffrement (FVEK BitLocker, master keys LUKS, FileVault), mots de passe en clair, sessions VPN actives, contenu déchiffré de conteneurs, processus malveillants ne touchant jamais le disque (<em>fileless malware</em>). Une enquête avec BitLocker actif et sans dump RAM est souvent une enquête morte. Voir aussi <a href="cassage_mdp.html">Cassage de mots de passe</a> et la fiche <a href="acquisition.html">Acquisition</a> (RFC 3227).
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     MOBILE — APERÇU
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">📱 Mobile — Spécificités iOS / Android</div>
+  <div class="sec-sub">Fiches dédiées : <a href="ios_forensique.html">iOS forensique</a> · <a href="android_forensique.html">Android forensique</a>.</div>
+
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🍎 iOS — Artefacts prioritaires post-acquisition</div>
+      <ul>
+        <li><strong>Manifest.db</strong> — index complet du backup (fichiers, métadonnées, paths)</li>
+        <li><strong>sms.db</strong> · <strong>CallHistory.storedata</strong> · <strong>AddressBook.sqlitedb</strong></li>
+        <li><strong>knowledgeC.db</strong> — apps utilisées, écran allumé, AirDrop, Bluetooth</li>
+        <li><strong>WhatsApp/Signal/Telegram</strong> : bases SQLite chiffrées (clés en Keychain)</li>
+        <li><strong>Photos.sqlite</strong> + EXIF (géoloc, modèle device, heure)</li>
+        <li><strong>Outils</strong> : Cellebrite Physical Analyzer · Magnet AXIOM · <strong>iLEAPP</strong> (open source)</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">🤖 Android — Artefacts prioritaires post-acquisition</div>
+      <ul>
+        <li><strong>/data/data/&lt;app&gt;/databases/</strong> — SQLite par application</li>
+        <li><strong>accounts.db</strong> — comptes Google/Samsung/Microsoft synchronisés</li>
+        <li><strong>contacts2.db</strong> · <strong>mmssms.db</strong> · <strong>calllog.db</strong></li>
+        <li><strong>/system/users/&lt;n&gt;/</strong> · <strong>/data/system_ce/</strong> — données utilisateur multi-profils</li>
+        <li><strong>WhatsApp</strong> : <code>msgstore.db</code> + clé dans <code>/data/data/com.whatsapp/files/key</code></li>
+        <li><strong>Outils</strong> : Cellebrite · Magnet AXIOM · <strong>ALEAPP</strong> (open source) · <strong>MOBILedit</strong></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     RÉCAP — OUTILS PAR ÉTAPE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">🛠 Récapitulatif — Outils par étape</div>
+  <table>
+    <thead><tr><th>Étape</th><th>Objectif</th><th>Outils open-source</th><th>Outils commerciaux</th></tr></thead>
+    <tbody>
+      <tr><td><strong>① Intégrité</strong></td><td>Hash + montage RO</td><td><code>sha256sum</code> · <code>certutil</code> · Arsenal Image Mounter (gratuit) · <code>mount -o ro,loop</code></td><td>FTK Imager · X-Ways</td></tr>
+      <tr><td><strong>② Identification</strong></td><td>OS · TZ · users</td><td>Registry Explorer (Zimmerman) · RegRipper · <code>plutil</code></td><td>Magnet AXIOM · EnCase</td></tr>
+      <tr><td><strong>③ Triage</strong></td><td>Collecte ciblée rapide</td><td><strong>KAPE</strong> · <strong>Velociraptor</strong> · CyLR · AChoir</td><td>Cellebrite Inspector · AXIOM Cyber</td></tr>
+      <tr><td><strong>④ Timeline</strong></td><td>Chronologie maître</td><td><strong>Plaso/log2timeline</strong> · Timesketch · MFTECmd + Timeline Explorer</td><td>X-Ways Timeline · AXIOM Timeline</td></tr>
+      <tr><td><strong>⑤ Ciblage Win</strong></td><td>Parsing artefacts</td><td>Suite Zimmerman (PECmd, LECmd, JLECmd, AmcacheParser, RECmd, EvtxECmd…) · RegRipper · Hindsight (browser)</td><td>Autopsy modules · X-Ways · AXIOM Examine</td></tr>
+      <tr><td><strong>⑤ Ciblage Linux</strong></td><td>Logs · persistance</td><td><code>journalctl</code> · <code>auditd</code> parsers · Plaso (cross-OS)</td><td>X-Ways</td></tr>
+      <tr><td><strong>⑤ Ciblage macOS</strong></td><td>Unified logs · TCC · plist</td><td><code>log</code> · <code>mdfind</code> · <code>plutil</code> · <strong>mac_apt</strong> · Spotlight Inspector</td><td>BlackLight · AXIOM Mac</td></tr>
+      <tr><td><strong>⑥ RAM</strong></td><td>Memory forensics</td><td><strong>Volatility 3</strong> · Rekall · MemProcFS</td><td>Magnet RAM Capture (capture seule) · X-Ways Memory</td></tr>
+      <tr><td><strong>Mobile</strong></td><td>iOS / Android parsing</td><td><strong>iLEAPP</strong> · <strong>ALEAPP</strong> · MOBILedit Free</td><td>Cellebrite · Oxygen · Magnet AXIOM Mobile</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     PIÈGES FRÉQUENTS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">❌ Pièges fréquents qui ruinent une analyse post-acquisition</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">⛔ Erreurs techniques</div>
+      <ul>
+        <li>Travailler sur l'image originale au lieu d'une <strong>copie de travail</strong></li>
+        <li>Ne pas recalculer le hash <strong>avant chaque session</strong> majeure</li>
+        <li>Confondre <strong>$SI</strong> (manipulable) et <strong>$FN</strong> (résistant au <em>timestomping</em>)</li>
+        <li>Ignorer la <strong>timezone</strong> du système ou des artefacts</li>
+        <li>Tirer une conclusion d'un <strong>artefact unique</strong> sans corrélation</li>
+        <li>Oublier d'examiner les <strong>Volume Shadow Copies</strong> (VSS)</li>
+        <li>Ne pas dumper la RAM quand la machine était allumée</li>
+        <li>Considérer l'<strong>absence d'artefact</strong> comme preuve d'absence d'action (Last Access désactivé par défaut)</li>
+      </ul>
+    </div>
+    <div class="card card-red">
+      <div class="ct">⛔ Erreurs méthodologiques</div>
+      <ul>
+        <li>Sauter directement à l'étape ⑤ sans timeline ⊕ identification système</li>
+        <li>Lancer Autopsy/X-Ways sur image full et attendre 24h <strong>avant</strong> d'extraire les artefacts de triage</li>
+        <li>Ne pas documenter chaque commande exécutée (journal d'audit)</li>
+        <li>Mélanger plusieurs hypothèses dans la même session sans les séparer</li>
+        <li>Communiquer un résultat préliminaire de triage comme conclusion d'enquête</li>
+        <li>Oublier de relier les artefacts au <strong>cadre légal de la saisie</strong> (mandat MP · périmètre · proportionnalité art. 197 CPP)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     QUIZ
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Tu reçois une image E01 d'un poste Windows 10 d'un suspect saisi il y a 3 jours. Par où commences-tu ?<small>Workflow · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Étape ① Intégrité</strong> avant tout : (1) recalculer le SHA-256 de l'E01 avec <code>FTK Imager</code> ou <code>ewfverify</code>, (2) comparer au hash du PV d'acquisition, (3) noter dans le journal d'audit (date · heure · outil · version · résultat), (4) monter l'image en read-only via Arsenal Image Mounter ou FTK Imager. <strong>Surtout pas</strong> : ouvrir directement dans Autopsy sans avoir reverifié le hash, ni travailler sur l'E01 d'origine. Si le hash diverge → STOP et documenter — l'analyse devient nulle au sens de l'art. 141 CPP.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Tu cherches à savoir si un fichier précis a été ouvert sur la machine il y a 2 semaines. Quels artefacts Windows examines-tu en priorité ?<small>Ciblage · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Plusieurs artefacts à corréler — jamais un seul : <strong>(1) LNK files</strong> dans <code>%AppData%\...\Recent</code> (lien créé à l'ouverture) · <strong>(2) Jump Lists</strong> (<code>AutomaticDestinations</code>) · <strong>(3) RecentDocs</strong> dans NTUSER.DAT · <strong>(4) Office MRU</strong> si fichier bureautique · <strong>(5) Shellbags</strong> pour les dossiers parents · <strong>(6) UserAssist</strong> si lancé par un raccourci · <strong>(7) Browser history</strong> si ouvert depuis un téléchargement. <strong>Attention</strong> : Last Access ($SI Accessed) est désactivé par défaut depuis Win7, donc absent ≠ jamais ouvert. Outil : <strong>LECmd</strong> + <strong>JLECmd</strong> (Zimmerman). Voir <a href="poster_windows_artefacts.html">Poster artefacts Windows</a>.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Un avocat de la défense te demande : « Comment savez-vous que ce timestamp NTFS n'a pas été falsifié ? » Que réponds-tu ?<small>Présentation · Niveau : difficile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Réponse type</strong> : « NTFS stocke deux jeux de timestamps par fichier — l'attribut <code>$STANDARD_INFORMATION</code> ($SI) <em>est</em> modifiable par l'utilisateur ou un outil de <em>timestomping</em>, mais l'attribut <code>$FILE_NAME</code> ($FN) ne l'est qu'au niveau du système d'exploitation lors d'opérations spécifiques (création, rename, déplacement entre volumes). J'ai vérifié les deux : ils convergent (ou divergent — auquel cas je documente la divergence et la signale). De plus, j'ai corrélé ce timestamp avec d'autres artefacts indépendants : <code>USN Journal</code> (<code>$Extend\$UsnJrnl:$J</code>), les Event Logs <code>Security.evtx</code>, le Prefetch, le Registry <code>UserAssist</code>. Une falsification cohérente sur 5 artefacts est techniquement quasi-impossible à réaliser à postériori. » Toujours ramener à la <strong>corrélation multi-sources</strong> et à la <strong>reproductibilité</strong>. Voir <a href="timeline.html">Timeline forensique</a>.</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     EXAM TIP — À RETENIR
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 À retenir pour la pratique — Analyse post-acquisition</div>
+    <p><strong>6 étapes ordonnées</strong> : Intégrité → Identification système → Triage rapide → Timeline → Ciblage hypothèse → Analyse profonde</p>
+    <p><strong>Avant tout</strong> : recalculer SHA-256, monter en read-only, travailler sur copie, documenter au journal d'audit</p>
+    <p><strong>5 infos système minimum</strong> : OS+version · Timezone · Users+SIDs · Date dernière utilisation · Config réseau</p>
+    <p><strong>Triage rapide</strong> : KAPE (Windows) · Velociraptor (cross-OS) · CyLR (Linux/macOS) — 30 min vs 24 h+ d'Autopsy</p>
+    <p><strong>Timeline maître</strong> : Plaso / log2timeline → psort → Timesketch ou Timeline Explorer · attention $SI vs $FN · TZ documentée</p>
+    <p><strong>Windows — 8 questions</strong> : Exécuté ? Ouvert ? Supprimé ? Téléchargé ? USB ? Web ? Connecté ? Réseau ?</p>
+    <p><strong>Linux</strong> : <code>journalctl</code> · <code>~/.bash_history</code> · <code>cron</code> · <code>systemd</code> · <code>auth.log</code> · <code>~/.ssh/</code></p>
+    <p><strong>macOS</strong> : <code>log show</code> · FSEvents · knowledgeC.db · TCC.db · plists · Quarantine</p>
+    <p><strong>RAM</strong> : Volatility 3 — <code>pstree</code> · <code>netscan</code> · <code>malfind</code> · <code>cmdline</code> · <code>hashdump</code></p>
+    <p><strong>Mobile</strong> : iLEAPP (iOS) · ALEAPP (Android) — <code>Manifest.db</code>, <code>knowledgeC.db</code>, SQLite per-app</p>
+    <p><strong>Règle d'or</strong> : jamais de conclusion sur artefact unique — corréler ≥ 3 sources indépendantes</p>
+    <p><strong>Art. 141 CPP</strong> : intégrité non documentée = preuve potentiellement nulle</p>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>SANS FOR500 · ISO/IEC 27037 · NIST SP 800-86 · Manuel CAS-IN ch. 29</span>
+  </div>
+</div>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/core/cas-in-titles-badges.js" defer></script>
+<script src="../js/components/titles-badges-ui.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
