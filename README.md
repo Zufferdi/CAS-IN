@@ -27,12 +27,12 @@ C'est sérieux. Mais ne te trompe pas : c'est un projet qui contient **324 perso
 |---|---:|---|
 | **Scènes jouables** | **392** | Chacune = 3 à 6 décisions notées, débrief intégral |
 | **Questions de quiz** | **2 235** | 8 thèmes, 3 niveaux de difficulté, mode quotidien |
-| **Fiches techniques** | **120** | DFIR + droit suisse + outils + cloud + LLM forensique |
+| **Fiches techniques** | **122** | DFIR + droit suisse + outils + cloud + LLM forensique |
 | **Tutoriels d'outils DFIR** | **28** | Pas-à-pas Autopsy, Volatility, Sleuthkit, FTK, etc. |
 | **Catégories de TP** | **43** | Carving, MFT parsing, magic bytes, NTFS internals, etc. |
 | **Personnages (NPCs)** | **324** | Chacun avec rôle, institution, expertise, bio, citation, relations |
-| **Campagnes thématiques** | **46** | Organisées par niveau et thème |
-| **Sagas narratives** | **35** | Multi-actes avec conséquences procédurales en cascade |
+| **Campagnes thématiques** | **58** | Organisées par niveau et thème |
+| **Sagas narratives** | **47** | Multi-actes avec conséquences procédurales en cascade |
 | **Trophées (achievements)** | **317** | Lecture, scoring, custody, multi-canton, multi-rôle, etc. |
 | **Cantons suisses couverts** | **19+** | Plus la Confédération et l'UE pour les volets transfrontaliers |
 | **Pages de référence DFIR** | **6** | Artefacts, Event IDs, MITRE, Droit, Outils, Magic bytes, Biblio |
@@ -182,7 +182,7 @@ CAS-IN/
 ├── references/             # 6 pages d'aide-mémoire filtrables
 │   └── …
 │
-├── fiches/                 # 120 fiches DFIR + droit (HTML statique)
+├── fiches/                 # 122 fiches DFIR + droit (HTML statique)
 │   └── *.html
 │
 ├── tutoriels/              # 28 tutoriels au format HTML
@@ -193,14 +193,14 @@ CAS-IN/
 │   └── *.json              # Une scène = un fichier
 │
 ├── data/                   # Données pivots
-│   ├── manifest.json       # 120 fiches catégorisées
+│   ├── manifest.json       # 122 fiches catégorisées
 │   ├── questions-index.json    # Méta : 8 thèmes, totaux (1.6 KB)
 │   ├── questions-search.json   # Index minimaliste pour search globale (425 KB)
 │   ├── questions/              # 8 chunks par thème (~500 KB chacun)
 │   │   └── quiz-{theme-slug}.json
 │   ├── i18n/               # 4 langues : fr, en, de, it
 │   ├── npcs.json           # 324 NPCs
-│   ├── campaigns.json      # 46 campagnes, 35 sagas
+│   ├── campaigns.json      # 58 campagnes (47 récits + 11 collections)
 │   ├── scenes-chronology.json
 │   ├── search-index.json   # Index plein-texte
 │   ├── cross-links.json    # Liens fiches ↔ scènes
@@ -302,7 +302,7 @@ Infrastructure de versioning du schema (`SCHEMA_VERSION`) prête pour les migrat
 
 CAS-IN est une **Progressive Web App** complète :
 - Installable sur desktop et mobile (Chrome, Edge, Safari)
-- Tout le contenu (392 scènes + 120 fiches + 2 235 questions + 324 NPCs + 28 tutoriels + 43 TP + 71 références biblio) est cacheable
+- Tout le contenu (476 scènes + 122 fiches + 2 235 questions + 324 NPCs + 28 tutoriels + 43 TP + 71 références biblio) est cacheable
 - Service Worker `sw.js` slim (21 KB depuis v132p) — cache `cas-in-v144`
 - Stratégies : `cacheFirst` pour les statiques, `networkFirst` pour les données critiques, runtime cache pour les chunks de questions
 - Fonctionne intégralement offline après la première visite
@@ -435,6 +435,6 @@ Toute ressemblance avec une affaire en cours est purement gênante. Toute ressem
 
 ---
 
-*Dernière mise à jour de ce README : 30 mai 2026, version 3.0-jolification (cache SW v144) — 392 scènes, 324 NPCs, 46 campagnes, 35 sagas, 120 fiches, 28 tutoriels, 43 TP, 2 235 questions, 71 références biblio, 317 trophées, 0 trace de tracking.*
+*Dernière mise à jour de ce README : 8 juin 2026, version 3.4 (cache SW v145) — 476 scènes, 324 NPCs, 47 récits (sagas + affaires) + 11 collections, 122 fiches, 28 tutoriels, 43 TP, 2 235 questions, 71 références biblio, 317 trophées, 0 trace de tracking.*
 
 *Si tu lis cette ligne, c'est que tu cherches vraiment des excuses pour ne pas commencer la saga d'initiation.*
