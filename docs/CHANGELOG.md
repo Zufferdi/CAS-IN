@@ -8,7 +8,40 @@ Cache SW courant : **`cas-in-v144`** (depuis le 30 mai 2026, v3.0-jolification).
 
 ---
 
-## [3.4-sagas-dossier] — 2026-06-08
+## [3.4-recits-orphelins] — 2026-06-08
+
+🎬 **Intégration des 11 récits orphelins manquants dans `campaigns.json`.**
+
+### Diagnostic
+Audit du 8 juin 2026 sur `data/campaigns.json` :
+- 477 scènes sur disque dans `/scenes/*.json`
+- 399 scènes référencées par les 36 récits déclarés
+- **78 scènes orphelines** réparties sur **11 arcs complets** (7 actes chacun) jamais déclarés
+- Sur la page sagas, 11 récits invisibles à l'utilisateur (Or russe, Shadow fleet, Coin Laundry, Yémen, Pegasus, Frappes cognitives, Police prédictive, Data brokers, Données brocante, Cryptomixer Bahnhofstrasse, No-G7)
+
+### Ajouté
+- **`scripts/integrate_orphan_recits_v34.py`** — script idempotent qui ajoute les 11 entrées dans `data/campaigns.json` (orders 49–59).
+- **`data/campaigns.json`** — 11 nouvelles entrées :
+  - 9 sagas journalistiques nationales (🎬) : `saga-or-russe`, `saga-shadow-fleet`, `saga-coinlaundry`, `saga-osint-yemen`, `saga-pegasus-mobiles`, `saga-frappes-cognitives`, `saga-police-predictive`, `saga-data-brokers`, `saga-donnees-brocante`
+  - 2 affaires cantonales (📁) : `saga-cryptomixer` (ZH), `saga-nog7` (GE)
+- Le total `kind=saga+affaire` passe de **36 → 47** récits visibles sur la page sagas. Le compteur dynamique `view-btn-sagas-count` dans le bandeau Scènes/Sagas reflètera automatiquement la nouvelle valeur.
+
+### À compléter manuellement
+Champs éditoriaux marqués `À COMPLÉTER` pour les 11 nouvelles entrées :
+- `subtitle` — ex: « Saga 7 actes · Or russe via raffineries tessinoises »
+- `description` — synopsis 1–2 phrases
+- `hook` — accroche 1 phrase visible sur la carte (mise en valeur jaune)
+
+Champs renseignés automatiquement depuis la première scène de chaque arc : `id`, `title` (préfixe avant ` #`), `icon`, `level` (extrait de `difficulty`), `order`, `scenes` (liste triée 1→7), `narrative: true`, `kind`.
+
+### Notes
+- Aucune scène modifiée, aucun fichier supprimé.
+- Re-audit post-patch : 0 récit orphelin restant.
+- Cache SW à incrémenter (`cas-in-v144 → cas-in-v145`) pour invalider l'ancien `campaigns.json`.
+
+---
+
+
 
 🎨 **Harmonisation visuelle de la page Sagas avec le tableau des dossiers (campagnes).**
 
