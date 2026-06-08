@@ -38,6 +38,7 @@
   }
 
 const STAGE_THRESHOLD = 60;
+const PERFECT_THRESHOLD = 90;
 
   function t(key, fb) {
     return (window.CASi18n && window.CASi18n.t) ? window.CASi18n.t(key, fb) : fb;
@@ -52,6 +53,15 @@ const STAGE_THRESHOLD = 60;
     medium:     '#f0c040',
     hard:       '#ff4060'
   };
+
+  // v3.4 — Métadonnées des grades (fallback si data.levels indisponible)
+  const LEVEL_META_FALLBACK = {
+    stagiaire:  { icon: '🎓', title: 'Stagiaire' },
+    inspecteur: { icon: '🔍', title: 'Inspecteur' },
+    enqueteur:  { icon: '⚖️', title: 'Enquêteur' },
+    expert:     { icon: '💎', title: 'Expert DFIR' }
+  };
+  let LEVEL_META = LEVEL_META_FALLBACK;
 
   let currentKind = 'all';
   let currentLevel = 'all';
@@ -79,9 +89,10 @@ const STAGE_THRESHOLD = 60;
     const sceneIds = saga.scenes || [];
     const total = sceneIds.length;
     if (total === 0) {
-      return { completed: 0, total: 0, pctCatalog: 0, avgPct: 0, isCompleted: false, nextSceneId: null };
+      return { completed: 0, perfect: 0, total: 0, pctCatalog: 0, avgPct: 0, isCompleted: false, allPerfect: false, nextSceneId: null };
     }
     let completed = 0;
+    let perfect = 0;
     let sumPct = 0;
     let countPct = 0;
     let nextSceneId = null;
@@ -92,6 +103,7 @@ const STAGE_THRESHOLD = 60;
         countPct += 1;
         if (r.pct >= STAGE_THRESHOLD) {
           completed += 1;
+          if (r.pct >= PERFECT_THRESHOLD) perfect += 1;
         } else if (!nextSceneId) {
           nextSceneId = sceneId;
         }
@@ -102,45 +114,83 @@ const STAGE_THRESHOLD = 60;
     const pctCatalog = Math.round((completed / total) * 100);
     const avgPct = countPct > 0 ? Math.round(sumPct / countPct) : 0;
     const isCompleted = completed === total;
+    const allPerfect = isCompleted && perfect === total;
     if (!nextSceneId && sceneIds.length > 0) nextSceneId = sceneIds[0];
-    return { completed, total, pctCatalog, avgPct, isCompleted, nextSceneId };
+    return { completed, perfect, total, pctCatalog, avgPct, isCompleted, allPerfect, nextSceneId };
+  }
+
+  // v3.4 — Statut harmonisé avec campaignStats() de scene-campaigns-v1.js
+  function getStatus(progress) {
+    if (progress.completed === 0) {
+      return { label: 'NON OUVERT', cls: 'new', icon: '○' };
+    }
+    if (progress.isCompleted) {
+      if (progress.allPerfect) {
+        return { label: 'MAÎTRISÉ', cls: 'mastered', icon: '★' };
+      }
+      return { label: 'CLÔTURÉ', cls: 'completed', icon: '✓' };
+    }
+    return {
+      label: `EN COURS · ${progress.completed}/${progress.total}`,
+      cls: 'inprogress',
+      icon: '◐'
+    };
   }
 
   function renderCard(saga, progress) {
     const level = saga.level || 'medium';
-    const color = LEVEL_COLORS[level] || LEVEL_COLORS.medium;
-    const cta = progress.completed === 0
-      ? t('sagas_page.cta_start', 'Démarrer')
-      : (progress.isCompleted ? t('sagas_page.cta_revisit', '🔄 Revisiter') : t('sagas_page.cta_resume', 'Reprendre'));
-    const targetSceneId = progress.isCompleted
-      ? (saga.scenes && saga.scenes[0]) || progress.nextSceneId
-      : progress.nextSceneId;
-    const href = targetSceneId
-      ? `scene.html?scene=${encodeURIComponent(targetSceneId)}${progress.isCompleted ? '&revisit=1' : ''}`
-      : 'scene.html#campaigns';
-    const completedCls = progress.isCompleted ? ' completed' : '';
+    const kind = saga.kind || 'saga';
+    const meta = LEVEL_META[level] || { icon: '', title: level };
+    const dossierNum = 'CAS-IN/' + String(saga.order || 0).padStart(2, '0');
+    const s = getStatus(progress);
+    const hook = saga.hook || '';
+    const kindClass = kind === 'affaire' ? 'dossier-recit-affaire' : 'dossier-recit-saga';
+    const ctaLabel = kind === 'affaire'
+      ? t('sagas_page.cta_open_affaire', 'OUVRIR LE DOSSIER')
+      : t('sagas_page.cta_open_saga', 'OUVRIR LA SAGA');
+    // v3.4 — La carte ouvre désormais la vue détaillée (existante dans
+    // scene-campaigns-v1.js, qui sait déjà rendre les sagas via c.narrative).
+    // Le lecteur voit la liste des actes/scènes avant de lancer une partie.
+    const href = `#campaign=${encodeURIComponent(saga.id)}`;
+    // Badge moyenne quand des scènes ont été tentées
+    const avgBadge = progress.avgPct
+      ? `<span class="dossier-perfect">${t('sagas_page.avg_label', 'moy.')} ${progress.avgPct}%</span>`
+      : (progress.perfect ? `<span class="dossier-perfect">${progress.perfect} ★</span>` : '');
     return `
-      <a href="${href}" class="sg-card${completedCls}" style="--sg-color: ${color}" data-saga="${escapeHtml(saga.id)}" data-level="${level}" data-kind="${escapeHtml(saga.kind || 'saga')}">
-        <div class="sg-card-head">
-          <div class="sg-card-icon">${escapeHtml(saga.icon || '📖')}</div>
-          <div class="sg-card-titles">
-            <h3 class="sg-card-title">${escapeHtml(saga.title || saga.id)}</h3>
-            <div class="sg-card-sub">${escapeHtml(saga.subtitle || '')}</div>
+      <a href="${href}"
+         class="dossier-card dossier-level-${level} dossier-recit ${kindClass}"
+         data-saga-id="${escapeHtml(saga.id)}"
+         data-campaign-id="${escapeHtml(saga.id)}"
+         data-level="${level}"
+         data-kind="${escapeHtml(kind)}"
+         role="button"
+         tabindex="0">
+        <div class="dossier-stamp">
+          <span class="dossier-num">N° ${escapeHtml(dossierNum)}</span>
+          <span class="dossier-classif">${escapeHtml(meta.icon || '')} ${escapeHtml((meta.title || '').toUpperCase())}</span>
+        </div>
+        <div class="dossier-head">
+          <div class="dossier-icon">${escapeHtml(saga.icon || '📖')}</div>
+          <div class="dossier-titles">
+            <h3 class="dossier-title">${escapeHtml(saga.title || saga.id)}</h3>
+            <div class="dossier-subtitle">${escapeHtml(saga.subtitle || '')}</div>
           </div>
-          <span class="sg-card-level" data-level="${level}">${escapeHtml(level)}</span>
         </div>
-        ${saga.description ? `<p class="sg-card-desc">${escapeHtml(saga.description)}</p>` : ''}
-        <div class="sg-card-progress">
-          <div class="sg-card-prog-line">
-            <span class="sg-card-prog-num">${progress.completed} / ${progress.total} scènes</span>
-            <span class="sg-card-prog-pct">${progress.pctCatalog}%${progress.avgPct ? ' · ' + t('sagas_page.avg_label', 'moy.') + ' ' + progress.avgPct + '%' : ''}</span>
+        ${hook ? `<p class="dossier-hook">« ${escapeHtml(hook)} »</p>` : ''}
+        ${saga.description ? `<p class="dossier-desc">${escapeHtml(saga.description)}</p>` : ''}
+        <div class="dossier-footer">
+          <div class="dossier-progress">
+            <div class="dossier-progress-track">
+              <div class="dossier-progress-fill" style="width:${progress.pctCatalog}%"></div>
+            </div>
           </div>
-          <div class="sg-card-bar"><div class="sg-card-bar-fill" style="width: ${progress.pctCatalog}%"></div></div>
+          <div class="dossier-status dossier-status-${s.cls}">
+            <span class="dossier-status-icon">${s.icon}</span>
+            <span class="dossier-status-label">${escapeHtml(s.label)}</span>
+            ${avgBadge}
+          </div>
         </div>
-        <div class="sg-card-cta">
-          <span>${progress.isCompleted ? t('sagas_page.saga_complete_label', '🏆 Complet') : ''}</span>
-          <span class="sg-card-cta-act">${cta} →</span>
-        </div>
+        <div class="dossier-cta">${escapeHtml(ctaLabel)} →</div>
       </a>
     `;
   }
@@ -182,6 +232,11 @@ const STAGE_THRESHOLD = 60;
     if (elAll) elAll.textContent = both.length;
     if (elSaga) elSaga.textContent = sagasOnly.length;
     if (elAffaire) elAffaire.textContent = affairesOnly.length;
+    // v3.4 — Met aussi à jour le compteur du bouton bascule "📖 Sagas (XX)"
+    // dans le bandeau Scènes/Sagas. Ce compteur reflète sagas + affaires
+    // (tous les récits affichés sur cette page).
+    const elToggle = document.getElementById('view-btn-sagas-count');
+    if (elToggle) elToggle.textContent = '(' + both.length + ')';
   }
 
   function applyFilters(allCampaigns, results) {
@@ -203,31 +258,31 @@ const STAGE_THRESHOLD = 60;
       return;
     }
 
-    // v3 — Sections séparées si kind='all'
+    // v3.4 — Sections séparées si kind='all' (CSS dans scene-campaigns.css)
     if (currentKind === 'all') {
       const sagas = recits.filter(c => c.kind === 'saga');
       const affaires = recits.filter(c => c.kind === 'affaire');
       let html = '';
       if (sagas.length > 0) {
         html += `
-          <div class="sg-section-header" style="grid-column:1/-1;margin:0 0 8px;padding:14px 0 6px;border-bottom:1px solid rgba(255,255,255,.08)">
-            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-              <h2 style="margin:0;font-size:1.15rem;font-weight:700">🎬 ${t('sagas_page.section_sagas', 'Sagas narratives')}</h2>
-              <span style="color:var(--dim);font-size:.85rem">${sagas.length} ${t('sagas_page.recits_label', 'récits')}</span>
+          <div class="sg-section-header">
+            <div class="sg-section-header-row">
+              <h2>🎬 ${t('sagas_page.section_sagas', 'Sagas narratives')}</h2>
+              <span class="sg-section-header-count">${sagas.length} ${t('sagas_page.recits_label', 'récits')}</span>
             </div>
-            <p style="margin:6px 0 0;color:var(--dim);font-size:.85rem;line-height:1.4">${t('sagas_page.section_sagas_desc', 'Arcs narratifs continus avec mêmes PNJ d&apos;épisode en épisode — 5 à 8 scènes par récit.')}</p>
+            <p>${t('sagas_page.section_sagas_desc', 'Arcs narratifs continus avec mêmes PNJ d&apos;épisode en épisode — 5 à 8 scènes par récit.')}</p>
           </div>
         `;
         html += sagas.map(s => renderCard(s, progressMap[s.id])).join('');
       }
       if (affaires.length > 0) {
         html += `
-          <div class="sg-section-header" style="grid-column:1/-1;margin:24px 0 8px;padding:14px 0 6px;border-bottom:1px solid rgba(255,255,255,.08)">
-            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-              <h2 style="margin:0;font-size:1.15rem;font-weight:700">📁 ${t('sagas_page.section_affaires', 'Affaires')}</h2>
-              <span style="color:var(--dim);font-size:.85rem">${affaires.length} ${t('sagas_page.dossiers_label', 'dossiers')}</span>
+          <div class="sg-section-header">
+            <div class="sg-section-header-row">
+              <h2>📁 ${t('sagas_page.section_affaires', 'Affaires')}</h2>
+              <span class="sg-section-header-count">${affaires.length} ${t('sagas_page.dossiers_label', 'dossiers')}</span>
             </div>
-            <p style="margin:6px 0 0;color:var(--dim);font-size:.85rem;line-height:1.4">${t('sagas_page.section_affaires_desc', 'Dossiers d&apos;enquête centrés sur un lieu ou un événement précis — 5 à 8 scènes par affaire.')}</p>
+            <p>${t('sagas_page.section_affaires_desc', 'Dossiers d&apos;enquête centrés sur un lieu ou un événement précis — 5 à 8 scènes par affaire.')}</p>
           </div>
         `;
         html += affaires.map(s => renderCard(s, progressMap[s.id])).join('');
@@ -237,23 +292,46 @@ const STAGE_THRESHOLD = 60;
       grid.innerHTML = recits.map(s => renderCard(s, progressMap[s.id])).join('');
     }
 
+    // v3.4 — Câbler la navigation vers la vue détaillée pour chaque carte
+    attachCardClickHandlers(grid);
+
     updateSummary(recits, progressMap);
     updateLevelCounts(recits);
+  }
+
+  // v3.4 — Délégation : marque l'origine "sagas" pour adapter le retour
+  // depuis la vue détaillée vers la page sagas (au lieu du tableau des dossiers).
+  // Le href "#campaign=..." reste fonctionnel pour middle-click et accessibilité.
+  function attachCardClickHandlers(grid) {
+    // Marqueur d'origine — délégué au grid pour ne s'attacher qu'une seule fois
+    if (!grid.dataset.sagaClickAttached) {
+      grid.dataset.sagaClickAttached = '1';
+      grid.addEventListener('click', (e) => {
+        const card = e.target.closest('.dossier-card[data-saga-id]');
+        if (!card) return;
+        try { sessionStorage.setItem('cas_sagas_origin', '1'); } catch (_) {}
+      }, true); // capture phase pour devancer la navigation hash
+    }
+    // Support clavier : Entrée est natif sur <a>, on ajoute juste Espace
+    grid.querySelectorAll('.dossier-card[data-campaign-id]').forEach(card => {
+      card.addEventListener('keydown', (e) => {
+        if (e.key === ' ') {
+          e.preventDefault();
+          const cid = card.dataset.campaignId;
+          if (cid) {
+            try { sessionStorage.setItem('cas_sagas_origin', '1'); } catch (_) {}
+            window.location.hash = '#campaign=' + encodeURIComponent(cid);
+          }
+        }
+      });
+    });
   }
 
   function attachLevelFilterHandlers(allCampaigns, results) {
     document.querySelectorAll('.sg-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        document.querySelectorAll('.sg-chip').forEach(c => {
-          c.classList.remove('active');
-          c.style.background = 'rgba(255,255,255,.04)';
-          c.style.color = 'var(--dim)';
-          c.style.borderColor = 'rgba(255,255,255,.08)';
-        });
+        document.querySelectorAll('.sg-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        chip.style.background = 'rgba(126,192,255,.14)';
-        chip.style.color = 'var(--text)';
-        chip.style.borderColor = 'rgba(126,192,255,.35)';
         currentLevel = chip.dataset.level || 'all';
         lsSet('cas_sagas_filter_level', currentLevel);
         applyFilters(allCampaigns, results);
@@ -264,16 +342,8 @@ const STAGE_THRESHOLD = 60;
   function attachKindFilterHandlers(allCampaigns, results) {
     document.querySelectorAll('.sg-kind-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        document.querySelectorAll('.sg-kind-chip').forEach(c => {
-          c.classList.remove('active');
-          c.style.background = 'rgba(255,255,255,.04)';
-          c.style.color = 'var(--dim)';
-          c.style.borderColor = 'rgba(255,255,255,.08)';
-        });
+        document.querySelectorAll('.sg-kind-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        chip.style.background = 'rgba(126,192,255,.20)';
-        chip.style.color = 'var(--text)';
-        chip.style.borderColor = 'rgba(126,192,255,.45)';
         currentKind = chip.dataset.kind || 'all';
         lsSet('cas_sagas_filter_kind', currentKind);
         applyFilters(allCampaigns, results);
@@ -287,31 +357,33 @@ const STAGE_THRESHOLD = 60;
     if (document.getElementById('sg-kind-filters')) return;
     const kindRow = document.createElement('div');
     kindRow.id = 'sg-kind-filters';
-    kindRow.style.cssText = 'display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px 0';
+    kindRow.className = 'sg-filters-row';
     kindRow.innerHTML = `
-      <button class="sg-kind-chip active" data-kind="all"
-        style="background:rgba(126,192,255,.20);color:var(--text);border:1px solid rgba(126,192,255,.45);padding:8px 18px;border-radius:999px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:38px">
-        ${t('sagas_page.kind_all', '📚 Tous récits')} <span id="sg-kind-count-all" style="opacity:.7;font-size:.8rem">—</span>
+      <button type="button" class="sg-kind-chip active" data-kind="all">
+        <span>${t('sagas_page.kind_all', '📚 Tous récits')}</span>
+        <span id="sg-kind-count-all">—</span>
       </button>
-      <button class="sg-kind-chip" data-kind="saga"
-        style="background:rgba(255,255,255,.04);color:var(--dim);border:1px solid rgba(255,255,255,.08);padding:8px 18px;border-radius:999px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:38px">
-        ${t('sagas_page.kind_saga', '🎬 Sagas')} <span id="sg-kind-count-saga" style="opacity:.7;font-size:.8rem">—</span>
+      <button type="button" class="sg-kind-chip" data-kind="saga">
+        <span>${t('sagas_page.kind_saga', '🎬 Sagas')}</span>
+        <span id="sg-kind-count-saga">—</span>
       </button>
-      <button class="sg-kind-chip" data-kind="affaire"
-        style="background:rgba(255,255,255,.04);color:var(--dim);border:1px solid rgba(255,255,255,.08);padding:8px 18px;border-radius:999px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:38px">
-        ${t('sagas_page.kind_affaire', '📁 Affaires')} <span id="sg-kind-count-affaire" style="opacity:.7;font-size:.8rem">—</span>
+      <button type="button" class="sg-kind-chip" data-kind="affaire">
+        <span>${t('sagas_page.kind_affaire', '📁 Affaires')}</span>
+        <span id="sg-kind-count-affaire">—</span>
       </button>
     `;
     filtersBar.parentElement.insertBefore(kindRow, filtersBar);
   }
 
   function injectCollectionsCard() {
-    const heroSection = document.querySelector('.sg-hero');
+    // v3.4 — La section hero a été renommée .page-hero (cohérence avec le tableau des dossiers)
+    const heroSection = document.querySelector('#screen-sagas .page-hero')
+                     || document.querySelector('.sg-hero'); // fallback héritage
     if (!heroSection) return;
     if (document.getElementById('sg-collections-promo')) return;
     const promo = document.createElement('div');
     promo.id = 'sg-collections-promo';
-    promo.style.cssText = 'margin:14px auto 0;max-width:760px;padding:14px 18px;background:linear-gradient(135deg,rgba(168,85,247,.10),rgba(99,102,241,.10));border:1px solid rgba(168,85,247,.30);border-radius:14px;text-align:left';
+    promo.style.cssText = 'margin:18px auto 0;max-width:100%;padding:14px 18px;background:linear-gradient(135deg,rgba(168,85,247,.10),rgba(99,102,241,.10));border:1px solid rgba(168,85,247,.30);border-radius:14px;text-align:left';
     promo.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
@@ -335,6 +407,55 @@ const STAGE_THRESHOLD = 60;
     }
   }
 
+  // v3.4 — Récupère les méta des grades depuis campaigns.json (levels).
+  // Surcharge LEVEL_META utilisé par renderCard pour le tampon de classification.
+  function setLevelMeta(levels) {
+    if (!levels || typeof levels !== 'object') return;
+    LEVEL_META = Object.assign({}, LEVEL_META_FALLBACK);
+    for (const [id, info] of Object.entries(levels)) {
+      if (info && (info.icon || info.title)) {
+        LEVEL_META[id] = {
+          icon: info.icon || LEVEL_META_FALLBACK[id]?.icon || '',
+          title: info.title || LEVEL_META_FALLBACK[id]?.title || id
+        };
+      }
+    }
+  }
+
+  // v3.4 — Adapte le bouton "← Retour au tableau" de la vue détaillée pour
+  // qu'il ramène à la page Sagas lorsqu'on y était entré depuis là.
+  // S'appuie sur sessionStorage.cas_sagas_origin posé au clic d'une carte saga.
+  function installBackLinkPatcher() {
+    function patch() {
+      try {
+        if (sessionStorage.getItem('cas_sagas_origin') !== '1') return;
+      } catch (_) { return; }
+      const link = document.querySelector(
+        '#screen-campaigns .campaign-back-link[data-action="back-to-campaigns"]'
+      );
+      if (!link || link.dataset.patchedForSagas === '1') return;
+      link.dataset.patchedForSagas = '1';
+      link.textContent = '← ' + t('sagas_page.back_to_sagas', 'Retour aux sagas');
+      // Capture-phase : court-circuite le handler de scene-campaigns-v1.js
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { sessionStorage.removeItem('cas_sagas_origin'); } catch (_) {}
+        window.location.href = location.pathname + '?view=sagas';
+      }, true);
+    }
+    const target = document.getElementById('screen-campaigns');
+    if (!target) {
+      // L'écran est créé par scene-campaigns-v1.js au boot — retry court
+      setTimeout(installBackLinkPatcher, 200);
+      return;
+    }
+    const observer = new MutationObserver(patch);
+    observer.observe(target, { childList: true, subtree: false });
+    // Patch immédiat (si on arrive déjà sur #campaign= depuis un refresh)
+    patch();
+  }
+
   async function init() {
     const grid = document.getElementById('sg-grid');
     if (!grid) return;
@@ -354,42 +475,28 @@ const STAGE_THRESHOLD = 60;
     const campaigns = camp.campaigns || [];
     const results = lsGet('scene_results', {}) || {};
 
+    // v3.4 — Importer les méta des grades pour le tampon des cartes
+    setLevelMeta(camp.levels);
+
     injectKindFilterUI();
     injectCollectionsCard();
     updatePageHeader(campaigns);
     updateKindCounts(campaigns);
 
+    // v3.4 — Restauration des filtres via .active uniquement (CSS gère le look)
     document.querySelectorAll('.sg-kind-chip').forEach(c => {
-      const isActive = c.dataset.kind === currentKind;
-      c.classList.toggle('active', isActive);
-      if (isActive) {
-        c.style.background = 'rgba(126,192,255,.20)';
-        c.style.color = 'var(--text)';
-        c.style.borderColor = 'rgba(126,192,255,.45)';
-      } else {
-        c.style.background = 'rgba(255,255,255,.04)';
-        c.style.color = 'var(--dim)';
-        c.style.borderColor = 'rgba(255,255,255,.08)';
-      }
+      c.classList.toggle('active', c.dataset.kind === currentKind);
     });
-
     document.querySelectorAll('.sg-chip').forEach(c => {
-      const isActive = c.dataset.level === currentLevel;
-      c.classList.toggle('active', isActive);
-      if (isActive) {
-        c.style.background = 'rgba(126,192,255,.14)';
-        c.style.color = 'var(--text)';
-        c.style.borderColor = 'rgba(126,192,255,.35)';
-      } else {
-        c.style.background = 'rgba(255,255,255,.04)';
-        c.style.color = 'var(--dim)';
-        c.style.borderColor = 'rgba(255,255,255,.08)';
-      }
+      c.classList.toggle('active', c.dataset.level === currentLevel);
     });
 
     applyFilters(campaigns, results);
     attachLevelFilterHandlers(campaigns, results);
     attachKindFilterHandlers(campaigns, results);
+
+    // v3.4 — Active la rétro-navigation vers la page sagas depuis le détail
+    installBackLinkPatcher();
   }
 
   if (document.readyState === 'loading') {
