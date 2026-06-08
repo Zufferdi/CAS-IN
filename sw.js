@@ -22,7 +22,7 @@
 // dans CHANGELOG.md et l'historique Git du fichier.
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'cas-in-v145';
+const CACHE_VERSION = 'cas-in-v147';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
