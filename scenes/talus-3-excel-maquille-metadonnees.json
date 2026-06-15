@@ -1,0 +1,159 @@
+{
+  "id": "talus-3-excel-maquille-metadonnees",
+  "title": "Les talus en cacahuète — Acte 3 : Excel maquillé, métadonnées qui parlent",
+  "icon": "📊",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Les fichiers Excel comptables sont analysés en profondeur. Les métadonnées Office (auteur, révisions, temps d'édition) révèlent un travail à deux mains : Pradervand crée les versions « propres », un comptable externe complice retouche les chiffres. Le journal d'écritures Crésus est croisé avec les relevés Raiffeisen. 47 opérations de cavalerie sont identifiées entre 2023 et 2025, pour un total de 287'500 CHF en valeur cumulée. Le dossier est désormais factuellement solide.",
+    "degraded": "L'analyse est faite mais avec des raccourcis : seules les versions « actuelles » des Excel sont étudiées, sans extraction des révisions antérieures (revision history des fichiers .xlsx). Quelques signaux sont ratés, dont la trace d'un comptable externe complice. Le dossier tient, mais perd une ligne d'accusation potentielle.",
+    "failure": "L'analyste a ouvert les Excel directement dans LibreOffice Calc sur le laptop de travail, sans extraction préalable des métadonnées. Les fichiers ont été modifiés (last access timestamps, application name dans XML interne). La défense aura beau jeu d'arguer que les fichiers présentés au tribunal ne sont pas les originaux. Aucune métadonnée Office récente n'est exploitable."
+  },
+  "tags": [
+    "MÉTADONNÉES OFFICE",
+    "EXCEL FORENSIQUE",
+    "FORENSIQUE COMPTABLE",
+    "CAVALERIE",
+    "JOURNAL ÉCRITURES",
+    "CRÉSUS",
+    "FAUX TITRES CP 251",
+    "BENEISH M-SCORE"
+  ],
+  "legalRefs": [
+    "Art. 251 CP — Faux dans les titres",
+    "Art. 158 CP — Gestion déloyale",
+    "Art. 957 ss CO — Tenue de la comptabilité",
+    "Ordonnance sur les livres (OLICo) — Conservation 10 ans",
+    "ISO/IEC 27037 — Préservation des fichiers",
+    "ECMA-376 / ISO/IEC 29500 — Format Office Open XML",
+    "Norme suisse Swiss GAAP RPC — Comptabilité"
+  ],
+  "intro": "Jeudi 2 octobre 2025, 09h00. Lab DFIR Polcant VD, Renens. Les images forensiques sont prêtes : laptop Pradervand, NAS Vibourg Construction SA, PC du club. Dr Christophe Mahler, expert-comptable forensique, vient d'arriver pour la session d'analyse conjointe — vous (Insp.-chef Reymondin) côté procédure, lui côté comptable. La trésorière Aline Verdon a accepté de venir l'après-midi pour expliquer le contexte des écritures suspectes. La cible du matin : décortiquer les fichiers Excel comptables 2023-2025 et le journal Crésus du club, croiser avec les relevés Raiffeisen.",
+  "alertLevel": "🔬 ANALYSE LAB · Image laptop + NAS prêtes · 312 Go forensique total · 47 fichiers Excel candidats · Crésus 2023-2025 + relevés Raiffeisen à croiser",
+  "objectives": [
+    {
+      "icon": "📐",
+      "text": "Extraire et analyser les métadonnées Office des fichiers Excel sans les corrompre"
+    },
+    {
+      "icon": "🔍",
+      "text": "Identifier les versions, révisions et auteurs successifs des fichiers comptables"
+    },
+    {
+      "icon": "↔️",
+      "text": "Croiser le journal d'écritures Crésus avec les relevés bancaires pour détecter les anomalies"
+    },
+    {
+      "icon": "📈",
+      "text": "Construire la matrice de cavalerie chronologique pour qualifier l'infraction CP 251"
+    }
+  ],
+  "debrief": "<p>L'acte 3 d'une saga col blanc se joue dans un lab silencieux, devant trois écrans. C'est l'acte où les preuves objectives se construisent — sans cris, sans menottes, juste de la rigueur méthodologique. Et c'est paradoxalement l'acte le plus risqué procéduralement : un fichier mal ouvert détruit une partie de la chaîne de conservation.</p><p><strong>L'ouverture d'un Excel : trois piliers de la chaîne.</strong> Un fichier .xlsx est un ZIP qui contient du XML structuré (ECMA-376 / ISO/IEC 29500). À l'intérieur : <code>docProps/core.xml</code> (créateur, dernier modifieur, dates), <code>docProps/app.xml</code> (application, version, temps d'édition cumulé), <code>xl/worksheets/sheet*.xml</code> (cellules), et — surtout — l'éventuel dossier <code>xl/revisions/</code> si le tracking est activé. L'analyste correct : <em>(1)</em> ouvre le fichier comme un ZIP (avec <code>7z l</code> ou <code>unzip -l</code>), <em>(2)</em> extrait les XML internes sans modifier le fichier source, <em>(3)</em> parse les métadonnées en lecture seule (Python <code>openpyxl --read-only</code> ou <code>oletools</code>), <em>(4)</em> ne lance JAMAIS Excel ou LibreOffice sur le fichier original pour « regarder ».</p><p><strong>Le piège du « clic pour vérifier ».</strong> Ouvrir le fichier dans Excel ou LibreOffice met à jour : <em>(a)</em> le timestamp <code>last access</code> du fichier dans le système de fichiers, <em>(b)</em> dans le XML interne, le champ <code>lastModifiedBy</code> peut s'écrire avec votre identité Windows (selon configuration), <em>(c)</em> le compteur de temps d'édition s'incrémente, <em>(d)</em> les liens externes (références à d'autres fichiers, données externes) peuvent être actualisés silencieusement, modifiant des cellules calculées. Le résultat : la défense aura beau jeu de questionner « comment puis-je m'assurer que ce que vous présentez est bien ce qui était sur le disque le jour de la saisie ? ».</p><p><strong>Le hash SHA-256 — votre meilleur ami.</strong> Avant toute manipulation, le hash de chaque fichier est calculé et consigné. Au tribunal, vous pourrez démontrer que le fichier que vous présentez est bit-à-bit identique à celui saisi. Sans hash, vous êtes dans la position fragile du « croyez-moi, je n'ai rien modifié ». Avec hash, c'est mathématique.</p><p><strong>La cavalerie expliquée en 3 lignes.</strong> Le mécanisme classique : (a) un sponsor fictif (Vibourg Construction SA) « verse » 47'000 CHF au club, (b) le club « rétrocède » 30-40 KCHF dans le mois suivant sous forme de salaires d'entraîneurs fictifs ou de frais surévalués remboursés à Pradervand directement, (c) Pradervand encaisse net 30-40 KCHF par an, financé par une entreprise qui ne fait pas le vrai chiffre d'affaires qu'elle déclare au club. Du côté comptable, ça crée des aller-retours bancaires apparemment justifiés mais sans contre-prestation réelle. Le Beneish M-Score (modèle académique de détection de manipulation comptable, 1999) flagge ce genre de patterns : ratios trop stables, marges qui ne suivent pas la dynamique du marché, comptes débiteurs/créditeurs qui ne correspondent pas au cycle d'exploitation déclaré.</p><p><strong>Le journal d'écritures Crésus.</strong> Crésus est le logiciel comptable PME suisse de référence (Epsitec). Le journal est une table chronologique horodatée de toutes les écritures (date, libellé, compte débit, compte crédit, montant). Forensiquement, deux choses comptent : <em>(1)</em> Crésus n'efface JAMAIS une écriture validée — il enregistre des extournes (renversements) qui restent visibles. Si Pradervand a tenté de masquer une écriture en l'extournant, l'extourne elle-même est une preuve. <em>(2)</em> Les libellés sont libres et révèlent l'intention : « Sponsoring Vibourg Construction SA Q4 2024 » est explicite, « Versement V.C. SA » l'est moins, « Apport courant » l'est encore moins — la dégradation des libellés est souvent un signal.</p><p><strong>Croisement bancaire — la matrice de cavalerie.</strong> L'outil opérationnel : un tableau à 4 colonnes (date écriture Crésus, libellé Crésus, montant Crésus, opération Raiffeisen correspondante avec sa date). Chaque ligne sans correspondance bancaire = signal. Chaque ligne avec correspondance bancaire dans le mauvais sens (sortie au lieu d'entrée) = signal. Chaque ligne avec correspondance différée de plus de 7 jours sans justification = signal. 47 lignes anormales sur 2'400 écritures sur 2023-2025, c'est forensiquement très clair.</p><p><strong>Références</strong> : ECMA-376 / ISO/IEC 29500, Beneish M-Score (1999), Crésus documentation Epsitec, art. 957 ss CO, OLICo art. 5 (conservation), Swiss GAAP RPC fondamentaux.</p>",
+  "steps": [
+    {
+      "phase": "💾 09h10 — Extraction des métadonnées sans contaminer",
+      "situation": "Vous montez l'image disque du laptop Pradervand en lecture seule sur votre poste de lab (FUSE-mount via FTK Imager). Vous identifiez 47 fichiers Excel candidats dans `Documents\\FC Vibourg\\Comptabilité\\`. Premier fichier ciblé : `compta-fcvibourg-2024-final.xlsx`. Dr Mahler attend votre méthode d'extraction des métadonnées avant qu'il fasse son analyse comptable.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>État du fichier candidat :</strong><br>\n📄 `compta-fcvibourg-2024-final.xlsx` — 847 Ko, SHA-256 calculé sur l'image disque<br>\n📅 NTFS timestamps : created 2024-01-15, last modified 2025-09-20 (la veille de la perquisition !), last access 2025-09-21<br>\n👥 Suspect a-t-il utilisé un compte multi-utilisateur ? Tracking activé ? Comments présents ?<br><br>\n⚠️ Le réflexe novice est d'ouvrir le fichier dans LibreOffice. NE PAS LE FAIRE.\n</div>",
+      "law": "<strong>ECMA-376 / ISO/IEC 29500</strong> — Format Office Open XML : fichier ZIP contenant XML structurés.<br><strong>ISO/IEC 27037</strong> — Préservation des preuves numériques : pas de modification de l'original.<br><strong>Bonnes pratiques DFIR</strong> — Extraction des métadonnées en lecture seule, sans ouverture par l'application native.",
+      "question": "<strong>Quelle méthode utilisez-vous pour extraire les métadonnées du fichier ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Copie du fichier vers le répertoire de travail du lab via `cp --preserve=timestamps` (Linux) ou équivalent — préserve les timestamps NTFS originaux. (2) Vérification SHA-256 de la copie = celui de l'original sur l'image disque. (3) Extraction des XML internes sans ouverture Excel : `unzip -l compta-fcvibourg-2024-final.xlsx` puis `unzip -p ... docProps/core.xml` pour cat le XML. (4) Parsing Python en lecture seule avec `openpyxl.load_workbook(..., read_only=True, keep_vba=False)` pour analyser le contenu sans modifier. (5) Outils Eric Zimmerman si dispo (OfficeMetadataParser) ou `oletools` pour structure macro/VBA si présente. (6) Tout journalisé dans le PV d'analyse.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Méthode forensique exemplaire. Le `--preserve=timestamps` est crucial : sans cet attribut, la copie aurait des timestamps actualisés à l'heure de la copie, ce qui détruit la signification probante des timestamps originaux. La vérification SHA-256 confirme la chaîne. L'extraction XML via `unzip -p` (qui pipe vers stdout, ne décompresse pas) est non-destructive. `openpyxl --read-only` ouvre le fichier en mode lecture sans incrémenter les compteurs internes ni écrire de modifications. Le journal d'analyse permet à la défense de répliquer chaque étape — preuve recevable. Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "ISO/IEC 27037 respectée. ECMA-376 — format respecté en lecture. Reproductibilité de l'analyse garantie.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "J'ouvre le fichier dans LibreOffice Calc sur mon poste lab — c'est plus rapide pour voir le contenu. Je note les anomalies, je fais un screenshot des cellules suspectes, et je passe au fichier suivant.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Erreur forensique grave. Ouvrir le fichier dans LibreOffice modifie : (1) le timestamp `last access` NTFS, (2) potentiellement le champ `lastModifiedBy` dans `docProps/core.xml` si LibreOffice est configuré avec votre identité, (3) le compteur de temps d'édition cumulé, (4) si des liens externes sont présents, les cellules calculées peuvent être actualisées silencieusement avec de nouvelles valeurs. La défense fera valoir que les screenshots présentés au tribunal proviennent d'un fichier modifié post-saisie, non du fichier original. Pire : si les automatismes Office activent des macros (peu probable mais possible), l'environnement de votre poste lab peut être impacté. La règle absolue : on extrait les données SANS ouvrir le fichier dans son application native. Pour les détournements PME : la <strong>fenêtre de destruction des preuves est courte</strong> — 48-72h après que le suspect prend conscience d'être surveillé. Un retard d'action = pièces papier brûlées, comptes vidés, suspects en fuite à l'étranger (Saint-Vincent-et-Grenadines = juridiction sans entraide effective). <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "ISO/IEC 27037 violée. Risque d'exclusion sous art. 141 CPP. Reproductibilité compromise.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Je crée une machine virtuelle Windows isolée, j'y copie le fichier Excel, j'ouvre dans Excel installé là-dedans, et je travaille dans la VM. Comme c'est isolé, ça ne contamine rien.",
+          "ok": false,
+          "pts": -15,
+          "fb": "L'idée de la VM est correcte sur le principe (isolation), mais le problème reste entier : même dans une VM, ouvrir le fichier dans Excel MODIFIE le fichier (timestamps internes, last access, potentiellement `lastModifiedBy`). L'isolation de la VM protège VOTRE machine hôte, mais ne préserve PAS l'intégrité du fichier analysé. La méthode VM serait pertinente pour exécuter une macro suspecte dans un environnement sandboxé pour observation comportementale, mais pas pour préserver les métadonnées d'un fichier de preuve. La preuve forensique = lecture sans modification, pas isolation de l'environnement. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "ISO/IEC 27037 partiellement violée (le fichier original est modifié, même en VM). Risque réduit mais non nul.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 10h30 — Que disent les métadonnées",
+      "situation": "Le parsing est terminé pour les 47 fichiers Excel. Tableau récapitulatif sur écran :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Métadonnées extraites — premiers signaux :</strong><br>\n📄 `compta-fcvibourg-2024-final.xlsx` :<br>\n• <code>core.xml</code> : creator=« Roland Pradervand », lastModifiedBy=« HM Comptable » (!), created=2024-01-15, modified=2025-09-20<br>\n• <code>app.xml</code> : application=« Microsoft Excel 16 », EditTime=cumulé 87h12min<br>\n• <code>xl/revisions/</code> : ABSENT (tracking pas activé)<br><br>\n📄 12 autres fichiers .xlsx : pattern similaire, `lastModifiedBy` est systématiquement « HM Comptable » ou « hmaier ».<br>\n📄 `compta-fcvibourg-2024-BROUILLON.xlsx` (variante archivée) :<br>\n• `lastModifiedBy=« HM Comptable »`, modified=2024-12-18<br>\n• Contenu : VERSION DIFFÉRENTE du fichier final ! Sponsoring Vibourg Construction SA = 32'000 (au lieu de 47'000 dans le final), salaire Krasniqi = 950 (au lieu de 1'200), pas de ligne « apport courant exceptionnel »<br>\n📞 Recherche RC sur « HM Comptable » / « hmaier » : Henri Maier, fiduciaire à Yverdon, n'apparaît PAS dans les contrats de mandat officiels du club ni de Vibourg Construction SA. C'est un mandat non déclaré.<br>\n📂 Fichier `signature-mail-HM.txt` retrouvé : Maier signe « Henri Maier — Fiduciaire HM, Conseil comptable et fiscal »<br><br>\n⚠️ Nous avons potentiellement un complice externe non identifié jusqu'ici.\n</div>",
+      "law": "<strong>Art. 251 CP</strong> — Faux dans les titres : créer ou altérer un titre.<br><strong>Art. 158 CP</strong> — Gestion déloyale par défaut de loyauté.<br><strong>Art. 25 CP</strong> — Complicité : assister intentionnellement l'auteur d'un crime ou délit.<br><strong>Art. 957 CO</strong> — Devoir de tenir une comptabilité conforme à la situation.<br><strong>OLICo art. 5</strong> — Conservation des justificatifs 10 ans.",
+      "question": "<strong>Que faites-vous de la découverte « HM Comptable » non déclaré, et quelles implications pour l'enquête ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Documenter formellement la découverte : PV d'analyse détaillé, capture des champs XML pertinents, comparaison de fichiers « final » vs « brouillon » avec diff structurel. (2) Recherche complémentaire OSINT sur Henri Maier (RC Yverdon, ZEFIX, site web fiduciaire, présence sur les comptes annuels d'autres clubs sportifs vaudois). (3) Réquisition de relevés bancaires Henri Maier auprès du procureur (art. 273 CPP) — versements de Vibourg Construction SA ou du FC Vibourg vers compte Maier sur 2023-2025 ? (4) Ne PAS contacter Maier immédiatement — préserver l'effet de surprise pour une audition coordonnée plus tard, voire une perquisition à son cabinet selon ce qu'on trouve. (5) Mise à jour du dossier procureur pour extension du mandat de perquisition à inclure Maier si éléments suffisants dans 48-72h.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Réaction professionnelle exemplaire. Documenter formellement crée une base attaquable seulement sur le fond, pas sur la forme. La comparaison structurelle entre « brouillon » et « final » est un élément de preuve très solide pour la qualification CP 251 : on voit Maier modifier les chiffres pour gonfler les sponsoring et créer des lignes « apport courant exceptionnel » qui n'existaient pas. La réquisition bancaire sur Maier validera ou invalidera l'hypothèse de complicité rémunérée (s'il reçoit des honoraires en espèces ou via société écran, c'est CP 25 + CP 251). Ne PAS contacter Maier maintenant est tactiquement crucial — il pourrait avertir Pradervand (s'ils sont en contact malgré la garde-à-vue ? non, Pradervand est sorti depuis), ou détruire ses propres copies de fichiers. L'extension du mandat est la bonne voie procédurale, pas l'improvisation. La spécificité du contexte amateur (club de village, milieu social interconnecté) impose une <strong>protection redoublée de la source</strong> (art. 169-176 CPP) — la trésorière vit dans le village, son identité ne doit fuir sous aucun prétexte. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 25 CP — complicité documentée comme hypothèse. Art. 273 CPP — réquisition bancaire en règle. Mandat de perquisition extension par décision motivée du procureur.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "J'appelle immédiatement Henri Maier pour lui demander de venir s'expliquer au commissariat — soit il coopère, soit on l'embarque. Le mieux est de lui faire peur tout de suite pour qu'il parle avant de pouvoir avertir d'éventuels complices.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Précipitation tactique qui peut détruire l'enquête. (1) Maier sait probablement déjà que la perquisition a eu lieu (la presse régionale ne va pas tarder, et Pradervand est sorti depuis le 21 septembre — il a pu reprendre contact). Vous êtes peut-être déjà tard, mais l'effet de surprise sur Maier reste possible si vous n'appelez PAS — vous lui tombez dessus à son cabinet sans préavis. (2) « Lui faire peur pour qu'il parle » : c'est précisément le type d'audition qui sera attaquée pour pression psychologique illégitime (art. 140 CPP). (3) Un appel téléphonique pour « inviter à s'expliquer » n'a aucune force contraignante — Maier peut refuser, prendre un avocat, partir en vacances. Vous avez perdu l'effet de surprise sans gagner la coopération. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Art. 140 CPP — pression psychologique potentielle. Perte d'effet de surprise sans justification tactique.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Je note la trace de Maier dans le PV mais on se concentre sur Pradervand pour l'instant — c'est le suspect principal. Maier sera entendu plus tard, peut-être comme témoin, après le procès Pradervand.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sous-estimation de l'élément Maier. La trace « HM Comptable » dans 13 fichiers Excel n'est PAS un détail accessoire — c'est potentiellement la signature d'un mandat secret de retouche comptable, ce qui qualifie CP 25 (complicité) en plus de CP 251 (faux titres). Si vous attendez « le procès Pradervand » pour entendre Maier : (a) délai de plusieurs mois minimum, (b) Maier aura eu le temps de détruire ses copies, de préparer sa version, de coordonner avec Pradervand via avocat commun, (c) la chaîne complicité se construit MAINTENANT en croisant comptes bancaires, échanges de mails, signatures de mandats, pas APRÈS condamnation du commanditaire. Repousser Maier, c'est laisser sortir une partie du dossier. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais erreur stratégique sur la construction de la complicité.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📐 14h00 — Aline Verdon explique — La matrice de cavalerie",
+      "situation": "Aline Verdon arrive au lab à 14h pour la session d'explication contextuelle. Dr Mahler lui présente la matrice qu'il a construite ce matin : 47 lignes croisées Crésus / Raiffeisen sur 2023-2025, avec écarts non justifiés. Aline reconnaît immédiatement plusieurs lignes : « Ça, c'est Roland qui me disait : 'tu rentres ça comme reversement coopératif, je t'expliquerai après'. Je n'ai jamais eu l'explication. »<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Extrait de la matrice de cavalerie (5 lignes représentatives) :</strong><br><br>\n<strong>L.1 :</strong> 14.02.2024 — Crésus libellé « Sponsoring Vibourg Construction SA Q1 2024 » — Débit 12'500 — Compte 1010 — <em>Aucune opération entrante Raiffeisen entre 10.02 et 20.02</em><br>\n<strong>L.2 :</strong> 18.02.2024 — Crésus libellé « Salaire D. Krasniqi février 2024 » — Crédit 1'200 — Compte 5200 — Confirmé Raiffeisen 18.02 sortie 1'200 vers IBAN Krasniqi<br>\n<strong>L.3 :</strong> 22.02.2024 — Crésus libellé « Apport courant exceptionnel R. Pradervand » — Crédit 8'700 — Compte 2400 — Confirmé Raiffeisen 22.02 SORTIE 8'700 vers IBAN privé R. Pradervand (!)<br>\n<strong>L.4 :</strong> 14.05.2024 — Crésus libellé « Sponsoring Vibourg Construction SA Q2 2024 » — Débit 12'500 — Compte 1010 — Aucune opération entrante 10-25.05<br>\n<strong>L.5 :</strong> 17.05.2024 — Crésus libellé « Remboursement frais déplacements R. Pradervand » — Crédit 6'400 — Compte 5400 — Sortie Raiffeisen 6'400 vers privé Pradervand. Justificatifs : ABSENTS<br><br>\n<strong>Pattern récurrent identifié :</strong><br>\n• Phase A : entrée fictive « Sponsoring Vibourg Construction SA » dans Crésus, SANS contrepartie bancaire entrante<br>\n• Phase B : sortie réelle (apport / remboursement frais / salaire fictif) vers Pradervand ou ses proches dans le mois<br>\n• 47 itérations 2023-2025, total 287'500 CHF de transferts nets vers Pradervand<br>\n• Vibourg Construction SA n'a JAMAIS effectivement versé les sponsorings : le club fabrique l'écriture comptable pour autoriser les sorties\n</div>",
+      "law": "<strong>Art. 251 CP</strong> — Faux dans les titres : la création d'une écriture comptable mentionnant un sponsoring qui n'existe pas est un faux dans un titre destiné à faire foi.<br><strong>Art. 158 CP</strong> — Gestion déloyale : Pradervand, dans sa qualité de président, gère les intérêts pécuniaires du club et viole ses devoirs en organisant des sorties à son profit personnel.<br><strong>Art. 138 CP</strong> — Abus de confiance : potentiellement en concours, pour les sommes en espèces.<br><strong>Beneish M-Score</strong> — Modèle académique de détection : les ratios sponsoring/CA, marges, créances clients flaggent le pattern.",
+      "question": "<strong>Comment formalisez-vous le dossier pour transmission au procureur Bouquet ? Quelle qualification pénale recommandez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Rapport DFIR consolidé avec : matrice de cavalerie 47 lignes (chaque ligne croisant Crésus / Raiffeisen avec écart documenté), extraits XML métadonnées Excel (auteurs/dates/HM Comptable), graphique chronologique des 287'500 CHF de flux nets vers Pradervand, hash SHA-256 de chaque pièce numérique. (2) Qualification recommandée : CP 158 (gestion déloyale, infraction principale) + CP 251 (faux dans les titres, en concours réel) + CP 25 (complicité Maier — en cours d'investigation, à confirmer après réquisition bancaire). (3) Estimation prudente : entre 250'000 et 320'000 CHF de préjudice patrimonial pour le FC Vibourg (selon que l'on retient le montant des sorties seules ou les pénalités fiscales en cascade). (4) Recommandation : audition formelle de Pradervand sur les 47 lignes (avec Me Wäfler), une à une, pour donner à la défense l'opportunité d'expliquer chaque opération.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Dossier consolidé et qualification correcte. La matrice 47 lignes est l'arme procédurale principale : elle est factuelle, reproductible, croisable. Les métadonnées Excel sont l'élément QUI fait basculer du CP 158 simple au CP 251 en concours réel : un faux n'est pas seulement un mensonge oral, c'est un mensonge fixé dans un titre destiné à faire foi (l'écriture comptable). La complicité Maier reste hypothèse jusqu'à confirmation bancaire, ce qui est juste — on ne sur-affirme pas. L'estimation prudente du préjudice (250-320 KCHF) sera consolidée par expertise judiciaire ultérieure. L'audition « ligne par ligne » est tactiquement intelligente : oblige Pradervand à expliquer chaque opération, ce qui crée soit (a) des aveux, soit (b) des contradictions exploitables, soit (c) des refus qui marquent une défense de retranchement. La spécificité du contexte amateur (club de village, milieu social interconnecté) impose une <strong>protection redoublée de la source</strong> (art. 169-176 CPP) — la trésorière vit dans le village, son identité ne doit fuir sous aucun prétexte. Pour les fichiers Crésus (.cre, base propriétaire Epsitec), l'extraction forensique exige le logiciel lui-même — pas d'extraction par texte brut. Imager le poste comptable AVANT toute manipulation = règle d'or. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 158 + Art. 251 CP en concours réel : qualifications cohérentes avec le dossier. Art. 25 CP en hypothèse. la jurisprudence TF sur la gestion déloyale en contexte associatif est applicable.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Qualification simple : CP 138 (abus de confiance) sur les 287'500 CHF. C'est plus simple à présenter au tribunal, et la peine maximale est la même (5 ans). Pas besoin de compliquer avec CP 158 et CP 251.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Erreur de qualification. CP 138 (abus de confiance) suppose qu'une chose ou valeur a été CONFIÉE à l'auteur. Pradervand est président, mais les fonds du club ne lui sont pas confiés à titre individuel — ils sont confiés à l'association, et lui dispose d'un pouvoir de GESTION sur les intérêts pécuniaires du club. C'est précisément la situation visée par CP 158 (gestion déloyale), pas CP 138. La jurisprudence (la jurisprudence TF sur la gestion déloyale) est claire : pour un président d'association qui dispose des fonds dans le cadre de son mandat de gestion, c'est CP 158. CP 138 s'appliquerait à un trésorier qui se serait approprié la caisse à titre personnel sans pouvoir de gestion. Sur le faux dans les titres : c'est précisément ce que la documentation comptable falsifiée constitue — l'omission de CP 251 affaiblirait le dossier face à un avocat compétent qui demandera la reclassification. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Mauvaise qualification : la jurisprudence TF sur la gestion déloyale applicable pour CP 158, pas CP 138. CP 251 indispensable au vu des faux Excel.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Je transmets le tableau brut au procureur Bouquet et lui demande de qualifier — c'est son rôle, pas le mien. L'enquêteur ne doit pas pré-qualifier, il doit rapporter les faits.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Posture procéduralement défendable mais opérationnellement faible. C'est vrai que la qualification finale relève du procureur, et l'enquêteur ne doit pas dicter — mais cela ne signifie PAS qu'il doit transmettre des faits bruts sans analyse. Le RÔLE de l'enquêteur DFIR/financier est précisément de proposer une LECTURE des faits qui aide le procureur à qualifier — sinon, on transmet un Excel et on attend que le procureur fasse le travail d'analyse. La bonne pratique : recommandation argumentée de qualification avec « le procureur reste libre de retenir une qualification différente selon son appréciation juridique ». Cela respecte le rôle de chacun ET fournit la valeur ajoutée attendue de l'enquêteur spécialisé. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais sous-utilisation de l'expertise de l'enquêteur. La qualification reste prérogative du procureur.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

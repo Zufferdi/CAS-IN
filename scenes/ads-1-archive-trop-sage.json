@@ -1,0 +1,162 @@
+{
+  "id": "ads-1-archive-trop-sage",
+  "title": "Le compartiment fantôme — Acte 1 : L'archive trop sage",
+  "icon": "📦",
+  "difficulty": "medium",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'archive suspecte a été identifiée, isolée et signalée selon la procédure d'incident. La directrice de l'ONG comprend les enjeux et coopère sans céder à la panique. L'IT externalisé est briefé sur la conduite à tenir : ne rien toucher, ne rien éteindre, ne rien analyser sur le poste. Vous gagnez 12 heures cruciales pour l'acquisition forensique avant que le malware n'ait pu exfiltrer davantage ou se faire détecter par l'attaquant.",
+    "degraded": "L'incident est identifié, mais des décisions précipitées ont été prises : un antivirus en ligne a été lancé sur le poste (modifiant timestamps et journaux), l'archive a été ré-ouverte par curiosité « pour voir », ou l'utilisatrice a redémarré son ordinateur. Rien d'irréparable mais la fenêtre d'analyse RAM se ferme.",
+    "failure": "Réflexes naïfs : l'utilisatrice ferme le mail, désinstalle WinRAR, redémarre, change son mot de passe Outlook depuis le poste compromis, scanne avec Windows Defender, et termine sa journée. Quand l'équipe DFIR arrive le lendemain, le malware est toujours actif mais 90% des traces volatiles ont disparu. L'attaquant aura eu 18h de plus pour exfiltrer et nettoyer."
+  },
+  "tags": [
+    "ALTERNATE DATA STREAMS",
+    "NTFS",
+    "GAMAREDON",
+    "APT FSB",
+    "WINRAR EXPLOIT",
+    "ONG HUMANITAIRE",
+    "RÉPONSE INCIDENT",
+    "MITRE T1564.004"
+  ],
+  "legalRefs": [
+    "Art. 143 CP — Soustraction de données",
+    "Art. 143bis CP — Accès indu à un système informatique",
+    "Art. 144bis CP — Détérioration de données",
+    "Art. 273 CP — Service de renseignements économiques",
+    "LRens et 13 — Signalement au SRC",
+    "LSI — Loi sur la sécurité de l'information (annonce obligatoire incidents)",
+    "Art. 269 CPP — Surveillance des télécommunications (préparation)",
+    "EIMP — Entraide judiciaire avec l'Ukraine",
+    "ISO/IEC 27037 — Ordre de volatilité",
+    "RFC 3227 — Guidelines for Evidence Collection"
+  ],
+  "intro": "Jeudi 15 janvier 2026, 10h47. Hélène Bourquin, directrice de l'ONG « Solidarité Dnipro » (Lausanne, 14 salariés, finance l'aide médicale dans l'est de l'Ukraine), vous appelle au numéro de garde DFIR de la Polcant VD. Sa secrétaire administrative, Maria, vient de recevoir un email d'un partenaire kiévien régulier — Ihor Marchenko, coordinateur logistique d'un hôpital partenaire à Dnipro. Pièce jointe : `rapport-trimestriel-Q4-2025-Dnipro.rar`. Maria a ouvert l'archive. Trois secondes plus tard, son antivirus a clignoté brièvement (notification éclair) puis plus rien. Pas d'alerte, pas de blocage, pas de message d'erreur. WinRAR a affiché le rapport PDF normalement. Maria a appelé Hélène par instinct — « ça a fait quelque chose, mais je ne sais pas quoi ».",
+  "alertLevel": "🔴 INCIDENT EN COURS · Pièce jointe WinRAR ouverte · AV : flash + silence · 0 alerte SOC · Poste TOUJOURS ALLUMÉ · Connecté au réseau · Cible : ONG aide Ukraine · APT suspect : Gamaredon (FSB)",
+  "objectives": [
+    {
+      "icon": "🛑",
+      "text": "Donner les bonnes instructions immédiates à l'ONG pour préserver l'état du poste compromis"
+    },
+    {
+      "icon": "📐",
+      "text": "Évaluer la criticité de l'incident et qualifier la cible (ONG aide Ukraine → priorité APT étatique)"
+    },
+    {
+      "icon": "🛡️",
+      "text": "Activer la chaîne d'escalade OFCS + SRC selon LRens et LSI sans précipiter ni minimiser"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Préparer les bases juridiques d'une intervention forensique sur place dans les 4 heures"
+    }
+  ],
+  "debrief": "<p>L'acte d'ouverture d'une compromission par APT étatique se joue en grande partie au téléphone, avant l'arrivée physique de l'équipe DFIR. La <strong>fenêtre de 30 à 90 minutes</strong> qui suit l'incident initial est décisive : c'est là que les traces volatiles disparaissent, que l'attaquant termine son installation, et qu'un mauvais réflexe utilisateur détruit ce qu'on aurait pu reconstituer.</p><p><strong>La règle du « ne touchez à rien » n'est PAS une politesse.</strong> Elle vise spécifiquement à préserver : <em>(1)</em> le contenu de la RAM (processus en cours, connexions réseau ouvertes, clés cryptographiques en clair, modules malveillants chargés en mémoire) ; <em>(2)</em> les timestamps des fichiers (chaque interaction Explorer modifie le <code>last access</code> NTFS) ; <em>(3)</em> les journaux Windows en cours d'écriture (Event Log, Sysmon, AMSI, Defender) ; <em>(4)</em> les connexions C2 actives qui peuvent être capturées en PCAP avant déconnexion. Un utilisateur qui « scanne avec Defender pour vérifier » fait pire que ne rien faire — il modifie l'état système et signale parfois sa présence au malware (anti-VM, anti-sandbox).</p><p><strong>L'isolation réseau, pas la mise hors tension.</strong> Le réflexe naïf est de « débrancher » ou d'éteindre le poste. C'est presque toujours une erreur. Bonne pratique : <em>(a)</em> isoler du réseau (débrancher le câble Ethernet, désactiver le WiFi via switch matériel — pas via Windows qui peut être compromis) ; <em>(b)</em> NE PAS éteindre — la RAM est la première preuve à acquérir ; <em>(c)</em> documenter l'état (photo du bureau Windows tel qu'il est) ; <em>(d)</em> attendre l'équipe DFIR avec write-blocker, mallette d'acquisition RAM (DumpIt, FTK Imager Lite, Magnet RAM Capture), et clé USB stérile préparée.</p><p><strong>La qualification de la cible oriente la criticité.</strong> Une ONG humanitaire active en Ukraine n'est pas une entreprise lambda. La probabilité d'attaque par APT étatique (Gamaredon = FSB, ou Turla, ou Sandworm = GRU) est statistiquement élevée — particulièrement depuis 2022. La règle implicite : <em>cible + contexte = anticipation TTP</em>. Si l'on pense Gamaredon, on cherche par défaut : Telegram C2, Cloudflare proxies, scripts VBS obfusqués, persistance via Run keys ou scheduled tasks, et… <strong>Alternate Data Streams NTFS</strong>.</p><p><strong>L'escalade OFCS + SRC : pas tabou, pas automatique.</strong> Selon la LRens/13, un soupçon de cyberattaque étatique étrangère contre un acteur suisse de la coopération internationale active en zone de conflit DOIT être signalé au Service de renseignement de la Confédération. Le OFCS est en miroir le canal cybersécurité (LSI, obligation d'annonce pour acteurs critiques). Le double signalement n'est pas une lourdeur : il déclenche deux canaux d'expertise différents (OFCS opérationnel, SRC renseignement). À l'inverse, signaler trop tôt sans qualification produit de faux positifs qui décrédibilisent l'enquêteur sur les vrais incidents.</p><p><strong>Le calme professionnel comme arme.</strong> Hélène Bourquin est dans son bureau, Maria est en larmes au bout du couloir, le board de l'ONG va paniquer dans 30 minutes. Le DFIR au téléphone qui hurle « ÉTEIGNEZ TOUT IMMÉDIATEMENT » génère plus de dégâts qu'un attaquant calme : pertes de RAM, pertes de PCAP, mots de passe changés depuis postes compromis, mails au CdA depuis Outlook web sur même session. La qualité de la première conversation téléphonique détermine la qualité de l'incident response des 72 heures suivantes.</p><p><strong>Références</strong> : ISO/IEC 27037, RFC 3227 (Guidelines for Evidence Collection — ordre de volatilité). OFCS / GovCERT — playbook réponse incident PME/ONG. SANS DFIR Field Guide. MITRE ATT&CK : T1566.001 (phishing pièce jointe), T1059.005 (VBScript), T1564.004 (NTFS file attributes / ADS).</p>",
+  "steps": [
+    {
+      "phase": "📞 10h48 — L'appel — Premier contact",
+      "situation": "Hélène Bourquin vous décrit la situation au téléphone. Elle est calme, méthodique (elle a travaillé chez MSF avant, elle connaît les procédures d'urgence — mais pas cyber). Elle veut savoir ce qu'elle DOIT faire dans les 5 prochaines minutes. Vous avez environ 3 minutes pour donner des instructions claires avant que sa secrétaire Maria, dans le couloir, ne fasse quelque chose de catastrophique par anxiété.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>État actuel du poste de Maria (selon Hélène) :</strong><br>\n💻 Windows 10 Pro, Office 365 connecté à exchange@solidarite-dnipro.ch<br>\n📥 Outlook ouvert avec le mail suspect encore affiché<br>\n📦 WinRAR ouvert, archive `rapport-trimestriel-Q4-2025-Dnipro.rar` extraite dans `C:\\Users\\maria\\Downloads\\dnipro\\`<br>\n📄 Le PDF `rapport-trimestriel-Q4-2025-Dnipro.pdf` est ouvert (Adobe Reader DC) — Maria l'a lu une dizaine de secondes, contenu apparemment cohérent (chiffres trimestriels d'aide médicale, photos d'hôpital)<br>\n🔌 Ethernet branché, WiFi désactivé<br>\n🟢 Antivirus : Bitdefender Endpoint Pro (entreprise)<br>\n💡 Maria est assise à un mètre du poste, n'y touche plus depuis 4 minutes<br><br>\n⚠️ Hélène demande : « On éteint ? On débranche ? On scanne ? On appelle Bitdefender ? Qu'est-ce qu'on fait ? »\n</div>",
+      "law": "<strong>ISO/IEC 27037</strong> — Ordre de volatilité : RAM > état du processus > fichiers ouverts > fichiers sur disque > supports amovibles > backups.<br><strong>RFC 3227</strong> — Guidelines for Evidence Collection and Archiving : préserver la mémoire avant l'extinction.<br><strong>Bonnes pratiques DFIR</strong> — Préserver l'état système jusqu'à l'arrivée des analystes.<br><strong>LSI</strong> — Annonce obligatoire OFCS sous 24h pour acteurs critiques (ONG humanitaire à l'étranger peut entrer dans le périmètre).",
+      "question": "<strong>Quelles instructions PRÉCISES donnez-vous à Hélène en 90 secondes ?</strong>",
+      "choices": [
+        {
+          "text": "Instructions précises et calmes : (1) ne touchez à RIEN sur le poste — ni clavier, ni souris ; (2) débranchez UNIQUEMENT le câble Ethernet — ne touchez pas au WiFi, pas à l'alim ; (3) NE redémarrez PAS, NE scannez PAS avec Defender ou Bitdefender, NE désinstallez RIEN ; (4) Maria peut s'éloigner physiquement du poste — elle ne risque rien personnellement ; (5) prenez une photo du bureau Windows AVEC SON SMARTPHONE depuis 1m de distance (pas avec l'appareil photo du poste) ; (6) j'envoie une équipe DFIR — temps d'arrivée 90 minutes maximum ; (7) en attendant, isolez votre boîte mail directionnelle d'Hélène depuis un AUTRE poste (smartphone si possible) — changez les mots de passe Office 365 depuis ce smartphone, pas depuis vos postes ; (8) prévenez SEULEMENT votre président de l'ONG et personne d'autre, en SMS — pas en mail.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Excellent. Vous donnez 8 instructions claires, opérables en 5 minutes, qui préservent l'intégrité forensique du poste tout en isolant la menace. Le point critique est le « NE PAS scanner avec l'antivirus » — c'est contre-intuitif pour Hélène qui pensera spontanément à « lancer un scan », mais c'est précisément ce qui modifie l'état système et alerte le malware sophistiqué. L'isolation Ethernet sans extinction est l'instruction la plus importante : elle coupe le C2 actif mais préserve la RAM. La photo via smartphone externe documente l'état initial. Le changement de mot de passe via SMARTPHONE EXTERNE est crucial — changer les credentials depuis le poste compromis revient à les donner à l'attaquant. Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "ISO/IEC 27037 — ordre de volatilité respecté (RAM préservée). RFC 3227 — préservation des traces volatiles. LSI — annonce OFCS déclenchable dans les 24h, pas dans la première heure (proportionnalité).",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "« Éteignez TOUT immédiatement, débranchez l'alim, mettez la machine dans un placard. Demandez à Bitdefender de venir analyser. Changez tous les mots de passe Office 365 depuis le poste de la comptable d'à côté. Je vous rappelle dans une heure pour faire le point. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Trois erreurs critiques. (1) Éteindre le poste DÉTRUIT la RAM — vous venez de supprimer la première et la plus précieuse source de preuve (processus en cours, connexions C2, clés crypto en clair, modules en mémoire). Sans RAM, vous ne pourrez peut-être JAMAIS identifier le malware actif ni l'attribution. (2) « Bitdefender vient analyser » : Bitdefender est l'éditeur de l'AV, pas une équipe DFIR forensique — leurs interventions visent à nettoyer, pas à préserver les preuves pour audience. (3) « Changez les mots de passe depuis le poste de la comptable d'à côté » : si l'attaquant a un foothold dans le LAN ou dans Office 365 lui-même (token Outlook récupéré), il intercepte ce changement de mot de passe en temps réel. Le changement DOIT se faire depuis un appareil EXTERNE au réseau de l'ONG (smartphone 4G). Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "ISO/IEC 27037 violée (perte de la RAM). RFC 3227 violée (perte des données volatiles). Risque de propagation latérale via réseau interne.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "« Restez calme, ne paniquez pas. Demandez à Maria de fermer Outlook et WinRAR proprement, de supprimer le fichier `.rar` dans la corbeille, de vider la corbeille, et de lancer un scan complet avec Bitdefender pour être sûre. Pendant ce temps, je prépare une équipe pour passer dans la journée. »",
+          "ok": false,
+          "pts": -30,
+          "fb": "Vous venez de demander à Maria de DÉTRUIRE l'essentiel des preuves en 5 minutes. (1) « Fermer Outlook et WinRAR proprement » : ferme les processus et libère la RAM — perte directe des modules malveillants chargés. (2) « Supprimer le fichier .rar et vider la corbeille » : détruit la pièce à conviction principale (l'archive piégée originale). (3) « Lancer un scan complet avec Bitdefender » : modifie chaque timestamp NTFS du disque, écrit des centaines de mégaoctets de journaux antivirus, et signale potentiellement la présence du malware sophistiqué qui peut alors déclencher sa routine d'auto-destruction (anti-forensic). En 5 minutes, l'enquête est compromise. Cette réponse coche tous les anti-réflexes du DFIR. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "ISO/IEC 27037 violée. Art. 254 CP (entrave à l'action pénale) si négligence grave consciente. Toutes les preuves volatiles, et probablement plusieurs preuves disque, perdues.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📐 10h54 — Qualification de la cible — Gamaredon ou pas ?",
+      "situation": "Vous avez raccroché avec Hélène, qui a suivi vos instructions. L'équipe DFIR est en route (ETA 80 minutes). Vous avez 80 minutes pour qualifier l'incident et activer les bons canaux d'escalade. Vous ouvrez votre fiche `apts.html` et vous regardez les TTP connus de Gamaredon.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Éléments de qualification disponibles maintenant :</strong><br>\n🎯 Cible : ONG suisse aide humanitaire est Ukraine (Dnipro)<br>\n📧 Expéditeur : adresse usurpée d'un partenaire ukrainien connu (vraisemblance haute)<br>\n📦 Vecteur : archive WinRAR avec contenu PDF leurre cohérent<br>\n💥 Symptôme : flash AV puis silence (signature non détectée)<br>\n🌍 Contexte géopolitique : 4ème année du conflit, janvier 2026, Gamaredon en activité documentée<br>\n📊 Sekoia TDR a publié le 1er juin 2026 une analyse sur GammaWorm + ADS (chaîne d'infection compatible)<br><br>\n<strong>TTP Gamaredon classiques (référence Sekoia 2026, Mandiant, ESET, CERT-UA) :</strong><br>\n• Phishing email avec archives compressées (RAR, ZIP, 7z, ISO)<br>\n• Scripts VBS/HTA/PowerShell obfusqués<br>\n• Persistance via Run keys, Scheduled Tasks, ou Alternate Data Streams<br>\n• C2 via Telegram bot + Cloudflare Workers + DNS dynamique<br>\n• Outils : GammaSteel, GammaLoad, GammaWorm, PteroDo, PowerShower<br>\n• Cibles : entités UA gov/military, ONG soutenant UA, journalistes/think tanks Europe<br>\n• Pas de chiffrement ransomware ; espionnage et persistance long terme<br><br>\n⚠️ Question : ai-je assez d'éléments pour activer LRens (signalement SRC) ? Ou je risque le faux positif ?\n</div>",
+      "law": "<strong>LRens</strong> — Tâches préventives en matière de protection de la sûreté de l'État et d'autres intérêts nationaux importants. Obligation de signalement de soupçons d'opérations de renseignement par puissance étrangère.<br><strong>LRens art. 13</strong> — Acquisition d'informations dans le domaine numérique.<br><strong>LSI</strong> — Loi sur la sécurité de l'information : annonce obligatoire OFCS sous 24h pour les acteurs critiques après détection d'un incident.<br><strong>CP 273</strong> — Service de renseignements économiques au profit d'un État étranger.<br><strong>Principe</strong> — Le signalement précoce vaut mieux qu'un signalement tardif, MAIS un signalement non qualifié décrédibilise sur les vrais incidents.",
+      "question": "<strong>Qualifiez-vous cet incident dès maintenant comme « APT étatique probable » et activez-vous les canaux LRens / LSI ?</strong>",
+      "choices": [
+        {
+          "text": "Oui mais en deux temps : (1) MAINTENANT — signalement opérationnel OFCS / GovCERT comme « incident cyber critique potentiel sur acteur ONG humanitaire UA » (canal LSI, sous 24h obligatoire de toute façon) — sans encore qualifier l'attribution. (2) DANS 4 HEURES — après imagerie forensique initiale et premiers IOC, si les TTP confirment Gamaredon, je transmets au SRC via la cellule de liaison cyber (LRens). (3) Pour la qualification d'attribution, j'attendrai les éléments techniques : pas de signalement attribution sans TTP MITRE ATT&CK confirmés. La cible est compatible APT, mais ce n'est pas suffisant comme attribution.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Très bonne calibration. Vous distinguez le signalement OPÉRATIONNEL (OFCS, qui traite tous les incidents sans présumer de l'attribution) du signalement RENSEIGNEMENT (SRC, qui nécessite une qualification d'attribution étatique). Le OFCS sous 4h c'est précoce mais pas excessif — c'est exactement le rôle du GovCERT, qui apportera potentiellement déjà des éléments comparatifs (« on a vu 3 archives similaires cette semaine sur d'autres ONG »). Attendre 4h pour le SRC vous donne le temps d'avoir les premiers IOC (hash de l'archive, comportement réseau, présence ou non de Telegram C2) qui rendront le signalement crédible. Cette gradation préserve votre crédibilité institutionnelle : vous n'êtes pas le DFIR qui « voit Gamaredon partout », vous êtes le DFIR qui escalade avec méthode. Gamaredon (G0047 MITRE) est documenté depuis 2014 par CERT-UA, Mandiant, ESET, Sekoia. Sa <strong>signature distinctive</strong> : commodity tooling + intensité opérationnelle élevée + cibles humanitaires/gouvernementales pro-UA. La convergence des indices construit l'attribution. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "LSI — Annonce OFCS dans les 24h respectée. LRens — Signalement SRC conditionné à la qualification technique : approche rigoureuse, recevable. Principe de proportionnalité.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Non, pas encore. Je vais attendre que l'équipe DFIR ait fini l'imagerie complète, l'analyse RAM, l'analyse réseau, et qu'on ait une attribution solide. Pas la peine de signaler quoi que ce soit avant 48-72h. Le OFCS sera de toute façon prévenu via l'annonce LSI standard.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Trop prudent au point de devenir risqué. Vous attendez 48-72h alors que la LSI impose une annonce OFCS sous 24h pour les acteurs critiques. Surtout, vous oubliez la fonction du GovCERT : ce n'est pas un service judiciaire qui exige une attribution avant intervention, c'est un service opérationnel qui CROISE les incidents en temps réel. Si vous appelez le GovCERT à 11h, et qu'ils ont déjà reçu 3 alertes similaires d'autres ONG en Suisse cette semaine, vous passez d'un incident isolé à une CAMPAGNE en cours — ce qui change tout (priorisation, ressources, mode opératoire). Attendre 48h, c'est perdre cette intelligence collective. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "LSI violée si annonce dépasse 24h. Article 10 LRens — devoir d'information sur les opérations potentielles de renseignement.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Oui, j'active TOUT immédiatement : signalement OFCS, signalement SRC LRens « attaque APT iranienne sur ONG UA » (vu le contexte géopolitique), demande de mesure de surveillance art. 269 CPP préemptive, alerte presse en préparation pour transparence. Mieux vaut sur-réagir que sous-réagir.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sur-réaction qui décrédibilise et compromet l'enquête. (1) « Attaque APT iranienne » : pourquoi iranienne ? Vous n'avez AUCUN élément, vous inventez une attribution — la cible UA pointe naturellement vers russe (Gamaredon FSB, Sandworm GRU, Turla), pas vers iranienne. Donner une attribution erronée à un service de renseignement vous décrédibilise pour 10 ans. (2) Demande art. 269 CPP préemptive sans cible identifiée ni numéro à surveiller : refusé en 2 minutes par le TMC, traces dans le dossier. (3) Alerte presse en préparation : VIOLATION de l'art. 73 CPP (secret de l'enquête) ET destruction immédiate de toute valeur tactique (l'attaquant lit la presse aussi). (4) Vous saturez 4 canaux d'escalade en 15 minutes — quand vous reviendrez avec un VRAI incident dans 6 mois, on ne vous écoutera plus. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP violé (secret enquête). LRens mal utilisée (signalement non motivé). Art. 269 CPP — conditions non remplies. Risque disciplinaire.",
+          "critical": true,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🚪 11h45 — Arrivée sur place — Préparation de l'acquisition",
+      "situation": "Vous et votre équipe arrivez au siège de l'ONG (un étage de bureau dans un immeuble lausannois). Hélène vous accueille calmement. Maria est dans la salle de pause, accompagnée d'une collègue. Le poste compromis est toujours allumé, Ethernet débranché, état préservé. Vous avez maintenant ~30 minutes pour préparer l'acquisition correctement avant de lancer la première manipulation.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Matériel apporté :</strong><br>\n💾 2 disques externes SSD 2 To (cibles d'acquisition, formatés et hashés à blanc)<br>\n🔌 Write-blocker matériel Tableau T356789iu<br>\n🧰 Mallette DFIR : DumpIt, FTK Imager Lite (clé USB stérile), Magnet RAM Capture, KAPE<br>\n📷 Appareil photo Canon avec horodatage activé<br>\n📋 Formulaires PV de saisie + chaîne de conservation<br>\n🌐 Mini-switch managé pour capture PCAP en sortie (au cas où l'on reconnecte temporairement pour observer)<br>\n⚖️ Mandat de séquestre du procureur de permanence (obtenu à 11h20)<br><br>\n<strong>État du poste :</strong><br>\n• Outlook ouvert, mail suspect affiché<br>\n• WinRAR ouvert, fichiers extraits visibles dans la fenêtre<br>\n• PDF ouvert en arrière-plan<br>\n• Aucune autre activité utilisateur depuis 1h05<br>\n• Ethernet débranché, WiFi désactivé (matériellement, switch sur la carte)<br><br>\n⚠️ Décision méthodologique : quelle est la PREMIÈRE action que je fais physiquement sur ce poste ?\n</div>",
+      "law": "<strong>ISO/IEC 27037</strong> — Ordre de volatilité strict : RAM en premier.<br><strong>RFC 3227</strong> — Mémoire vive avant disque, en sachant que tout dump RAM modifie marginalement la RAM elle-même (paradoxe accepté).<br><strong>NIST SP 800-86</strong> — Guide to Integrating Forensic Techniques into Incident Response.<br><strong>Art. 263 CPP</strong> — Séquestre : préservation des objets en vue de la procédure.<br><strong>Art. 192-194 CPP</strong> — Inventaire et garantie d'intégrité.",
+      "question": "<strong>Quelle est la PREMIÈRE action physique que vous effectuez sur le poste ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Photo du bureau Windows tel qu'il est, depuis 1m, avec horodatage. (2) Branchement de la clé USB stérile (préparée à blanc, scellée jusqu'à maintenant) contenant DumpIt + Magnet RAM Capture + FTK Imager Lite. (3) Lancement de Magnet RAM Capture (préféré à DumpIt pour Windows 10/11 — meilleure compatibilité avec antivirus moderne) avec sortie vers le disque externe SSD via write-blocker. Hash SHA-256 automatique. (4) Pendant l'acquisition RAM (15-20 min selon la taille), photo détaillée des fenêtres ouvertes, capture des connexions netstat actives (depuis poste tiers à la même session — pas depuis ce poste). (5) Une fois RAM dumpée et hashée, je décide de la suite (imagerie disque live ou shutdown puis imagerie sans démarrage).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Procédure DFIR de référence. L'ordre RAM avant tout est non négociable : c'est la seule chose qui sera perdue irrévocablement en cas d'extinction. Magnet RAM Capture a effectivement de meilleurs résultats que DumpIt sur Windows 10/11 modernes (gestion des pilotes signés, compatibilité Defender). L'écriture vers SSD externe via write-blocker garantit la non-altération de la cible. La capture du SHA-256 immédiatement après l'acquisition est essentielle pour la chaîne de conservation. La photo préalable documente l'état initial. Le netstat depuis poste tiers évite la dégradation supplémentaire de la machine cible. Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "ISO/IEC 27037 + RFC 3227 respectées. Art. 263 CPP — séquestre formalisé via mandat. Art. 192 CPP — inventaire en cours.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Je commence par l'imagerie disque physique : (1) je clone l'éteins-le proprement via Démarrer → Arrêter, (2) je débranche le disque dur, (3) je le clone sur le SSD externe via write-blocker. La RAM, on verra après si on a le temps.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Vous venez de perdre la RAM. Définitivement. En éteignant via Démarrer → Arrêter, vous lancez une procédure Windows qui (a) flushe les buffers, (b) ferme les processus proprement — y compris le malware qui peut activer sa routine d'auto-destruction, et (c) écrit dans le journal système, l'event log, et potentiellement les ruches du registre. Toutes les preuves volatiles sont perdues. Tous les processus en cours sont terminés sans capture. Toutes les connexions C2 fermées sans trace réseau. Toutes les clés cryptographiques en mémoire effacées. Vous vous retrouvez avec uniquement le disque dur — ce qui sur un APT moderne représente peut-être 30% des preuves nécessaires à l'attribution. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "ISO/IEC 27037 — Ordre de volatilité violé. RFC 3227 — non respecté. Perte irréversible des données volatiles.",
+          "critical": true,
+          "next": 3
+        },
+        {
+          "text": "Je rebranche d'abord l'Ethernet pour 30 secondes — j'observe le trafic réseau sortant via Wireshark sur le mini-switch managé. Comme ça je capture le beaconing C2 en live, puis je débranche à nouveau et je commence l'acquisition.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Idée tentante mais déraisonnable à ce stade. Reconnecter le poste compromis au réseau, MÊME 30 secondes, c'est : (1) potentiellement permettre une exfiltration supplémentaire qu'on ne maîtrise pas ; (2) potentiellement signaler à l'attaquant un changement d'environnement (par exemple, sortie soudaine du poste de l'« hibernation réseau » de 1h — le malware peut envoyer un signal d'alerte) ; (3) modifier l'état RAM (interruptions réseau, sockets) avant le dump RAM proprement dit. La capture C2 live se fait APRÈS l'acquisition RAM, dans un environnement contrôlé (le poste isolé sur un mini-LAN avec proxy de capture), et seulement si l'analyse RAM révèle des indicateurs qui justifient cette manipulation supplémentaire. L'ordre est : RAM → disque → réseau contrôlé, jamais l'inverse. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Risque de propagation latérale. Art. 263 CPP — préservation : compromise par reconnexion non maîtrisée.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    }
+  ]
+}

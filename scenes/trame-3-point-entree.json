@@ -1,0 +1,115 @@
+{
+  "id": "trame-3-point-entree",
+  "title": "Trame chiffrée — Acte 3 : Le point d'entrée",
+  "icon": "🪤",
+  "difficulty": "expert",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "La chaîne d'attaque complète a été reconstituée en moins de 36 heures, par travail conjoint GovCERT + brigade cyber + JuraIT. Le phishing initial a été retrouvé (email du 27 septembre 2025, comptable A. Stoffel), le malware loader analysé (IcedID), le pivot Cobalt Strike documenté (beacon C2 vers cloudflareworkers[.]dev, technique standard), le timeline complet (3 semaines de dwell time avant chiffrement) consigné par TTP MITRE ATT&CK. IOC partagés via MISP-CH au secteur. Le dossier d'enquête est solide et exportable au MPC si attribution APT confirme un acteur étatique-soutenu.",
+    "degraded": "Le point d'entrée a été identifié (phishing comptable) mais la chaîne complète reste partielle — Cobalt Strike détecté mais pas analysé, dwell time imprécis, technique d'exfiltration des 380 GB non confirmée. Le dossier est défendable mais aura des angles morts qu'une défense intelligente exploitera. Les IOC partagés sont incomplets.",
+    "failure": "L'analyse reste superficielle : « phishing probable, ransomware LockBit, rançon demandée ». Pas de chaîne reconstituée, pas de timeline, pas de TTP MITRE. La police présente un dossier insuffisant au MP. La défense plaidera l'absence de preuves matérielles et le manque d'attribution rigoureuse. Le dossier risque le classement sans suite ou la requalification a minima."
+  },
+  "tags": [
+    "FORENSIQUE INCIDENT",
+    "CHAÎNE D'ATTAQUE",
+    "PHISHING INITIAL",
+    "ICEDID / QAKBOT (LOADER)",
+    "COBALT STRIKE",
+    "DWELL TIME",
+    "MITRE ATT&CK",
+    "MISP-CH PARTAGE IOC"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP — Accès indu à un système informatique (intrusion initiale)",
+    "Art. 144bis CP — Détérioration de données (chiffrement)",
+    "Art. 143 CP — Soustraction de données (exfiltration 380 GB)",
+    "Art. 147 CP — Utilisation frauduleuse d'un ordinateur",
+    "Art. 156 CP — Extorsion-chantage",
+    "Art. 260ter CP — Organisation criminelle (LockBit)",
+    "MITRE ATT&CK Enterprise — Framework de qualification des TTP",
+    "Doctrine threat intel — Diamond Model d'analyse d'intrusion"
+  ],
+  "intro": "Mardi 21 octobre 2025, 08h00. Vous êtes dans la salle de réunion transformée en cellule de crise. Mathieu Brun (GovCERT) projette ses premières analyses au tableau. Sandra Meyer a sorti ses logs RMM, SIEM (sommaire), VPN, et exporté l'archive Exchange du SVR-MAIL (le seul serveur épargné — qui s'avère porteur d'informations cruciales). Vous devez reconstituer la chaîne d'attaque complète : combien de temps les attaquants étaient-ils dans le réseau ? Quel est le point d'entrée ? Quels TTP MITRE ? Quelle attribution probable ?",
+  "alertLevel": "🔍 RECONSTITUTION EN COURS · GovCERT en analyse · ~30 GB de logs à corréler · Dwell time suspecté >2 semaines · IOC partiels obtenus · Première réunion sectorielle horloger prévue jeudi",
+  "objectives": [
+    {
+      "icon": "📧",
+      "text": "Identifier le point d'entrée initial (vraisemblablement phishing)"
+    },
+    {
+      "icon": "🔗",
+      "text": "Reconstituer la chaîne malware : dropper → loader → C2 → ransomware"
+    },
+    {
+      "icon": "⏱️",
+      "text": "Mesurer le dwell time (durée entre intrusion initiale et chiffrement)"
+    },
+    {
+      "icon": "🏷️",
+      "text": "Mapper les TTP observés sur MITRE ATT&CK Enterprise"
+    },
+    {
+      "icon": "🔄",
+      "text": "Partager les IOC matures via MISP-CH avec le secteur horloger"
+    }
+  ],
+  "debrief": "<p>L'acte 3 d'un incident ransomware est celui de la <strong>reconstitution narrative</strong>. On passe de l'urgence (acte 1) et du périmètre (acte 2) à la <em>question fondamentale</em> : comment sont-ils entrés, qu'ont-ils fait, comment ont-ils déclenché ? Cette reconstitution est indispensable pour : (1) <em>l'enquête pénale</em> (preuve matérielle de chaque infraction), (2) <em>la remédiation</em> (boucher les trous), (3) <em>le partage sectoriel</em> (éviter les victimes suivantes).</p><p><strong>Le dwell time — la métrique clé.</strong> Mandiant M-Trends 2024 mesure un dwell time médian de 10 jours pour les ransomware (et descendant — 5 jours dans certains rapports 2025). Dans le cas PMSA, le SVR-MAIL épargné est un cadeau forensique : ses logs Exchange contiennent toute l'histoire du phishing initial. La reconstruction confirme typiquement : (1) phishing reçu, (2) clic + macro/exécutable, (3) loader (IcedID, Qakbot, BumbleBee), (4) beacon Cobalt Strike, (5) reconnaissance interne (LDAP queries, AD enumeration), (6) credential dumping (Mimikatz, lsass), (7) lateral movement (PSExec, WMI, RDP), (8) data staging et exfiltration (Mega, Rclone, FTP), (9) déploiement ransomware (GPO push, PSExec, scheduled tasks). Chaque étape laisse des traces, à condition de savoir où regarder.</p><p><strong>Le phishing initial — le carrefour humain.</strong> Statistiquement, ~80% des ransomware démarrent par phishing (Verizon DBIR 2024). Le comptable cliqueur d'une PME n'est pas un suspect — c'est une victime de la victime. L'enquête doit le traiter avec ménagement : audition technique pour reconstituer le contexte du clic (oui c'était convaincant ? non c'était trop beau ?), pas culpabilisation. Bonne pratique RH post-incident : formation sans nommer, pas de sanction du cliqueur (effet contre-productif sur la culture de signalement).</p><p><strong>Cobalt Strike — l'outil universel.</strong> Cobalt Strike, conçu comme outil de red team commercial, est devenu l'outil de pivot dominant des cybercriminels. La détection d'un beacon Cobalt Strike est presque pathognomonique d'une intrusion sophistiquée. Indices : (1) URLs C2 avec patterns spécifiques (souvent Cloudflare Workers, cloudfront, ou subdomain takeover), (2) JA3/JA3S fingerprints reconnaissables, (3) Sleeptime / Jitter caractéristiques, (4) malleable C2 profiles publics et détectables. Les détections ne sont pas un échec de l'attaquant — c'est juste la friction normale.</p><p><strong>MITRE ATT&CK — le langage commun.</strong> Mapper les TTP observés sur ATT&CK Enterprise permet : (1) une attribution rapide via comparaison avec profils connus (LockBit affiliate vs Conti héritage vs autre), (2) un partage IOC efficace via MISP (les TTP sont plus universels que les hash), (3) une défense reproductible (chaque TTP identifié → mesure défensive associée). Quelques TTP clés ransomware : T1566.001 (phishing), T1059.001/005 (PowerShell, VBScript), T1027 (obfuscation), T1055.012 (Process Hollowing), T1071.001 (HTTPS C2), T1003 (credential dumping), T1021.001/002 (RDP/SMB lateral movement), T1486 (encrypt for impact).</p><p><strong>Le partage IOC — l'éthique de la solidarité.</strong> Une PME victime peut être tentée de garder pour elle les IOC, par crainte réputationnelle. C'est un calcul à courte vue. Le partage via MISP-CH (anonymisé par OFCS) permet de prévenir d'autres victimes dans le secteur — et de bénéficier en retour des IOC partagés par d'autres acteurs CH lors de campagnes ultérieures. La logique « mutuelle » est essentielle au modèle suisse de cybersécurité.</p><p><strong>Références</strong> : Mandiant M-Trends 2024 ; Verizon DBIR 2024 ; MITRE ATT&CK Enterprise (attack.mitre.org) ; CISA Cobalt Strike detection guidance ; MISP project ; OFCS Guide partage IOC.</p>",
+  "steps": [
+    {
+      "phase": "📧 08h00-10h00 — Le phishing du 27 septembre",
+      "situation": "Mathieu Brun (GovCERT) projette l'analyse Exchange. Le SVR-MAIL épargné a tout conservé.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.78rem;line-height:1.7;font-family:var(--mono)\">\n<strong>Email suspect identifié — Sample :</strong><br>\nDate: 27.09.2025 14:23:11 UTC<br>\nFrom: \"Direction des contributions VS\" <contributions-vs@<span style=\"color:#ff6b6b\">contributions-vd-ch[.]com</span>><br>\nTo: a.stoffel@pmsa.ch<br>\nSubject: Rappel de paiement TVA Q3 2025 — Action requise<br>\nAttachment: <span style=\"color:#ff6b6b\">Rappel_TVA_Q3_2025_PMSA.zip</span> (3,4 MB)<br><br>\nMadame, Monsieur,<br>\nVeuillez trouver ci-joint le rappel de paiement TVA Q3 2025. Le solde dû est de 47'382.55 CHF.<br>\nDélai : 7 jours sous peine de poursuite.<br>\nCordialement, Direction des contributions VS<br>\n[signature scannée — falsifiée]<br><br>\n<strong>Analyse rapide :</strong><br>\n🚩 Domaine expéditeur : contributions-vd-ch[.]com (✗ légitime serait .vs.ch ou .vd.ch)<br>\n🚩 Comptable de canton BE — pas concerné par VS ou VD<br>\n🚩 ZIP — non standard pour autorités fiscales (PDF normal)<br>\n🚩 Pression temporelle (7 jours, poursuite)<br>\n✅ MAIS : signature scannée crédible, montant cohérent avec une PME, formulation officielle, langue impeccable\n</div><br>\nMeyer ouvre le ZIP en bac-à-sable Any.Run : à l'intérieur, un fichier <code>Rappel_TVA_Q3_2025_PMSA.scr</code> (extension .scr — screensaver Windows, exécutable). Stoffel l'a ouvert le 27.09 à 14h31 (8 minutes après réception). Première exécution de processus suspect dans les logs Windows : 14h31:47.<br><br>\nMeyer : « Stoffel est venue me voir ce matin, en pleurs. Elle dit qu'elle ne s'en doutait pas. »",
+      "law": "<strong>Art. 143bis CP</strong> — Accès indu : quiconque, sans droit, s'introduit dans un système informatique. L'exécution du loader par tromperie de l'utilisateur est juridiquement un accès indu (la volonté de l'utilisateur étant viciée par la tromperie).<br><strong>Art. 197 CPP</strong> — Témoins : Stoffel n'est PAS suspecte, elle est victime de tromperie. Sa déposition est essentielle pour reconstituer le contexte mais doit se faire dans un cadre protecteur (CPP 168-176 protection des témoins).<br><strong>Doctrine pénale</strong> — La responsabilité du cliqueur de phishing est en principe exclue (élément subjectif manquant). Les rares exceptions concernent les cas de négligence grossière manifeste (signaux d'alerte évidents ignorés).<br><strong>OFCS / Police</strong> — Le phishing rappelle l'importance de l'authentification renforcée et de la formation continue, mais ne crée pas de responsabilité pénale du cliqueur.",
+      "question": "<strong>Comment traitez-vous A. Stoffel, la comptable ?</strong>",
+      "choices": [
+        {
+          "label": "Audition technique en tant que témoin (CPP 168-176), centrée sur la reconstitution factuelle du contexte de réception et clic. Pas de culpabilisation, pas de question piège. Bénéfice : reconstituer ce qui a rendu l'email convaincant pour informer la prévention.",
+          "score": "success",
+          "feedback": "✅ Approche correcte. Stoffel est <em>témoin victime</em>, pas suspecte. Audition technique = factuelle, pas accusatoire. Vous reconstituez : était-elle sous pression (fin Q3, période de bouclement) ? Le mail est-il arrivé dans son inbox principale ou un dossier filtré ? A-t-elle vérifié l'expéditeur ? Y avait-il eu d'autres mails de \"l'administration fiscale\" précédemment qui l'ont conditionnée ? Ces réponses (1) consolident le dossier pénal contre l'auteur (preuve de la tromperie réussie), (2) informent la prévention dans le secteur (« attention pattern fiscalité trompeuse »), (3) permettent à Stoffel de se positionner comme témoin coopérante."
+        },
+        {
+          "label": "Audition formelle en tant que possible co-responsable — vérifier qu'elle n'a pas agi en complicité (insider threat).",
+          "score": "failure",
+          "feedback": "❌ Erreur. La présomption de complicité face à un cliqueur de phishing typique est non fondée et professionnellement contre-productive. Indices d'insider threat (vrais) : volume anormal d'accès, transferts de données suspects, contact externe avec l'attaquant. Stoffel n'a aucun de ces signaux. La traiter en suspecte (1) détruit votre relation enquêteur-témoin, (2) culpabilise injustement la victime de la victime, (3) ferme l'accès à l'information précieuse qu'elle peut fournir, (4) crée un précédent toxique dans l'entreprise (« si tu cliques tu es flic-é »). Réserver l'insider threat pour les cas où les indices techniques le justifient."
+        },
+        {
+          "label": "Lui faire une remontrance immédiate devant les collègues pour exemplifier le danger, puis l'auditionner.",
+          "score": "failure",
+          "feedback": "❌ Posture pédagogiquement et juridiquement fautive. (1) Humilier publiquement une victime = atteinte à sa dignité, et possible action en responsabilité contre l'État pour traitement dégradant. (2) Effet contre-productif sur la culture sécurité : les autres employés cacheront à l'avenir leurs erreurs. (3) Stoffel pourrait refuser de témoigner en confiance, ou pire, demander l'assistance d'un avocat qui prolongera la procédure. La sécurité = sans blâme (« blameless ») post-incident, c'est un consensus pro depuis 15 ans (cf. literature John Allspaw, Etsy postmortems)."
+        },
+        {
+          "label": "Ne pas l'auditionner — concentrer l'enquête sur les aspects techniques uniquement, le phishing est trivial à reconstituer par les logs.",
+          "score": "degraded",
+          "feedback": "⚠️ Approche techniciste qui sous-estime la valeur du témoignage humain. Les logs disent « clic à 14h31 », mais Stoffel peut révéler : « j'étais sous pression, ma collègue venait de partir en arrêt, j'ai reçu 3 autres mails de l'AFC ce mois-ci, j'ai cru que c'était la suite ». Ce contexte (1) renforce la qualification de la tromperie pour la procédure pénale, (2) éclaire la prévention, (3) donne à Stoffel un espace de parole qui répare partiellement le trauma. Audition rapide, technique, ménagée = bonne pratique."
+        }
+      ]
+    },
+    {
+      "phase": "🔗 10h00-13h00 — La chaîne malware et le pivot Cobalt Strike",
+      "situation": "Brun et Egger (GovCERT) ont analysé en sandbox le .scr. La chaîne se reconstitue :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.78rem;line-height:1.7\">\n<strong>Chaîne malware reconstituée :</strong><br><br>\n<strong>① 27.09 14h31</strong> — Stoffel ouvre <code>Rappel_TVA_Q3_2025_PMSA.scr</code><br>\n→ Sample = <strong>IcedID</strong> (loader connu, MITRE S0483)<br>\n→ Hash SHA-256 : a3f9e2d8...c4b7 (déjà répertorié VirusTotal, 31/72 détections au 27.09)<br>\n→ T1566.001 (Spearphishing Attachment), T1204.002 (User Execution)<br><br>\n<strong>② 27.09 14h35-15h12</strong> — IcedID s'installe<br>\n→ Reconnaissance système (whoami, ipconfig, net users domain)<br>\n→ T1082 (System Information Discovery)<br>\n→ Persistance via tâche planifiée (T1053.005)<br><br>\n<strong>③ 28.09 03h17</strong> — Premier beacon Cobalt Strike<br>\n→ C2: <code>worker-graceful-fog-3a8f.workers.dev</code> (Cloudflare Workers)<br>\n→ JA3 hash: 72a589da586844d7f0818ce684948eea (signature classique Cobalt Strike)<br>\n→ T1071.001 (Application Layer Protocol: HTTPS), T1090.002 (External Proxy)<br><br>\n<strong>④ 28.09-15.10 (17 jours)</strong> — Reconnaissance et latéralisation<br>\n→ Mimikatz exécuté sur 4 postes admin (T1003.001 LSASS dump)<br>\n→ Lateral movement via PSExec (T1021.002), WMI (T1047)<br>\n→ AD enumeration : BloodHound (T1087.002)<br>\n→ Compromission compte service backup (BAK_SVC) → accès NAS Synology<br><br>\n<strong>⑤ 16.10-19.10 (3 jours)</strong> — Exfiltration<br>\n→ Staging fichiers dans C:\\Windows\\Temp\\__staging (compressés .7z)<br>\n→ Exfiltration via <strong>Rclone</strong> vers serveur Mega.nz (T1567.002)<br>\n→ Volume estimé : 380 GB confirmé (correspond à la menace LockBit)<br><br>\n<strong>⑥ 19.10 21h47-22h17</strong> — Chiffrement<br>\n→ Déploiement LockBit 3.0 via GPO et PSExec (T1486)<br>\n→ Suppression VSS (T1490)<br>\n→ Note ransom déposée\n</div><br>\n<strong>Dwell time total : 22 jours</strong> (27.09 → 19.10).<br><br>\nBrun pose la question : « Les IOC sont prêts, on partage via MISP-CH au secteur horloger ? »",
+      "law": "<strong>Doctrine threat intel</strong> — Le partage d'IOC entre acteurs publics et privés est encouragé par l'OFCS via MISP-CH (Malware Information Sharing Platform). Le partage est anonymisable et préservé par les clauses TLP (Traffic Light Protocol).<br><strong>LPD art. 6</strong> — Le partage d'IOC techniques (hash, IP, domaine) ne traite pas de données personnelles au sens LPD, sauf cas particuliers (IP utilisateur final). Pour les phishing reçus à des adresses email nominatives, anonymiser l'adresse récipiendaire avant partage.<br><strong>LSI art. 74d</strong> — La confidentialité du signalement OFCS protège l'identité de PMSA dans le partage. Les IOC peuvent être partagés sans identifier la victime.<br><strong>MITRE ATT&CK</strong> — Référentiel international, langage commun pour décrire les TTP. Utilisé par tous les CERT.",
+      "question": "<strong>Comment gérez-vous le partage IOC ?</strong>",
+      "choices": [
+        {
+          "label": "Partage immédiat via MISP-CH (OFCS anonymise PMSA), TLP:AMBER (secteur horloger + LE seulement), IOC techniques uniquement (hash, C2, JA3, TTP MITRE).",
+          "score": "success",
+          "feedback": "✅ Partage modèle. (1) <strong>Immédiat</strong> = bénéfice maximal pour le secteur (autres PME horlogères qui pourraient être en cours de compromission par le même affiliate). (2) <strong>Anonymisation via OFCS</strong> = la confidentialité de PMSA est préservée. (3) <strong>TLP:AMBER</strong> = diffusion contrôlée, pas public, mais utile aux acteurs concernés. (4) <strong>IOC techniques uniquement</strong> = pas de fuite de données personnelles. Démonstration de maturité opérationnelle. PMSA n'est pas pénalisée par le partage, le secteur en bénéficie."
+        },
+        {
+          "label": "Pas de partage — PMSA est victime, ne pas exposer ses TTP, attendre que les IOC soient inutiles (>30 jours).",
+          "score": "failure",
+          "feedback": "❌ Logique d'égoïsme contre-productive. Les IOC LockBit 3.0 actuels (campagne secteur horloger) sont <em>très</em> utiles dans les prochaines heures-jours, pas dans 30 jours (l'affiliate change ses C2). Ne pas partager = laisser potentiellement d'autres PME se faire chiffrer. Mauvaise lecture du modèle CH de cybersécurité (basé sur la mutualisation). De plus, les IOC sont anonymisables — PMSA n'est pas exposée. C'est une option \"sécurisante\" qui en réalité augmente le risque collectif."
+        },
+        {
+          "label": "Partage public sur Twitter avec mention LockBit pour les chercheurs en cybersécurité.",
+          "score": "failure",
+          "feedback": "❌ Triple erreur. (1) <strong>Public</strong> = vous brûlez les détections (l'attaquant verra et changera ses C2, vous perdez l'avantage des prochaines 48h). (2) <strong>Twitter</strong> = aucune anonymisation OFCS, PMSA est implicitement identifiable (croisement temporel). (3) <strong>Mention LockBit</strong> = pas conforme aux protocoles d'investigation discrète. Les chercheurs en cyber sérieux accèdent à MISP via leurs employeurs CERT/SOC, pas à Twitter."
+        },
+        {
+          "label": "Partage via MISP-CH mais TLP:RED (vous seul + GovCERT), pour ne pas exposer.",
+          "score": "degraded",
+          "feedback": "⚠️ TLP:RED = info pour le destinataire individuel UNIQUEMENT, ne peut pas être redistribué. Ne permet pas au secteur horloger d'en bénéficier. Vous protégez à l'excès. Bonne pratique : TLP:AMBER (secteur + LE) pour les IOC techniques (le bon dosage de discrétion et utilité). TLP:RED réservé aux infos non confirmées ou impliquant directement la victime nommée."
+        }
+      ]
+    }
+  ]
+}

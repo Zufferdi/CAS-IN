@@ -1,0 +1,158 @@
+{
+  "id": "ads-3-poste-qui-bavarde",
+  "title": "Le compartiment fantôme — Acte 3 : Le poste qui bavarde encore",
+  "icon": "📡",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Le PCAP est analysé. Beaconing C2 confirmé toutes les 90 secondes vers Telegram bot + Cloudflare Workers. Volume d'exfiltration estimé à ~340 Mo sur 18 heures (donc avant votre intervention). Fingerprint JA3 du C2 partagé avec partenaires threat intel. OFCS alerte d'autres ONG via canaux fermés. L'investigation tient la cadence.",
+    "degraded": "PCAP analysé partiellement (outils non maîtrisés, manque de temps). C2 identifié mais sans extraction complète du contenu exfiltré. Estimation volume floue. Pas de partage threat intel.",
+    "failure": "Le PCAP est trop volumineux et l'analyse est superficielle. Le canal C2 réel est manqué (confondu avec du trafic Cloudflare légitime). L'attaquant exfiltre toujours via un poste secondaire que vous n'avez pas identifié."
+  },
+  "tags": [
+    "ANALYSE PCAP",
+    "C2 TELEGRAM",
+    "CLOUDFLARE WORKERS",
+    "JA3 FINGERPRINT",
+    "EXFILTRATION DATA",
+    "MITRE T1071",
+    "WIRESHARK",
+    "NETWORKMINER"
+  ],
+  "legalRefs": [
+    "Art. 269 CPP — Surveillance des télécommunications",
+    "Art. 273 CPP — Données accessoires télécom",
+    "Art. 143bis CP — Accès indu",
+    "Art. 271 CP — Actes exécutés sans droit pour un État étranger",
+    "ISO/IEC 27037 — Préservation PCAP",
+    "MITRE ATT&CK T1071.001 Web Protocols, T1041 Exfiltration over C2"
+  ],
+  "intro": "Samedi 17 janvier 2026, 09h00. Salle d'analyse réseau Polcant VD. Le PCAP capturé pendant 10 minutes hier matin sur la sortie WAN de l'ONG fait 340 Mo. À première vue, du trafic HTTPS standard — Outlook, Office 365, navigation web. Mais quelque part dans cette masse, il y a le beaconing C2 du malware. Vous (Lara Schmidlin + collègue réseau Vincent Chevalley) avez 4 heures pour le décortiquer. Wireshark + NetworkMiner + tshark scripts custom prêts.",
+  "alertLevel": "📡 PCAP 340 Mo · 10 min de capture · C2 Telegram + Cloudflare suspecté · JA3 fingerprint à extraire · Volume exfiltration à estimer",
+  "objectives": [
+    {
+      "icon": "🔍",
+      "text": "Filtrer le trafic légitime pour isoler les flux suspects"
+    },
+    {
+      "icon": "🎯",
+      "text": "Identifier le pattern de beaconing C2 dans la masse"
+    },
+    {
+      "icon": "📐",
+      "text": "Calculer le volume probable d'exfiltration historique"
+    },
+    {
+      "icon": "🤝",
+      "text": "Partager les IOC via canaux threat intel fermés"
+    }
+  ],
+  "debrief": "<p>L'acte 3 d'une saga APT bascule du forensique poste au forensique réseau. La RAM nous dit ce que le malware fait dans le poste ; le PCAP nous dit ce qu'il EXFILTRE et OÙ.</p><p><strong>Le beaconing — signature comportementale.</strong> Un C2 normal envoie des requêtes à intervalle régulier (60s, 90s, 5min) pour signaler la disponibilité de l'infecté et recevoir des commandes. Le pattern de fréquence est très révélateur : (a) intervalle TRÈS régulier (variation <5%) = malware programmatique ; (b) intervalle avec jitter (±30%) = malware sophistiqué essayant d'imiter l'utilisateur ; (c) intervalle adaptatif (rapide quand l'utilisateur travaille, lent la nuit) = APT haut de gamme. Gamaredon utilise typiquement 60-90s avec léger jitter.</p><p><strong>Cloudflare Workers comme C2 — le défi 2024-2026.</strong> Les domaines <code>*.workers.dev</code> (Cloudflare gratuit, déploiement en 30 secondes, certificat SSL valide auto) sont devenus l'infrastructure C2 préférée des APT modernes. Avantages pour l'attaquant : (a) HTTPS légitime (chiffrement bout-en-bout, pas de DPI possible), (b) CDN globalement résilient (impossible à blacklister, on noterait Cloudflare entier), (c) gratuit et anonyme, (d) ressemble à du trafic légitime. Détection : analyse du <strong>JA3/JA3S fingerprint</strong> (signature TLS), du volume/fréquence (trop régulier = beaconing), du contenu chiffré (entropie, taille de payload).</p><p><strong>JA3 fingerprint — l'arme contre le HTTPS opaque.</strong> JA3 est un hash MD5 calculé sur les paramètres du TLS Client Hello (version, ciphers, extensions, courbes elliptiques, formats de point). Deux clients qui utilisent la même librairie TLS avec la même configuration produiront le même JA3. Les malware Gamaredon, par exemple, ont un JA3 reproductible (car ils utilisent une librairie TLS spécifique, pas le User-Agent Windows). En 2026, les blacklists JA3 connues (Salesforce open, abuse.ch) couvrent ~80% des malware connus.</p><p><strong>Estimation du volume exfiltré.</strong> Si le malware est actif depuis le 15 janvier 10h47 (Maria ouvrant l'archive) et qu'on a capturé du PCAP le 16 janvier 11h45, soit ~25h de compromission active : (a) compter le volume sortant total (Wireshark : <code>tcp.dst.port == 443 and frame.len > 1500</code>), (b) soustraire le trafic légitime estimé (~150-200 Mo/jour pour un poste de bureau standard), (c) le reliquat est le candidat exfiltration. Plus précis : isoler le trafic JA3 malveillant et compter son volume cumulé.</p><p><strong>Partage threat intel — canaux fermés vs ouverts.</strong> Une fois les IOC extraits (URLs Cloudflare Workers, JA3, IPs, hashes), le partage se fait par canaux gradués : (1) OFCS / OFCS / GovCERT — premier point d'entrée suisse, alerte sectorielle ONG ; (2) MISP (Malware Information Sharing Platform) — communautés fermées et accréditées (FIRST, partenaires sectoriels) ; (3) STIX/TAXII — feed structuré vers partenaires identifiés ; (4) bilatéraux directs — Sekoia, Mandiant, ESET, CrowdStrike. Pas de partage public (VirusTotal, Twitter cyber) tant que l'attaquant est actif sur l'infrastructure observée.</p><p><strong>Références</strong> : Wireshark documentation, NetworkMiner, JA3 (Salesforce 2017), Sekoia TDR rapports Gamaredon 2024-2026, abuse.ch ThreatFox, MITRE ATT&CK T1071.001.</p>",
+  "steps": [
+    {
+      "phase": "🔍 09h15 — Premier filtrage Wireshark",
+      "situation": "Vous chargez le PCAP dans Wireshark. 340 Mo, ~487'000 paquets. Premier coup d'œil au statistics → conversations. Top 10 destinations IP par volume :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Top destinations IP (Statistics → Endpoints) :</strong><br>\n1. <code>52.108.x.x</code> (Microsoft Office 365) — 187 Mo<br>\n2. <code>140.82.x.x</code> (GitHub.com) — 22 Mo<br>\n3. <code>104.21.43.158</code> (Cloudflare) — 18 Mo<br>\n4. <code>185.199.108.153</code> (Fastly) — 8 Mo<br>\n5. <code>149.154.167.220</code> (Telegram) — 6 Mo<br>\n6. <code>104.16.249.34</code> (Cloudflare) — 4 Mo<br>\n7. <code>13.107.42.x</code> (Microsoft) — 3 Mo<br>\n8. <code>104.16.131.42</code> (Cloudflare) — 1.2 Mo<br>\n9. <code>149.154.175.50</code> (Telegram) — 0.8 Mo<br>\n10. Autres — total ~90 Mo<br><br>\n<strong>Premier signal :</strong><br>\n⚠️ Telegram : pas de Telegram desktop installé officiellement par l'ONG. Pourquoi 6+ Mo vers Telegram ?<br>\n⚠️ Cloudflare : 3 IPs Cloudflare différentes, totalisant ~23 Mo — pas anormal en absolu (Cloudflare héberge beaucoup), mais à creuser<br>\n💡 Hypothèse : Cloudflare = workers.dev C2 + Telegram = canal C2 secondaire ou exfiltration\n</div>",
+      "law": "<strong>Art. 269 CPP</strong> — Surveillance non temps réel : le PCAP a été capturé avec autorisation préalable.<br><strong>MITRE ATT&CK T1071</strong> — Application Layer Protocol (HTTPS sur web protocols).<br><strong>ISO/IEC 27037</strong> — PCAP préservé en lecture seule, hash de référence.",
+      "question": "<strong>Quels filtres Wireshark appliquez-vous pour isoler le trafic C2 ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Premier filtre : <code>ip.dst == 149.154.167.220 or ip.dst == 149.154.175.50</code> (IPs Telegram identifiées). Analyse de la régularité des paquets sortants — beaconing pattern ? (2) Deuxième filtre sur Cloudflare : <code>ssl.handshake.extensions_server_name contains \"workers.dev\"</code> (utilisable car SNI non chiffré dans TLS 1.2/1.3 sans ECH). Recherche du nom de domaine spécifique <code>wnoufqebrm.workers.dev</code> identifié dans l'analyse RAM. (3) Extraction JA3 fingerprint via tshark : <code>tshark -r capture.pcap -T fields -e tcp.stream -e tls.handshake.ja3 -Y \"tls.handshake.type == 1\"</code>. Comparaison avec blacklist JA3 publique abuse.ch. (4) Calcul du volume cumulé par destination potentielle C2 = trafic malveillant. (5) Calcul des intervalles entre paquets vers même destination = pattern beaconing.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Méthodologie d'analyse réseau exemplaire. Les filtres choisis sont précisément ceux qui isolent le trafic C2 sans noyer l'analyse : (1) Telegram par IP (canaux dédiés bien connus), (2) Cloudflare par SNI workers.dev (le SNI reste en clair dans la plupart des cas — utilisable), (3) extraction JA3 systématique avec comparaison blacklist (abuse.ch est gratuit et bien maintenu), (4)+(5) confirmation par pattern volume + intervalle. C'est la pile complète d'analyse C2 moderne. Le filtre SNI workers.dev est particulièrement efficace : peu de trafic légitime utilise workers.dev en SNI. Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 269 CPP — analyse dans le cadre de l'autorisation. ISO/IEC 27037 respectée. MITRE T1071.001 mapping correct.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Je filtre tout sauf le trafic Microsoft Office 365 et GitHub (sources légitimes) — comme ça je vois plus clairement le reste. Reste : Cloudflare + Telegram + Fastly + autres. Je regarde le contenu de chaque flux.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche raisonnable en première intention, mais limitée. (1) Filtrer « tout sauf Microsoft + GitHub » présuppose que ces deux sources sont 100% propres — Gamaredon utilise parfois GitHub (raw content) comme étape C2 intermédiaire (T1102 Web Service). Filtrer GitHub vous fait potentiellement rater une étape. (2) Sans extraction JA3 / SNI, vous regardez le contenu chiffré sans pouvoir identifier le malware par signature TLS. (3) « Regarder chaque flux » sur 50 Mo de trafic « non-Microsoft » prend des heures sans structure. La méthode efficace est : filtres ciblés sur signaux connus (JA3, SNI workers.dev, IPs Telegram), pas exclusion massive. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais inefficacité méthodologique.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Je décrypte le HTTPS via Wireshark avec la SSLKEYLOGFILE — pour cela, je relance le poste de Maria avec un keylogger TLS configuré. Comme ça je vois tout le contenu en clair.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Plusieurs erreurs graves. (1) Relancer le poste de Maria : VIOLATION de la chaîne de conservation. Le poste est sous séquestre, il ne doit pas être remis en service pour analyse improvisée. (2) Installer un keylogger TLS sur un poste compromis : (a) modifie l'état du poste (atteinte à la preuve disque), (b) requiert connexion réseau (pour quoi faire — relancer le malware ?), (c) sans autorisation art. 269 CPP spécifique pour décryption de communications. (3) SSLKEYLOGFILE fonctionne sur un Firefox/Chrome qu'on contrôle au moment de la communication — pas sur un PCAP historique. Vous confondez deux scénarios. (4) La bonne approche est : analyser le PCAP tel qu'il est, identifier les flux suspects par métadonnées (SNI, JA3, taille, fréquence), et si vraiment besoin de décryptage, requalifier la mesure auprès du TMC (art. 269 CPP) — pas improvisation sur le poste compromis. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 269 CPP — décryptage requiert autorisation spécifique. Atteinte au séquestre. Risque disciplinaire grave.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🎯 10h30 — Beaconing C2 confirmé",
+      "situation": "Filtre SNI <code>workers.dev</code> appliqué :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Résultats du filtre :</strong><br><br>\n📊 Domaine identifié : <code>wnoufqebrm.workers.dev</code> (correspondance avec l'URL décodée base64 de l'analyse RAM)<br>\n📊 IP Cloudflare : <code>104.21.43.158</code><br>\n📊 7 connexions TLS établies sur les 10 minutes de capture<br>\n📊 Intervalle entre connexions : 88s, 91s, 87s, 90s, 89s, 88s, 90s (moyenne 89s ± 2s — beaconing très régulier, jitter minimal)<br>\n📊 Volume par connexion : ~3.2 Ko outbound (POST avec données chiffrées TLS), ~180 octets inbound (probable ACK ou commande courte)<br>\n📊 JA3 fingerprint extrait : <code>e7d705a3286e19ea42f587b344ee6865</code><br>\n📊 Match JA3 abuse.ch ThreatFox : <strong>Gamaredon GammaLoad v3 (2024-2025)</strong><br><br>\n<strong>Calcul de volume exfiltré historique :</strong><br>\n• Compromission active depuis 15 janvier 10h47 → analyse 17 janvier 09h00 = 46h<br>\n• Beaconing toutes les 89s → ~1'860 beacons théoriques<br>\n• 3.2 Ko par beacon outbound → ~6 Mo de données exfiltrées (faible)<br>\n• MAIS : le beaconing inclut potentiellement des phases d'exfiltration plus volumineuses (commande « envoie-moi le document X »)<br>\n• Aucune phase d'exfiltration massive identifiée sur 10 min de capture, donc estimation prudente : <strong>5-50 Mo exfiltrés probablement</strong> sur 46h<br>\n• 6 Mo de Telegram : canal secondaire — exfiltration de fichiers ou commandes spécifiques\n</div>",
+      "law": "<strong>Art. 269 CPP</strong> — Surveillance des télécommunications.<br><strong>Art. 271 CP</strong> — Actes exécutés sans droit pour un État étranger (applicable à Gamaredon = FSB).<br><strong>MITRE ATT&CK</strong> — T1071.001 Web Protocols, T1041 Exfiltration Over C2.",
+      "question": "<strong>Vous avez confirmation Gamaredon. Quelles sont vos 3 actions immédiates ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Compilation des IOC pour partage threat intel : URLs (<code>wnoufqebrm.workers.dev</code> + Telegram bot IPs), JA3 hash, hash de update.dat (binaire téléchargé), TTP MITRE. Format STIX 2.1. (2) Partage canaux fermés : OFCS / OFCS / GovCERT en priorité (alerte sectorielle ONG aide UA), MISP communautés sectorielles, bilatéraux Sekoia / Mandiant (qui pourront enrichir l'attribution). (3) Demande au procureur Daudin d'extension d'autorisation art. 269 CPP pour surveillance continue temps réel du canal C2 (workers.dev) sur poste « pot de miel » — capturer le trafic C2 en temps réel pour identifier d'éventuelles autres victimes et reconstituer l'infrastructure attaquante. (4) Confirmation à OFCS : attribution Gamaredon « confidence haute » désormais — assez d'éléments pour signalement formel SRC LRens.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Plan d'action senior. (1) Le partage STIX 2.1 est le standard d'échange threat intel structuré — permet l'intégration directe dans les SIEM/EDR des partenaires. (2) OFCS / GovCERT en priorité fait sens (cellule suisse) et permet l'alerte sectorielle aux autres ONG potentiellement ciblées sans nommer la victime. (3) L'extension art. 269 CPP pour pot de miel temps réel est une mesure avancée mais légitime : on observe l'attaquant sans qu'il sache, on identifie d'autres victimes et infrastructure. Le TMC peut accorder. (4) Le passage à « confidence haute » pour l'attribution est justifié par la convergence : 5 TTP + 3 YARA + JA3 ThreatFox + comportement beaconing + cible (ONG UA) — c'est désormais 8-10 indicateurs corroborants. Les autorisations TMC pour surveillance d'infrastructure attaquante (et non d'individus identifiés) sont juridiquement délicates en CH. Les opérations historiques comparables (Crypto AG / Operation Rubicon, Operation Trojan Shield) étaient des opérations de renseignement, pas des enquêtes pénales — le cadre juridique est différent. La doctrine récente nuance l'application. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 269 CPP — extension dans le cadre légal. LRens — signalement SRC qualifié. LSI — escalade OFCS.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "On a Gamaredon. Je publie un thread Twitter avec les IOC pour partager rapidement avec la communauté threat intel mondiale. Plus c'est partagé, mieux c'est défendu pour tous.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur de canal de partage. (1) Twitter cyber est ouvert ET surveillé par les opérateurs APT. Publier les IOC signale immédiatement à Gamaredon qu'il est repéré sur cette infrastructure spécifique. Workers.dev change en 30 minutes, Telegram bot est révoqué, JA3 modifié à la prochaine compilation. Vous tuez votre enquête en temps réel. (2) La règle du partage threat intel : public seulement quand l'infrastructure est morte (l'attaquant a déjà bougé) OU quand l'effet d'alerte large vaut la perte de fenêtre tactique (rare). (3) En enquête active, on partage en canaux fermés (MISP, STIX/TAXII partenaires, bilatéraux directs). Twitter c'est en POST-mortem, après attribution publique formelle de l'État (typiquement par fedpol+SRC), pas en cours d'enquête. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP — secret enquête violé. Risque de compromission de la fenêtre tactique.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "On finalise le rapport interne et on attend les décisions hiérarchiques. Pas la peine de partager pour l'instant — on garde l'avantage tactique.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sur-prudence. Partager via canaux FERMÉS (OFCS / GovCERT, MISP, bilatéraux) ne compromet PAS l'avantage tactique — c'est précisément le contraire : (1) les partenaires (Sekoia, Mandiant) peuvent enrichir l'attribution avec leurs données, (2) OFCS / GovCERT peut détecter d'autres victimes suisses et créer un dossier consolidé plus solide pour le procureur, (3) le partage avec OFCS déclenche les alertes sectorielles (autres ONG soutenant UA en CH) sans nommer votre victime. La frontière est : public (Twitter, VT) = NON, fermé (MISP, OFCS / GovCERT, bilatéraux) = OUI. Garder pour soi des IOC qualifiés en sachant qu'autres victimes existent peut-être = manquement éthique et professionnel. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais inefficacité opérationnelle et possible manquement à la coopération attendue (LSI, principe de coopération).",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📐 13h00 — Volume historique et autres victimes",
+      "situation": "OFCS / GovCERT / OFCS / GovCERT vient de vous rappeler suite à votre partage. Surprise :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Information OFCS / GovCERT :</strong><br><br>\n📞 « Insp.-chef, votre JA3 <code>e7d705a3286e19ea42f587b344ee6865</code> matche 2 autres alertes reçues depuis hier soir : (1) une autre ONG romande, plus petite, à Genève, qui finance également l'aide en Ukraine — pas encore signalé formellement, alerte interne reçue de leur IT prestataire ; (2) un think tank à Berne qui publie sur les questions est-européennes. »<br>\n📞 « On est probablement sur une campagne ciblée. Sekoia TDR confirme avoir vu cette infrastructure utilisée dans 3 autres campagnes européennes ce trimestre. »<br><br>\n<strong>Implications pour votre enquête :</strong><br>\n🎯 Vous n'êtes plus dans un cas isolé — c'est une campagne suisse identifiée<br>\n🎯 Solidarité Dnipro est UNE victime parmi 3 (probablement plus)<br>\n🎯 Coordination interne SUISSE devient nécessaire — qui pilote ?<br>\n🎯 Hélène Bourquin et les autres directions ONG doivent être informées de manière coordonnée<br>\n🎯 Dimension EIMP avec Ukraine devient pertinente (potentiellement les attaquants opèrent depuis Russie via la frontière, et leurs cibles ukrainiennes sont aussi à informer)\n</div>",
+      "law": "<strong>LSI</strong> — Coordination OFCS en cas de campagne sectorielle.<br><strong>LRens / 13</strong> — Signalement SRC pour suspicion d'opération étatique étrangère.<br><strong>EIMP</strong> — Entraide judiciaire internationale.<br><strong>Convention de Budapest 2001</strong> — Cybercriminalité, coopération internationale.",
+      "question": "<strong>Comment positionnez-vous votre enquête maintenant face à la dimension campagne ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Coordination ascendante : votre dossier reste cantonal (Polcant VD a la compétence territoriale, ONG Solidarité Dnipro est à Lausanne), mais OFCS / GovCERT pilote la coordination THREAT INTEL inter-victimes. Vous restez en charge de l'aspect judiciaire pour votre victime. (2) OFCS / GovCERT alerte les 2 autres victimes via canaux directs (police cantonale Genève et Berne). Chaque police cantonale ouvre son dossier en parallèle, avec coordination informelle. (3) MPC (Ministère public de la Confédération) à informer : si dimension fédérale (atteintes coordonnées au pays), le MPC peut joindre les dossiers pour cohérence (art. 24 CPP). (4) SRC : escalade en cours, briefing prévu mardi avec niveau d'attribution « confidence haute » documenté. (5) Communication Hélène Bourquin : vous lui annoncez (en termes mesurés) qu'elle n'est pas seule, sans donner les autres noms.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Structure de coordination correcte. (1) Vous gardez la compétence locale (Polcant VD) sans tenter de monter en compétence fédérale prématurément, mais vous laissez OFCS piloter la coordination threat intel — c'est son rôle. (2) Coordination informelle inter-cantonale est la voie suisse standard ; chaque dossier suit sa procédure cantonale mais l'info circule. (3) Le MPC peut effectivement joindre les dossiers (art. 24 CPP) si la dimension fédérale est confirmée — c'est une décision du Procureur général de la Confédération, à anticiper. (4) Escalade SRC graduelle, sans précipitation. (5) Communication à Hélène est gérée avec tact : elle a besoin de savoir qu'elle n'est pas seule (effet humain), mais pas qui sont les autres (confidentialité, secret enquête). Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 24 CPP — possibilité de jonction MPC. LSI — coordination OFCS. LRens — escalade SRC. Art. 73 CPP — confidentialité respectée.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Vu que c'est une campagne fédérale, je transfère immédiatement le dossier au MPC et à fedpol. Polcant VD se retire, on n'a pas la compétence pour ce niveau.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Délégation excessive. (1) La compétence territoriale du Polcant VD sur Solidarité Dnipro (Lausanne) reste valable même si campagne multi-cantons — chaque canton garde le sien, avec coordination. (2) Le MPC ne « reprend » pas un dossier automatiquement parce qu'il y a 3 victimes — il faut une décision motivée d'art. 24 CPP basée sur des critères précis (atteinte fédérale, complexité requérant coordination). (3) « Polcant VD se retire » : la victime (Hélène et son ONG) perdrait l'interlocuteur de confiance qu'elle a depuis le 15 janvier — dégradation de la relation, risque de moindre coopération. (4) Le travail technique fait (analyse RAM, PCAP, IOC) est consolidé dans votre dossier — passer le tout au MPC sans accompagnement = perte de continuité. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Art. 24 CPP — jonction MPC : décision motivée, pas transfert spontané. Continuité d'enquête compromise.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "On est sur une affaire d'État, c'est urgent. Je convoque une conférence de presse demain matin pour informer le public et les ONG suisses du risque Gamaredon — c'est de l'intérêt public.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Violation procédurale grave et précipitation. (1) Conférence de presse en enquête en cours = VIOLATION explicite art. 73 CPP (secret enquête). Pour informer le public, ce n'est PAS le rôle de l'enquêteur cantonal — c'est celui du procureur (rare en cours d'enquête) ou du OFCS/SRC dans une déclaration formelle nationale (très rare). (2) L'attaquant assistera à votre conférence de presse via les flux — vous ruinez immédiatement la fenêtre tactique sur les 3+ victimes encore actives. (3) Mauvaise gouvernance institutionnelle : un enquêteur cantonal ne convoque pas seul de conférence de presse sur une affaire impliquant LRens / fed dimensions. La presse appellera le DFAE, fedpol, le OFCS qui seront pris au dépourvu — dégât réputationnel pour le service. Le « intérêt public » de l'information existe mais se communique par canaux institutionnels coordonnés, jamais sur initiative individuelle. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP violé. LRens art. 4 (gouvernance institutionnelle). Risque disciplinaire majeur.",
+          "critical": true,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

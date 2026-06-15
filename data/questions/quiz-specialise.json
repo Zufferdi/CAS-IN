@@ -1,597 +1,542 @@
 [
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Containers & Virtualisation",
+    "chapter": "Compass Security",
     "diff": "easy",
     "type": "single",
-    "q": "Sur Linux, les containers Docker s'appuient sur quels mécanismes du noyau pour isoler les processus et leurs ressources ?",
+    "q": "Où est situé le siège de l'entreprise suisse Compass Security (cybersécurité, fondée 1999) ?",
     "opts": [
-      "VirtualBox + VMware Tools",
-      "Namespaces + cgroups",
-      "Hyper-V + WSL2",
-      "iptables uniquement"
+      "Genève",
+      "Rapperswil-Jona (Saint-Gall)",
+      "Zurich",
+      "Berne"
     ],
-    "answers": [1],
-    "expl_ok": "Docker s'appuie sur deux primitives Linux : <strong>namespaces</strong> (isolation : PID, network, mount, UTS, IPC, user, cgroup) et <strong>cgroups</strong> (limitation CPU, RAM, I/O). C'est ce qui rend Docker beaucoup plus léger qu'une VM (pas de noyau dédié) — mais aussi plus exposé : <strong>tous les containers partagent le noyau de l'hôte</strong>. Conséquence forensique : <code>docker exec</code>, <code>nsenter</code> et l'inspection des <code>cgroups</code> permettent d'extraire des artefacts sans arrêter le container.",
-    "expl_ko": "Docker = namespaces (isolation) + cgroups (ressources). Pas un noyau dédié comme une VM — l'hôte voit tout.",
-    "refs": ["Linux kernel — namespaces(7)", "Docker — Engine Architecture"],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Compass Security a son siège à <strong>Rapperswil-Jona (canton de Saint-Gall)</strong>. Fondée en 1999 par Walter Sprenger et Ivan Bütler. Bureaux additionnels à Zurich, Berne, Bâle, Berlin et Toronto. ~55 employés. L'un des leaders cybersécurité en Suisse.",
+    "expl_ko": "Siège = Rapperswil-Jona (SG). Compass Security est issue de la communauté Hacking-Lab AG.",
+    "refs": [
+      "compass-security.com",
+      "Moneyhouse Compass Security Schweiz AG"
+    ],
     "feedback": {
-      "0": "VirtualBox/VMware sont des hyperviseurs (VMs), pas Docker.",
-      "2": "Hyper-V est l'hyperviseur Windows ; WSL2 utilise Hyper-V mais n'est pas la base Docker Linux.",
-      "3": "iptables gère le pare-feu réseau ; insuffisant pour l'isolation processus/fs/users."
+      "0": "Pas de bureau Compass Security à Genève — pour le Valais le bureau Berne est le plus proche.",
+      "2": "Bureau Zurich existe, mais le siège est à Rapperswil-Jona.",
+      "3": "Bureau Berne existe, mais le siège est à Rapperswil-Jona."
     },
-    "fiches": ["docker_kubernetes_forensique"]
+    "fiches": [
+      "ics_forensique"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Containers & Virtualisation",
-    "diff": "medium",
-    "type": "multi",
-    "q": "Vous enquêtez sur un hôte Linux compromis avec containers Docker actifs. Quelles approches d'acquisition sont valables sans arrêter les containers ? (plusieurs réponses)",
-    "opts": [
-      "<code>docker inspect &lt;container&gt;</code> pour métadonnées complètes",
-      "<code>docker logs &lt;container&gt;</code> pour stdout/stderr",
-      "<code>docker exec -it &lt;container&gt; /bin/sh</code> pour live forensics",
-      "<code>docker commit &lt;container&gt; forensic-snapshot</code> pour figer l'état",
-      "Reformater le disque hôte"
-    ],
-    "answers": [0, 1, 2, 3],
-    "expl_ok": "Acquisition <strong>live</strong> d'un container Docker : (1) <code>docker inspect</code> = configuration, network, volumes, mounts (JSON complet). (2) <code>docker logs</code> = stdout/stderr capturé. (3) <code>docker exec</code> = shell live pour exécuter <code>ps</code>, <code>netstat</code>, lister <code>/proc</code>, dump des artefacts. (4) <code>docker commit</code> = créer une image-snapshot exportable avec <code>docker save</code> en .tar. Côté hôte : artefacts dans <code>/var/lib/docker/containers/&lt;id&gt;/</code> (config.v2.json, hostconfig.json, logs). Pour les containers arrêtés : <code>docker container inspect</code> + le filesystem dans <code>/var/lib/docker/overlay2/</code>.",
-    "expl_ko": "Triade live Docker : <strong>inspect + logs + exec</strong>. + <code>docker commit</code> pour figer l'état. Reformater l'hôte détruit toutes les preuves.",
-    "refs": ["Docker — docker commit reference", "DFIR — Container Forensics"],
-    "feedback": {
-      "4": "Reformater = destruction de preuves, interdit en forensique."
-    },
-    "fiches": ["docker_kubernetes_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Réseau forensique",
+    "chapter": "Protocoles industriels",
     "diff": "medium",
     "type": "single",
-    "q": "Un attaquant exfiltre des données via <strong>DNS tunneling</strong>. Quel pattern dans les logs DNS permet de détecter cette technique ?",
+    "q": "Le protocole BACnet (Building Automation and Control Networks) utilisé dans les HVAC d'hôpitaux et bâtiments écoute par défaut sur quel port TCP ?",
     "opts": [
-      "Faible volume de requêtes vers des domaines connus",
-      "Requêtes de sous-domaines très longs encodés Base32/Base64, volume anormal vers un même domaine de second niveau",
-      "Uniquement des requêtes A vers google.com",
-      "Aucun signe observable"
+      "Port 102 (Siemens S7)",
+      "Port 502 (Modbus)",
+      "Port 10001 (ATG Veeder-Root)",
+      "Port 47808 (BACnet/IP)"
     ],
-    "answers": [1],
-    "expl_ok": "Signes typiques du <strong>DNS tunneling</strong> (Iodine, dnscat2, OzymanDNS) : (1) <strong>Sous-domaines très longs</strong> (50+ caractères), encodés en Base32/Base64 — le data utile est dans le label DNS. (2) <strong>Volume anormal</strong> vers un même domaine 2LD (parfois 1000+ requêtes/min). (3) <strong>Type TXT/NULL/CNAME</strong> inhabituel (les réponses contiennent les commandes C2). (4) <strong>Entropie élevée</strong> des labels (vs noms de domaines humains). Détection : Splunk/Elastic avec règles sur la longueur de la query, ratio NXDOMAIN, fréquence, ou ML (Anomalize). MITRE ATT&CK <strong>T1071.004</strong>.",
-    "expl_ko": "DNS tunneling = sous-domaines longs et aléatoires + volume anormal. Bypass typique des proxies HTTPS qui laissent passer le DNS sortant.",
-    "refs": ["MITRE ATT&CK T1071.004 — DNS Tunneling", "SANS — Detecting DNS Tunneling"],
+    "answers": [
+      3
+    ],
+    "expl_ok": "<strong>Port 47808 (UDP/TCP)</strong> est le port standard BACnet/IP, utilisé pour le contrôle HVAC (chauffage, ventilation, climatisation) dans les bâtiments. Présent dans Schneider EcoStruxure, Honeywell, Siemens Desigo. La saga 4 référence ce protocole pour l'hôpital cantonal d'Aarau.",
+    "expl_ko": "BACnet/IP = port 47808. Les autres ports correspondent à d'autres protocoles OT/ICS.",
+    "refs": [
+      "ASHRAE BACnet standard",
+      "MITRE ATT&CK for ICS"
+    ],
     "feedback": {
-      "0": "Au contraire — c'est le volume ANORMAL qui révèle l'attaque.",
-      "2": "Trafic légitime classique, pas un IOC.",
-      "3": "Faux — plusieurs signes observables, c'est même un cas d'école en NDR."
+      "0": "Port 102 = Siemens S7-1200/1500.",
+      "1": "Port 502 = Modbus.",
+      "2": "Port 10001 = ATG Veeder-Root."
     },
-    "fiches": ["dns_forensique_avance"]
+    "fiches": [
+      "ics_forensique"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Réseau forensique",
-    "diff": "easy",
-    "type": "single",
-    "q": "Quelle technologie chiffre les requêtes DNS sur le port 443 en les enveloppant dans HTTPS, rendant l'inspection passive impossible ?",
-    "opts": [
-      "DoT (DNS over TLS, port 853)",
-      "DoH (DNS over HTTPS, port 443)",
-      "DNSSEC",
-      "DoS (DNS over Sockets)"
-    ],
-    "answers": [1],
-    "expl_ok": "<strong>DoH</strong> (DNS over HTTPS, RFC 8484) encapsule les requêtes DNS dans des connexions HTTPS standard sur le port 443. Conséquence : indistinguable du trafic HTTPS normal côté proxy/firewall. Adopté par Firefox (2018), Chrome, Edge, Cloudflare (1.1.1.1), Google (8.8.8.8). À distinguer de <strong>DoT</strong> (port 853, identifiable) et <strong>DNSSEC</strong> (signature d'authenticité, mais pas de chiffrement). Implication forensique : le DNS chiffré masque les requêtes aux outils de monitoring classiques — passer par la capture SNI/JA3 sur HTTPS ou imposer un résolveur DNS d'entreprise.",
-    "expl_ko": "DoH = port 443 = invisible côté réseau. DoT = port 853 = bloquable mais identifiable. DNSSEC ≠ chiffrement, c'est de la signature.",
-    "refs": ["RFC 8484 — DoH", "RFC 7858 — DoT", "Cloudflare — DNS Resolver 1.1.1.1"],
-    "feedback": {
-      "0": "DoT utilise le port 853 distinct — identifiable au réseau.",
-      "2": "DNSSEC signe l'intégrité, ne chiffre rien.",
-      "3": "« DoS » est l'attaque déni de service, pas un protocole DNS."
-    },
-    "fiches": ["dns_forensique_avance"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Systèmes spéciaux",
-    "diff": "easy",
-    "type": "single",
-    "q": "Lors d'une perquisition, vous trouvez une Apple Watch d'un suspect. Quel type d'artefacts forensiques peut-elle révéler ?",
-    "opts": [
-      "Aucun — c'est juste une montre",
-      "Géolocalisation, fréquence cardiaque, pas effectués, notifications miroir de l'iPhone, données santé (Activity.app)",
-      "Uniquement l'heure",
-      "Le mot de passe iCloud en clair"
-    ],
-    "answers": [1],
-    "expl_ok": "L'Apple Watch est un témoin numérique riche : <strong>géolocalisation</strong> (GPS depuis Series 2+ ; sinon via iPhone appairé), <strong>biométrie</strong> (fréquence cardiaque continue, ECG depuis Series 4, SpO2 depuis Series 6), <strong>activité physique</strong> (pas, distance, calories), <strong>notifications miroir</strong> de l'iPhone (SMS, iMessage, emails), <strong>Wallet/Apple Pay</strong> (transactions), <strong>messages dictés</strong>. Les données sont synchronisées avec l'<strong>app Santé iPhone</strong> (<code>healthdb_secure.sqlite</code>) et iCloud. Cas d'enquête : MJ Burns (2018, USA) — une Apple Watch a permis de placer le suspect sur la scène à la minute près.",
-    "expl_ko": "Wearable = riche : géoloc + biométrie + activité + notifications miroir. Toujours saisir la montre ET le smartphone appairé.",
-    "refs": ["Apple — HealthKit Documentation", "Sarah Edwards — Apple Watch Forensics"],
-    "feedback": {
-      "0": "Une smartwatch moderne est un mini-ordinateur avec capteurs.",
-      "2": "Bien plus que l'heure — c'est un témoin biométrique et géolocalisé.",
-      "3": "Faux — les mots de passe iCloud ne sont jamais stockés en clair."
-    },
-    "fiches": ["iot_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Systèmes spéciaux",
+    "chapter": "OFCS et coordination",
     "diff": "medium",
     "type": "single",
-    "q": "Sur une Tesla saisie après un accident, quels artefacts forensiques peut-on extraire ?",
+    "q": "Qui est le directeur de l'OFCS (Office fédéral de la cybersécurité) depuis sa création en 2024 ?",
     "opts": [
-      "Rien — Tesla chiffre tout",
-      "Logs MCU/IC (Media Control Unit / Instrument Cluster), Autopilot logs, vidéos Sentry Mode/Dashcam, EDR (Event Data Recorder), historique de charge/position",
-      "Uniquement la batterie",
-      "Le numéro de série uniquement"
+      "Pascal Strupler",
+      "Florian Schütz",
+      "Viola Amherd",
+      "Andreas Würgler"
     ],
-    "answers": [1],
-    "expl_ok": "Une Tesla contient plus de 100 ECU et stocke abondamment : <strong>MCU</strong> (Media Control Unit — Linux/Ubuntu modifié, contient cartes, contacts, calendriers, navigation, journaux d'utilisation), <strong>IC</strong> (Instrument Cluster), <strong>Autopilot</strong> (logs des décisions du système, capteurs caméras/radar), <strong>Sentry Mode + Dashcam</strong> (vidéos haute résolution stockées sur clé USB ou mémoire interne, prévisualisables jusqu'à ~1h en boucle), <strong>EDR</strong> (Event Data Recorder type SAE J1698-3 : vitesse, accélération, freinage, ceinture — 30s avant impact en général). Tesla coopère avec NHTSA/police via leur portail Tesla Service. Outils : Berla iVe + Tesla USB extraction.",
-    "expl_ko": "Tesla = mine d'or forensique : MCU + Sentry Mode (vidéos) + EDR + Autopilot logs. Berla iVe est l'outil commercial standard.",
-    "refs": ["Tesla — Vehicle Data Privacy", "Berla iVe — Vehicle Forensics", "NHTSA — EDR Guidelines"],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Florian Schütz</strong> est directeur de l'OFCS depuis le 1er janvier 2024 (nommé le 24 mai 2023). Auparavant chef du NCSC (depuis 2019) et délégué fédéral à la cybersécurité.",
+    "expl_ko": "Florian Schütz = directeur OFCS. Pascal Strupler était directeur de l'OFSP. Viola Amherd = Conseillère fédérale DDPS.",
+    "refs": [
+      "OFCS organigramme",
+      "DDPS communications"
+    ],
     "feedback": {
-      "0": "Tesla coopère avec les autorités via Tesla Service Portal.",
-      "2": "Faux — c'est un ordinateur complet sur roues.",
-      "3": "Très réducteur — le VIN n'est qu'un identifiant."
+      "0": "Pascal Strupler = ancien directeur OFSP (santé), pas OFCS.",
+      "2": "Viola Amherd = Conseillère fédérale, supervise le DDPS.",
+      "3": "Nom inventé."
     },
-    "fiches": ["vehicules_forensique", "iot_forensique"]
+    "fiches": [
+      "autorites_competences_ch"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Systèmes spéciaux",
+    "chapter": "Cyber Av3ngers — campagnes",
     "diff": "hard",
     "type": "single",
-    "q": "Vous saisissez une VM VMware au format VMDK avec plusieurs snapshots. Quel est le principal écueil forensique à éviter ?",
+    "q": "Quel équipement industriel Cyber Av3ngers a-t-il principalement ciblé lors de la campagne novembre 2023 aux États-Unis (alerte CISA AA23-335A) ?",
     "opts": [
-      "Démarrer la VM pour vérifier qu'elle fonctionne",
-      "Ne pas considérer la chaîne de snapshots (<code>-flat.vmdk</code>, <code>-000001.vmdk</code>, <code>-000002.vmdk</code>) : chaque snapshot est un delta — il faut soit consolider, soit analyser dans l'ordre",
-      "Renommer les fichiers",
-      "Convertir en RAW"
+      "Veeder-Root TLS-350 (jauges carburant)",
+      "Unitronics Vision PLC (logique programmable)",
+      "Siemens S7-1500 (automates)",
+      "Schneider Modicon (contrôleurs industriels)"
     ],
-    "answers": [1],
-    "expl_ko": "Au moins 3 fichiers compagnons critiques pour un VMDK : <code>-flat.vmdk</code> (base), <code>-delta.vmdk</code> ou <code>-000001.vmdk</code>, <code>-000002.vmdk</code> (snapshots successifs). Chaque snapshot ne contient que les <strong>blocs modifiés depuis le snapshot précédent</strong>. Pour analyser : (1) soit <strong>consolider</strong> avec <code>vmware-vdiskmanager -r</code> (mais altère, à faire sur copie hashée), (2) soit <strong>analyser dans l'ordre temporel</strong> pour reconstruire les états successifs (chaque snapshot = un point dans le temps). Format alternatif : VHDX (Hyper-V) avec parent/child analogues, QCOW2 (KVM/QEMU) avec backing chain.",
-    "expl_ok": "Snapshots VMware = chaîne de deltas. <strong>Toujours préserver TOUS les fichiers</strong> du dossier VM avant analyse. Démarrer la VM ferait perdre des états.",
-    "refs": ["VMware — Virtual Disk Format Specification", "SANS FOR526 — Memory Forensics"],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Unitronics Vision PLC</strong> (logique programmable israélienne) a été la cible principale en novembre 2023. Cyber Av3ngers a notamment touché la Municipal Water Authority of Aliquippa (Pennsylvania) — premier cas qui a déclenché l'alerte CISA AA23-335A. Choix de cible motivé : Unitronics est israélien, donc politiquement chargé pour ce groupe pro-iranien.",
+    "expl_ko": "Cible principale = Unitronics PLC. La motivation politique (Unitronics = entreprise israélienne) est claire.",
+    "refs": [
+      "CISA Alert AA23-335A",
+      "FBI advisories Cyber Av3ngers"
+    ],
     "feedback": {
-      "0": "Démarrer modifie l'horloge, lance les services, écrit dans les logs = perte d'état.",
-      "2": "Casserait les références entre fichiers compagnons.",
-      "3": "Conversion possible mais à faire sur copie, et après avoir compris la chaîne."
+      "0": "Veeder-Root est cible plus large (toutes nationalités) mais pas la cible principale Nov 2023.",
+      "2": "Siemens cible secondaire mais pas principale pour Cyber Av3ngers.",
+      "3": "Schneider cible secondaire."
     },
-    "fiches": ["vm_forensique"]
+    "fiches": [
+      "ics_forensique",
+      "malware_forensique"
+    ]
   },
   {
-    "theme": "Spécificité des OS",
-    "theme_icon": "🖥️",
-    "chapter": "Windows Subsystem for Linux",
-    "diff": "medium",
-    "type": "single",
-    "q": "Un attaquant utilise WSL2 sur un Windows pour échapper aux EDR. Où est stocké le filesystem ext4 de la distribution Linux WSL2 ?",
-    "opts": [
-      "Dans <code>C:\\Linux\\</code>",
-      "Dans un fichier <code>ext4.vhdx</code> sous <code>%USERPROFILE%\\AppData\\Local\\Packages\\&lt;DistroID&gt;\\LocalState\\</code>",
-      "Sur une partition ext4 native",
-      "Dans le cloud Microsoft"
-    ],
-    "answers": [1],
-    "expl_ko": "WSL2 utilise un fichier image disque virtuel <strong><code>ext4.vhdx</code></strong> géré par Hyper-V, situé sous <code>%USERPROFILE%\\AppData\\Local\\Packages\\&lt;DistroID&gt;\\LocalState\\</code> (par exemple <code>CanonicalGroupLimited.UbuntuonWindows_*</code>). Le fichier est verrouillé tant que la VM WSL tourne. Pour analyser : (1) arrêter WSL avec <code>wsl --shutdown</code>, (2) monter le VHDX avec <code>Mount-VHD</code> ou <code>guestmount</code> sur copie, (3) parser l'ext4 (Autopsy, fls/icat). Détecter l'usage WSL : EID 4688 avec <code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code> ; clés registre <code>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</code>.",
-    "expl_ok": "<code>ext4.vhdx</code> dans AppData = filesystem complet WSL2. Verrouillé en cours d'usage → toujours <code>wsl --shutdown</code> avant copie forensique.",
-    "refs": ["Microsoft — WSL Architecture", "DFIR Report — WSL forensics"],
-    "feedback": {
-      "0": "Pas un chemin Windows standard, et WSL n'utilise pas ce dossier.",
-      "2": "WSL2 utilise un VHDX (image disque), pas une partition native (c'était WSL1).",
-      "3": "Local seulement, pas cloud."
-    },
-    "fiches": ["wsl_forensique"]
-  },
-  {
-    "theme": "Spécificité des OS",
-    "theme_icon": "🖥️",
-    "chapter": "USB Forensique Windows",
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "Insomni'Hack",
     "diff": "easy",
     "type": "single",
-    "q": "Quel emplacement du registre Windows conserve la <strong>liste complète des périphériques USB</strong> ayant déjà été connectés à la machine ?",
+    "q": "Quelle est la conférence de cybersécurité suisse majeure organisée annuellement à Genève par SCRT ?",
     "opts": [
-      "<code>HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\USB</code>",
-      "<code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR</code> (périphériques de stockage) + <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USB</code> (tous USB)",
-      "<code>HKCU\\Network\\USB</code>",
-      "<code>C:\\Windows\\System32\\usb.log</code>"
+      "Hack-in-Bern",
+      "Insomni'Hack",
+      "CyberGeneva",
+      "SwissHack Forum"
     ],
-    "answers": [1],
-    "expl_ok": "Windows historise tous les USB dans <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR\\</code> (stockage : clés, disques externes) et <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USB\\</code> (tous USB : HID, audio…). Chaque entrée est nommée <code>Disk&Ven_KINGSTON&Prod_DTXM30&Rev_PMAP\\&lt;Serial&gt;</code>. <strong>Triade USB</strong> : VID (Vendor ID, 4 hex), PID (Product ID, 4 hex), Serial (numéro unique). Complémentaire : <code>setupapi.dev.log</code> (premier branchement avec timestamp), <code>HKLM\\SYSTEM\\MountedDevices</code> (lettre de drive), <code>NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MountPoints2\\</code> (par user).",
-    "expl_ko": "Mémo USB : <strong>USBSTOR (stockage) + USB (tous) + setupapi.dev.log + MountedDevices + MountPoints2</strong>.",
-    "refs": ["Microsoft — Device Enumeration", "Eric Zimmerman — Registry Explorer / USBDeview"],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Insomni'Hack</strong> est la conférence cybersécurité majeure suisse, organisée annuellement à Genève par SCRT depuis 2008. CTF de renommée internationale + conférences techniques + ateliers. Référence pour la communauté DFIR / pentest suisse romande.",
+    "expl_ko": "Insomni'Hack = la conf' suisse de référence. Les autres noms sont inventés.",
+    "refs": [
+      "insomnihack.ch",
+      "SCRT Genève"
+    ],
     "feedback": {
-      "0": "Pas le bon chemin.",
-      "2": "HKCU\\Network n'a aucun rapport.",
-      "3": "Il n'y a pas de fichier usb.log dans System32."
+      "0": "Nom inventé.",
+      "2": "Nom inventé.",
+      "3": "Nom inventé."
     },
-    "fiches": ["usb_forensique", "usb_removable_media_forensique"]
+    "fiches": [
+      "methodologie"
+    ]
   },
   {
-    "theme": "Spécificité des OS",
-    "theme_icon": "🖥️",
-    "chapter": "USB Forensique Windows",
-    "diff": "medium",
-    "type": "multi",
-    "q": "Pour <strong>attribuer un branchement USB à un utilisateur précis</strong> (et pas seulement à la machine), quels artefacts croisez-vous ? (plusieurs réponses)",
-    "opts": [
-      "<code>NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MountPoints2</code> (par user)",
-      "Logs Security EID 6416 (External Device Recognized) + EID 4624 (logon session de l'utilisateur)",
-      "Shellbags de l'utilisateur (accès à \\\\?\\Volume{GUID}\\ correspondant)",
-      "Jump Lists / RecentDocs de l'utilisateur référençant la lettre de drive",
-      "Le poids du périphérique"
-    ],
-    "answers": [0, 1, 2, 3],
-    "expl_ok": "Attribuer USB ↔ user nécessite de croiser plusieurs sources : (1) <strong>MountPoints2</strong> dans NTUSER.DAT (par utilisateur) = clés <code>{GUID}</code> avec timestamps last-write. (2) <strong>EID 6416 + 4624</strong> = corrélation horaire « tel device + telle session active ». (3) <strong>Shellbags</strong> = preuve de navigation dans l'arborescence du périphérique. (4) <strong>Jump Lists / RecentDocs</strong> = ouverture de fichiers depuis la clé. Le tout horodaté à la seconde permet d'établir qui a branché et utilisé l'USB. Outils : RegRipper, USBDeview, JLECmd (Zimmerman).",
-    "expl_ko": "Attribution USB ↔ user = <strong>MountPoints2 + EID + shellbags + Jump Lists</strong>. Aucun seul ne suffit ; c'est la corrélation qui fait la preuve.",
-    "refs": ["SANS FOR500 — USB Attribution", "NIST SP 800-86 — Integration of Forensic Techniques"],
-    "feedback": {
-      "4": "Le poids est sans valeur forensique."
-    },
-    "fiches": ["usb_forensique", "usb_removable_media_forensique"]
-  },
-  {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Documents bureautiques",
-    "diff": "easy",
+    "chapter": "MITRE ATT&CK",
+    "diff": "medium",
     "type": "single",
-    "q": "Le format Office moderne (.docx, .xlsx, .pptx) est en réalité quel type de fichier ?",
+    "q": "Quelle technique MITRE ATT&CK correspond à l'utilisation des Alternate Data Streams NTFS pour cacher du code malveillant ?",
     "opts": [
-      "Format binaire propriétaire Microsoft",
-      "Une archive ZIP contenant des fichiers XML (Office Open XML — OOXML, ISO/IEC 29500)",
-      "Un format texte UTF-8",
-      "Un format vectoriel SVG étendu"
+      "T1027 — Obfuscated Files or Information",
+      "T1055 — Process Injection",
+      "T1564.004 — Hide Artifacts: NTFS File Attributes",
+      "T1059 — Command and Scripting Interpreter"
     ],
-    "answers": [1],
-    "expl_ok": "Depuis Office 2007, les formats <strong>OOXML</strong> (.docx/.xlsx/.pptx) sont des <strong>archives ZIP</strong> normalisées <strong>ISO/IEC 29500</strong>. Renommer en .zip ou ouvrir avec 7-Zip révèle : <code>[Content_Types].xml</code>, <code>_rels/</code>, <code>docProps/core.xml</code> (auteur, dates, version), <code>docProps/app.xml</code> (template, app, lignes/mots), <code>word/document.xml</code> (contenu principal). Implication forensique : tracked changes (<code>w:ins</code>, <code>w:del</code>), commentaires, propriétés cachées sont tous extractibles. Outils : <code>oletools</code>, <code>oledump.py</code> (legacy .doc/.xls), <code>python-docx</code>, <code>exiftool</code>.",
-    "expl_ko": "OOXML = ZIP + XML. Renommer .docx → .zip pour explorer. Toutes les métadonnées dans <code>docProps/core.xml</code>.",
-    "refs": ["ISO/IEC 29500 — Office Open XML File Formats", "Microsoft — OOXML Documentation"],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>T1564.004 — Hide Artifacts: NTFS File Attributes</strong> couvre spécifiquement l'utilisation des ADS NTFS pour cacher des fichiers ou du code. Sous-technique de T1564 (Hide Artifacts).",
+    "expl_ko": "La technique est T1564.004. T1027 est l'obfuscation générale, T1055 le process injection, T1059 l'interpréteur de commandes.",
+    "refs": [
+      "MITRE ATT&CK T1564.004",
+      "Sekoia threat intel reports"
+    ],
     "feedback": {
-      "0": "C'était le cas des anciens .doc/.xls (formats binaires CFBF) — .docx est ZIP+XML depuis 2007.",
-      "2": "Pas du texte plat — c'est binaire (ZIP).",
-      "3": "SVG est totalement différent (graphique vectoriel)."
+      "0": "T1027 est l'obfuscation générale, non spécifique aux ADS.",
+      "1": "T1055 est le process injection, sans rapport avec NTFS.",
+      "3": "T1059 concerne les interpréteurs comme PowerShell."
     },
-    "fiches": ["documents_office_forensique"]
+    "fiches": [
+      "alternate_data_streams",
+      "mitre_attack"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Documents bureautiques",
-    "diff": "medium",
-    "type": "multi",
-    "q": "Vous analysez un .docx suspect. Quels artefacts XML internes sont riches en informations forensiques ? (plusieurs réponses)",
-    "opts": [
-      "<code>docProps/core.xml</code> — auteur, date création, date modification, dernière personne ayant modifié, révision count",
-      "<code>docProps/app.xml</code> — application, template utilisé, lignes/mots/paragraphes",
-      "<code>word/document.xml</code> — corps du document, <code>w:ins</code>/<code>w:del</code> (tracked changes)",
-      "<code>word/comments.xml</code> — commentaires nominatifs avec timestamps",
-      "<code>word/styles.xml</code> — uniquement la mise en forme typographique"
-    ],
-    "answers": [0, 1, 2, 3],
-    "expl_ok": "Artefacts forensiques OOXML : (1) <strong>core.xml</strong> — Dublin Core metadata : <code>dc:creator</code>, <code>cp:lastModifiedBy</code>, <code>dcterms:created</code>, <code>dcterms:modified</code>, <code>cp:revision</code>. (2) <strong>app.xml</strong> — <code>Application</code> (ex. Word/Office), <code>Template</code> (souvent révélateur : <code>Normal.dotm</code> normal vs templates corporate), <code>Pages</code>/<code>Words</code>/<code>Characters</code> + <code>TotalTime</code> (minutes d'édition cumulées). (3) <strong>document.xml</strong> — tracked changes avec <code>w:author</code> et <code>w:date</code> par modification. (4) <strong>comments.xml</strong> — auteur + timestamp + texte. <code>styles.xml</code> est utile mais purement typographique.",
-    "expl_ko": "Triade docx : <strong>core + app + document + comments</strong>. Surtout, <code>TotalTime</code> (minutes d'édition) est souvent oublié — révélateur d'une rédaction express ou de copier-coller.",
-    "refs": ["ECMA-376 — OOXML Specification", "Microsoft — File Properties"],
-    "feedback": {
-      "4": "styles.xml n'a pas d'information sur les auteurs ou timestamps — purement typographique."
-    },
-    "fiches": ["documents_office_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "PDF forensique avancé",
+    "chapter": "Détection ADS",
     "diff": "hard",
     "type": "single",
-    "q": "Un PDF suspect a été modifié 3 fois après sa création. Comment retrouve-t-on les <strong>versions précédentes</strong> directement dans le fichier ?",
+    "q": "Quel Event ID Sysmon permet de détecter en temps réel la création d'un Alternate Data Stream ?",
     "opts": [
-      "Impossible — un PDF est immuable",
-      "Via les <strong>Incremental Updates</strong> : chaque sauvegarde ajoute un nouveau xref et un nouveau trailer en fin de fichier — les versions antérieures sont préservées et extractibles",
-      "Dans un fichier .bak séparé",
-      "Sur le cloud Adobe uniquement"
+      "Event ID 1 — Process Create",
+      "Event ID 11 — File Create",
+      "Event ID 15 — FileCreateStreamHash",
+      "Event ID 22 — DNS Query"
     ],
-    "answers": [1],
-    "expl_ok": "Le format <strong>PDF (ISO 32000)</strong> utilise des <strong>incremental updates</strong> : chaque sauvegarde n'écrase pas le fichier mais <strong>ajoute</strong> à la fin un nouveau bloc d'objets + un nouveau <code>xref</code> + un nouveau <code>trailer</code>. Conséquences forensiques majeures : (1) les versions antérieures sont <strong>préservées dans le fichier</strong>, (2) une modification du contenu (tampon ajouté, signature, texte effacé) laisse une trace, (3) on peut <strong>reconstruire l'historique</strong> en parsant chaque section. Outils : <code>pdftk dump_data</code>, <code>peepdf</code>, <code>pdfid.py</code> (Didier Stevens), <code>qpdf --qdf</code> (humanise le fichier).",
-    "expl_ko": "PDF = append-only par incremental updates. Chaque <code>xref</code> + <code>trailer</code> en fin = un point dans le temps. <strong>Plus de xref/trailer = plus de modifications</strong>.",
-    "refs": ["ISO 32000-2:2020 — PDF Format Specification", "Didier Stevens — PDF tools"],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>Sysmon Event ID 15 — FileCreateStreamHash</strong> enregistre la création d'un ADS avec hash MD5/SHA1 du stream créé. C'est l'outil de détection temps réel pour les opérations APT utilisant les ADS.",
+    "expl_ko": "L'Event ID 15 (FileCreateStreamHash) est l'événement spécifique. Les autres événements Sysmon couvrent d'autres aspects (process, fichiers généraux, DNS).",
+    "refs": [
+      "Sysmon documentation Microsoft",
+      "SwiftOnSecurity sysmon-config baseline"
+    ],
     "feedback": {
-      "0": "Faux — PDF n'est pas immuable. Au contraire, il préserve l'historique par construction.",
-      "2": "Pas de .bak — c'est dans le fichier lui-même.",
-      "3": "Pas besoin du cloud — l'historique est local dans le PDF."
+      "0": "Event ID 1 = création de processus.",
+      "1": "Event ID 11 = création de fichier (sans focus stream).",
+      "3": "Event ID 22 = requête DNS."
     },
-    "fiches": ["pdf_forensique_avance"]
+    "fiches": [
+      "alternate_data_streams"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Steganographie",
-    "diff": "medium",
-    "type": "single",
-    "q": "Quelle est la différence fondamentale entre <strong>stéganographie</strong> et <strong>cryptographie</strong> ?",
-    "opts": [
-      "Aucune, ce sont des synonymes",
-      "La cryptographie cache le <strong>contenu</strong> (le message reste visible mais illisible) ; la stéganographie cache l'<strong>existence</strong> du message (porteur d'apparence anodine)",
-      "La stéganographie est plus rapide",
-      "La cryptographie est illégale en Suisse"
-    ],
-    "answers": [1],
-    "expl_ok": "<strong>Cryptographie</strong> = chiffrement (Caesar, AES, RSA…) — le message est manifestement chiffré (« ç%^&*Wq2 ») et l'attaquant sait qu'il y a un secret. <strong>Stéganographie</strong> = dissimulation — le porteur (image PNG, audio WAV, fichier ZIP) paraît anodin, l'existence même du message caché est masquée. Les deux sont complémentaires : on peut chiffrer ET cacher. Techniques classiques : <strong>LSB</strong> (Least Significant Bit dans pixels d'image), <strong>append data after EOF</strong> (concat fichier en fin d'image), <strong>metadata abuse</strong> (EXIF, ID3), <strong>JPEG DCT coefficients</strong> (Steghide, JPHide), <strong>zsteg</strong> pour PNG, <strong>StegOnline</strong>, <strong>stegseek</strong> (bruteforce). Détection : statistical analysis (chi-squared, RS analysis), entropie anormale.",
-    "expl_ko": "Crypto cache le contenu, stégano cache l'existence. <strong>Souvent combinés</strong> : chiffrer puis cacher.",
-    "refs": ["Johnson & Jajodia — Steganography Principles", "Niels Provos — Statistical Steganalysis"],
-    "feedback": {
-      "0": "Faux — concepts distincts complémentaires.",
-      "2": "La vitesse n'est pas le critère.",
-      "3": "La cryptographie est légale en Suisse."
-    },
-    "fiches": ["steganographie"]
-  },
-  {
-    "theme": "Système de fichiers",
-    "theme_icon": "📁",
-    "chapter": "F2FS Android",
-    "diff": "medium",
-    "type": "single",
-    "q": "Pourquoi le système de fichiers <strong>F2FS</strong> (Flash-Friendly File System) est-il incontournable en forensique mobile moderne ?",
-    "opts": [
-      "Parce qu'il est plus rapide qu'ext4 sur HDD",
-      "Parce qu'il est le système de fichiers par défaut de nombreux Android récents (Samsung, Google Pixel) — optimisé pour la NAND flash avec un Log-Structured design",
-      "Parce qu'il fonctionne sur iOS",
-      "Parce qu'il est open-source Microsoft"
-    ],
-    "answers": [1],
-    "expl_ok": "<strong>F2FS</strong> a été développé par Samsung en 2012 spécifiquement pour la <strong>NAND flash</strong> (smartphones, SSDs). Conçu comme un <strong>Log-Structured File System</strong> : les écritures vont séquentiellement dans un log, avec garbage collection en arrière-plan — adapté aux contraintes du flash (wear leveling, write amplification). Devenu <strong>filesystem par défaut sur de nombreux Android récents</strong> (Samsung Galaxy depuis 2013, Google Pixel 3+). Conséquence forensique : maîtriser sa structure (Superblock, Checkpoint Area, SIT/NAT, Main Area avec segments de 2 MiB) pour parser les images. Outils : <code>f2fs-tools</code>, <code>fsck.f2fs</code>, <code>dump.f2fs</code>, Autopsy avec module dédié.",
-    "expl_ko": "F2FS = filesystem flash Android moderne. Log-Structured, segments de 2 MiB. Différent d'ext4 — parsers dédiés.",
-    "refs": ["Linux kernel — F2FS documentation", "Samsung — F2FS whitepaper"],
-    "feedback": {
-      "0": "Au contraire — F2FS est spécifiquement pour NAND flash, pas HDD.",
-      "2": "iOS utilise APFS, pas F2FS.",
-      "3": "F2FS est Samsung-origine, intégré au noyau Linux."
-    },
-    "fiches": ["f2fs", "android_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Logs avancés",
-    "diff": "medium",
-    "type": "multi",
-    "q": "Vous suspectez qu'un attaquant a tenté d'effacer ses traces dans les logs Windows. Quels indicateurs de <strong>log tampering</strong> recherchez-vous ? (plusieurs réponses)",
-    "opts": [
-      "EID 1102 (Security log cleared) ou EID 104 (System log cleared)",
-      "Trous temporels anormaux sans events Sysmon attendus",
-      "Modification de l'ACL du fichier .evtx (event 4719 Audit Policy Change)",
-      "Présence du processus <code>wevtutil cl</code> dans le history PowerShell ou Sysmon EID 1",
-      "Présence de fichiers .docx récents"
-    ],
-    "answers": [0, 1, 2, 3],
-    "expl_ok": "Indicateurs de tampering : (1) <strong>EID 1102</strong> dans Security = audit log effacé, automatiquement loggé après le wipe (Windows écrit cet event juste avant). (2) <strong>EID 104</strong> dans System = autres logs effacés. (3) <strong>Trous temporels</strong> de minutes/heures sans event quand on en attendait (Sysmon configuration normale). (4) <strong>EID 4719</strong> = Audit Policy Change (l'attaquant a désactivé un audit avant son action). (5) Commande <code>wevtutil cl &lt;LogName&gt;</code> dans les historiques PowerShell/cmd. Mitigation : forwarding centralisé (Winlogbeat/NXLog/Splunk UF) — l'attaquant ne peut pas effacer ce qui est déjà parti.",
-    "expl_ko": "Tampering Windows : <strong>EID 1102 + 104 + 4719 + trous</strong>. Toujours croiser avec le SIEM externe (forwarding empêche les effacements).",
-    "refs": ["Microsoft — Audit Policy Change Events", "SANS — Windows Log Forensics"],
-    "feedback": {
-      "4": "Les .docx récents n'ont aucun lien avec le tampering de logs."
-    },
-    "fiches": ["log_forensique_avance", "windows_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Messageries d'entreprise",
-    "diff": "medium",
-    "type": "single",
-    "q": "Pour acquérir légalement le contenu d'un canal Slack lors d'une investigation, quelle est la source canonique ?",
-    "opts": [
-      "Capture d'écran de chaque message par l'enquêteur",
-      "<strong>Slack Discovery API</strong> (Enterprise Grid + plan eDiscovery) ou <strong>Corporate Export</strong> (Standard/Plus) — récupère messages, fichiers, threads avec métadonnées intactes",
-      "Reverse engineering du client desktop",
-      "Demande à chaque utilisateur de copier-coller"
-    ],
-    "answers": [1],
-    "expl_ok": "Slack propose deux niveaux d'export selon le plan : (1) <strong>Standard/Plus</strong> — export des canaux publics uniquement (admin/export → JSON). (2) <strong>Enterprise Grid + eDiscovery Add-on</strong> — accès via <strong>Discovery API</strong> à TOUS les messages (canaux publics, privés, DMs), fichiers, threads. Format : JSON structuré avec <code>ts</code>, <code>user</code>, <code>text</code>, <code>reactions</code>, <code>thread_ts</code>. C'est la source canonique pour eDiscovery juridique. Alternative locale : parser le cache <strong>LevelDB</strong> de l'app desktop (<code>%APPDATA%\\Slack\\</code> Windows ou <code>~/Library/Application Support/Slack/</code> macOS) — partiel mais utile si pas d'accès admin.",
-    "expl_ko": "Slack source canonique = <strong>Discovery API</strong> (Enterprise Grid) ou <strong>Corporate Export</strong>. Cache LevelDB local en complément.",
-    "refs": ["Slack — Discovery API Documentation", "Slack — Compliance Exports"],
-    "feedback": {
-      "0": "Capture d'écran perd métadonnées, threads, et n'a pas de valeur juridique pour des milliers de messages.",
-      "2": "Inutile — l'API officielle suffit.",
-      "3": "Méthode non scalable et non probante juridiquement."
-    },
-    "fiches": ["entreprise_messaging_forensique"]
-  },
-  {
-    "theme": "Forensique",
-    "theme_icon": "🔬",
-    "chapter": "Messageries d'entreprise",
+    "chapter": "Origine NTFS ADS",
     "diff": "easy",
     "type": "single",
-    "q": "Pour acquérir le contenu de Microsoft Teams lors d'une enquête, quelle est la source de référence ?",
+    "q": "Pourquoi Microsoft a-t-il introduit les Alternate Data Streams dans NTFS ?",
     "opts": [
-      "Le cache local Teams sur le poste",
-      "Microsoft 365 Compliance (Purview) — Content Search ou eDiscovery couvrant Teams (messages stockés dans Exchange/SharePoint en arrière-plan)",
-      "Slack Discovery API",
-      "Une copie écran de chaque conversation"
+      "Pour permettre le chiffrement transparent des fichiers",
+      "Pour la compatibilité avec les resource forks du système Mac HFS",
+      "Pour stocker les metadata EXIF des images",
+      "Pour optimiser la défragmentation"
     ],
-    "answers": [1],
-    "expl_ok": "Teams stocke les messages dans <strong>Exchange Online</strong> (système boîtes individuelles : « Teams Messages » sub-folder), les fichiers dans <strong>SharePoint/OneDrive</strong>. Conséquence : la source canonique pour eDiscovery est <strong>Microsoft Purview Compliance</strong> avec Content Search ou eDiscovery Standard/Advanced. On peut rechercher par utilisateur, mots-clés, dates, et placer un <strong>eDiscovery Hold</strong> pour préserver. Le cache desktop Teams (<code>%APPDATA%\\Microsoft\\Teams\\</code> sur Win, format LevelDB/SQLite) est un complément local mais incomplet.",
-    "expl_ko": "Teams = stocké dans Exchange + SharePoint. Source canonique = <strong>Microsoft Purview</strong>. Cache local secondaire.",
-    "refs": ["Microsoft Purview — eDiscovery for Teams", "Microsoft — Teams Compliance Architecture"],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les ADS ont été introduits dans NTFS au milieu des années 1990 pour assurer la compatibilité avec les <strong>resource forks Mac HFS</strong> via les fonctionnalités Services for Macintosh sur Windows NT Server. Services for Macintosh a été supprimé en 2008, mais les ADS restent une fonctionnalité native NTFS, impossible à désactiver.",
+    "expl_ko": "Origine = compatibilité HFS Mac (resource forks). Pas le chiffrement (EFS, BitLocker), pas les metadata images (EXIF interne au fichier), pas la défragmentation.",
+    "refs": [
+      "NTFS Specifications",
+      "Services for Macintosh historical documentation"
+    ],
     "feedback": {
-      "0": "Cache local incomplet et perd les threads multi-utilisateurs.",
-      "2": "Slack Discovery API ne touche pas Teams.",
-      "3": "Pas scalable ni probant juridiquement."
+      "0": "Le chiffrement NTFS utilise EFS, pas les ADS.",
+      "2": "Les metadata EXIF sont dans le fichier image lui-même.",
+      "3": "La défragmentation n'a rien à voir avec les ADS."
     },
-    "fiches": ["entreprise_messaging_forensique", "m365_forensique"]
+    "fiches": [
+      "alternate_data_streams",
+      "ntfs"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Apps mobiles tierces",
+    "chapter": "Forensique OT",
     "diff": "easy",
     "type": "single",
-    "q": "Lors d'une extraction iOS, dans quel ordre de priorité forensique abordez-vous les apps tierces (Snapchat, Instagram, Bumble, banques) ?",
+    "q": "Le modèle Purdue de cybersécurité industrielle distingue 6 niveaux d'abstraction. À quel niveau se situe la DMZ industrielle ?",
     "opts": [
-      "Toutes les apps dans l'ordre alphabétique",
-      "Messageries (WhatsApp, Telegram, Signal) en priorité absolue, puis dating (Bumble, Tinder), puis cloud (Dropbox, Drive), puis finance",
-      "Uniquement les apps de jeux",
-      "Apps installées en dernier d'abord"
+      "Level 0 — Processus physique",
+      "Level 2 — Supervision SCADA",
+      "Level 3.5 — DMZ industrielle",
+      "Level 5 — Internet / WAN"
     ],
-    "answers": [1],
-    "expl_ok": "Priorité forensique typique iOS : (1) <strong>Messageries</strong> (WhatsApp, Telegram, Signal, Wickr, Threema) = contenu communicationnel critique. (2) <strong>Réseaux sociaux</strong> (Instagram, Snapchat, TikTok, Twitter) = identité publique + DMs. (3) <strong>Dating</strong> (Tinder, Bumble, Grindr, Hinge) = rencontres datées et géolocalisées. (4) <strong>Cloud Storage</strong> (Dropbox, Drive, OneDrive, iCloud) = exfiltration potentielle. (5) <strong>Finance</strong> (Revolut, banque, crypto wallets) = flux financiers. (6) <strong>Voyage/Navigation</strong> (Google Maps, Waze) = géolocalisation. Toutes stockent en SQLite dans <code>/var/mobile/Containers/Data/Application/&lt;UUID&gt;/</code>. Outils : iLEAPP modules dédiés.",
-    "expl_ko": "Priorité : <strong>Messageries → Dating → Cloud → Finance</strong>. Le contenu communicationnel a souvent la valeur probante la plus directe.",
-    "refs": ["Sarah Edwards — iOS Apps Forensics", "iLEAPP — module catalog"],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>Level 3.5 — DMZ industrielle</strong> est la ZONE INTERMÉDIAIRE clé entre OT (Level 0-3) et IT (Level 4-5). Inclut data diodes, jump servers, firewalls dédiés. <strong>L'absence de Level 3.5 est la vulnérabilité critique #1 des PME industrielles</strong>.",
+    "expl_ko": "La DMZ industrielle est Level 3.5, entre OT et IT. Les autres niveaux : 0 = processus physique, 2 = supervision, 5 = Internet.",
+    "refs": [
+      "Modèle Purdue (Purdue University, 1992)",
+      "ISA-99 / IEC 62443"
+    ],
     "feedback": {
-      "0": "Alphabétique = aveugle à la valeur probante.",
-      "2": "Trop restreint — manque tout le reste.",
-      "3": "L'ordre d'installation n'a aucune valeur d'enquête."
+      "0": "Level 0 = capteurs, actionneurs physiques.",
+      "1": "Level 2 = HMI et supervision SCADA local.",
+      "3": "Level 5 = Internet, exposition extérieure."
     },
-    "fiches": ["mobile_apps_forensique", "ios_forensique"]
+    "fiches": [
+      "ics_forensique",
+      "iot_forensique"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Systèmes spéciaux",
+    "chapter": "Forensique OT",
     "diff": "medium",
     "type": "single",
-    "q": "Lors d'une perquisition, vous saisissez un NAS Synology. Quelle est la difficulté forensique principale par rapport à un disque dur classique ?",
+    "q": "Sur quel port TCP par défaut un Veeder-Root TLS-350 (Automated Tank Gauge) écoute-t-il en cas d'exposition Internet ?",
     "opts": [
-      "Aucune — c'est un disque comme un autre",
-      "Le NAS utilise du <strong>RAID</strong> (souvent SHR/Btrfs) + plusieurs disques. Acquisition image par image puis reconstruction RAID en lab — ou acquisition logique via interface admin",
-      "Le NAS ne contient jamais de données utiles",
-      "Le NAS efface ses données automatiquement à la saisie"
+      "Port 22 (SSH)",
+      "Port 80 (HTTP)",
+      "Port 502 (Modbus)",
+      "Port 10001 (ATG protocol)"
     ],
-    "answers": [1],
-    "expl_ok": "NAS = défis multiples : (1) <strong>RAID</strong> (SHR Synology, RAID 1/5/6/10) — un disque seul est inutilisable, il faut tous les disques ET la config RAID pour reconstruire. (2) <strong>Filesystem propriétaire</strong> souvent : Btrfs (Synology) ou ZFS (QNAP avec TrueNAS). (3) <strong>Snapshots Btrfs/ZFS</strong> = mine d'or temporelle (versions antérieures préservées). (4) <strong>Chiffrement</strong> parfois activé (Synology Hyper Backup). Approche : (a) imager chaque disque (write blocker), (b) noter l'ordre des slots, (c) reconstruction RAID en lab avec Reclaim, R-Studio, ou montage Btrfs RAID natif Linux, (d) ALTERNATIVE : acquisition logique via admin Synology si credentials récupérés.",
-    "expl_ko": "NAS = RAID + Btrfs/ZFS + snapshots. <strong>Imager TOUS les disques en notant l'ordre des slots</strong>, jamais juste un.",
-    "refs": ["Synology — Hyper Backup Forensics", "QNAP — ZFS Forensics"],
+    "answers": [
+      3
+    ],
+    "expl_ok": "Le <strong>port TCP 10001</strong> est le port par défaut du protocole ATG Veeder-Root. Pas de chiffrement, pas d'authentification, pas de session — chaque commande est indépendante. C'est précisément ce qui permet à Cyber Av3ngers d'exploiter sans effort en 9 secondes.",
+    "expl_ko": "Le protocole ATG (Automated Tank Gauge) Veeder-Root écoute par défaut sur TCP 10001. Port 22 = SSH, Port 80 = HTTP, Port 502 = Modbus (autre protocole industriel).",
+    "refs": [
+      "Veeder-Root ATG Protocol documentation",
+      "HD Moore Rapid7 (2015) — Internet of Gas Station Tank Gauges"
+    ],
     "feedback": {
-      "0": "Faux — c'est l'un des cas les plus complexes (RAID).",
-      "2": "Au contraire — NAS = backups familles, archives entreprise, parfois CCTV.",
-      "3": "Aucun NAS ne wipe automatiquement à la saisie."
+      "0": "SSH = port 22, pour administration sécurisée.",
+      "1": "HTTP = port 80, web standard.",
+      "2": "Modbus = port 502, autre protocole industriel."
     },
-    "fiches": ["nas_forensique"]
+    "fiches": [
+      "ics_forensique"
+    ]
   },
   {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Systèmes spéciaux",
+    "chapter": "Forensique OT",
     "diff": "hard",
     "type": "single",
-    "q": "Qu'est-ce qu'un <strong>SMS Blaster</strong> et quel est le cadre légal suisse applicable ?",
+    "q": "Vous découvrez qu'un Veeder-Root TLS-350 d'une station-service est exposé Internet. Avant de procéder à un audit complet, quel test passif vous permet de confirmer l'exposition sans accéder au système ?",
     "opts": [
-      "Un service marketing autorisé",
-      "Un équipement émulant une <strong>fausse station de base GSM/4G</strong> (IMSI catcher actif) pour envoyer en masse des SMS frauduleux sans passer par les opérateurs — usage <strong>strictement interdit en Suisse</strong> (LTC + radiocommunication)",
-      "Une simple application Android",
-      "Un type de spam email"
+      "TCP SYN scan (nmap) sur le port 10001 — détection passive de l'ouverture",
+      "Envoi de la commande I201 (Get Inventory Report) pour confirmer la nature du service",
+      "Tentative de connexion telnet directe avec credentials par défaut",
+      "Téléchargement du firmware via interface web admin"
     ],
-    "answers": [1],
-    "expl_ok": "Un <strong>SMS Blaster</strong> est un dispositif radio (boîtier portable ~50×30cm ou plus discret) qui émule une <strong>BTS (Base Transceiver Station)</strong> GSM/LTE avec une puissance suffisante pour forcer les téléphones environnants à se connecter à lui. Il envoie ensuite des SMS arbitraires (sans MSISDN d'origine, contournant les opérateurs et les blocages anti-fraude). Cas réels : phishing bancaire en Asie 2022-2024, manifestants visés, fraude au paquet livreur. <strong>Cadre suisse</strong> : utilisation soumise à la <strong>LTC (Loi sur les télécommunications)</strong> et à la <strong>OFCOM</strong> (concession radio) — usage non autorisé = délit. Détection : tours GSM inconnues, RSSI anormal, baisse soudaine de service.",
-    "expl_ko": "SMS Blaster = IMSI catcher actif émetteur. Strictement interdit en Suisse (LTC). Détection via monitoring radio et alertes opérateur.",
-    "refs": ["LTC — Loi sur les télécommunications (CH)", "OFCOM — Concessions radio", "EU Cellular Network Security 2023"],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Un <strong>TCP SYN scan (nmap)</strong> est une reconnaissance passive légale partout : on observe l'ouverture du port sans communiquer avec le service. Aucune commande ATG envoyée = aucun risque art. 143bis CP. Les autres options constituent des accès au système (art. 143bis applicable).",
+    "expl_ko": "Le scan SYN est passif et légal. Envoyer une commande ATG (I201) = accès indu (art. 143bis CP) même si on ne modifie rien. Telnet credentials = tentative d'accès indu. Téléchargement firmware = accès indu aggravé.",
+    "refs": [
+      "Art. 143bis CP — Accès indu",
+      "Shodan ToS — Terms of Service",
+      "Bonnes pratiques cybersécurité scan passif"
+    ],
     "feedback": {
-      "0": "Faux — c'est un dispositif illégal en CH.",
-      "2": "Faux — c'est du matériel radio (SDR + ampli).",
-      "3": "Faux — c'est radio cellulaire, pas email."
+      "1": "Envoyer une commande ATG = communication avec le système = accès au sens art. 143bis CP.",
+      "2": "Tentative de connexion telnet = tentative d'accès indu, illégal sans consentement.",
+      "3": "Téléchargement firmware = accès aux ressources internes du système."
     },
-    "fiches": ["sms_blaster"]
+    "fiches": [
+      "ics_forensique",
+      "droit"
+    ]
   },
   {
-    "theme": "Système de fichiers",
-    "theme_icon": "📁",
-    "chapter": "Localisation des fichiers",
-    "diff": "medium",
-    "type": "single",
-    "q": "Sur NTFS, quelle structure unique contient à la fois les <strong>métadonnées</strong> (nom, dates, taille, permissions) ET les <strong>données</strong> du fichier (si petit) ou les <strong>pointeurs vers les clusters</strong> (si grand) ?",
-    "opts": [
-      "L'inode comme sur EXT4",
-      "Le record MFT (Master File Table) — chaque fichier a un record MFT de 1024 octets contenant attributs ($STANDARD_INFORMATION, $FILE_NAME, $DATA…)",
-      "La FAT (File Allocation Table)",
-      "Le superbloc"
-    ],
-    "answers": [1],
-    "expl_ok": "Sur NTFS, <strong>chaque fichier ou dossier = un record MFT</strong> de 1024 octets (par défaut). Le record contient une suite d'<strong>attributs</strong> : <code>$STANDARD_INFORMATION</code> (timestamps MACE, owner, flags), <code>$FILE_NAME</code> (nom + timestamps redondants), <code>$SECURITY_DESCRIPTOR</code>, <code>$DATA</code> (le contenu). Pour les <strong>petits fichiers</strong> (~700 o et moins), <code>$DATA</code> est <strong>resident</strong> = stocké directement dans la MFT. Pour les gros : <code>$DATA</code> devient <strong>non-resident</strong> = liste de <strong>data runs</strong> (LCN + longueur) pointant vers les clusters réels. Conséquence forensique : la MFT seule peut contenir le fichier entier ! Outils : <code>MFTECmd</code> (Zimmerman), <code>analyzeMFT</code>, Autopsy.",
-    "expl_ko": "NTFS = tout est attribut, tout est dans la MFT. Petits fichiers = resident (contenu DANS la MFT). Grand = pointeurs (data runs).",
-    "refs": ["Brian Carrier — File System Forensic Analysis", "Microsoft — NTFS File System"],
-    "feedback": {
-      "0": "Inode est EXT2/3/4 (Linux), pas NTFS.",
-      "2": "La FAT est utilisée par les filesystems FAT12/16/32, pas NTFS.",
-      "3": "Superbloc est un concept ext, pas NTFS."
-    },
-    "fiches": ["file_location_fs", "ntfs"]
-  },
-  {
-    "theme": "Système de fichiers",
-    "theme_icon": "📁",
-    "chapter": "Localisation des fichiers",
-    "diff": "easy",
-    "type": "single",
-    "q": "Sur ext4 (Linux/Android), quelle structure stocke les métadonnées d'un fichier (timestamps, permissions, pointeurs vers blocs) — sans le nom ?",
-    "opts": [
-      "L'inode",
-      "Le MFT record",
-      "La FAT",
-      "Le journal"
-    ],
-    "answers": [0],
-    "expl_ok": "Sur ext2/3/4, chaque fichier/dossier est représenté par un <strong>inode</strong> (index node) — typiquement 256 octets en ext4. L'inode contient : mode (permissions + type), UID/GID, taille, <strong>timestamps</strong> (atime, mtime, ctime + crtime en ext4 : 4 timestamps en nanoseconde depuis ext4), liens, et <strong>pointeurs vers blocs de données</strong> (12 directs + indirect simple + double + triple, ou extents en ext4). <strong>Le nom du fichier n'est PAS dans l'inode</strong> — il est dans une <code>directory entry</code> du répertoire parent qui pointe vers l'inode. Conséquence : un fichier peut avoir plusieurs noms (hard links) pointant vers le même inode.",
-    "expl_ko": "ext4 : <strong>inode = métadonnées + pointeurs, directory entry = nom + numéro inode</strong>. Hard links possibles car nom et métadonnées sont séparés.",
-    "refs": ["Linux kernel — ext4 documentation", "Brian Carrier — File System Forensic Analysis"],
-    "feedback": {
-      "1": "MFT record est NTFS.",
-      "2": "FAT est FAT12/16/32.",
-      "3": "Le journal (jbd2 en ext4) loggue les transactions, pas les métadonnées par fichier."
-    },
-    "fiches": ["file_location_fs"]
-  },
-  {
-    "theme": "Forensique",
+    "theme": "Spécialisé",
     "theme_icon": "🔬",
-    "chapter": "Conteneurs & Orchestration",
-    "diff": "hard",
+    "chapter": "Cartographie OSINT industrielle",
+    "diff": "medium",
     "type": "multi",
-    "q": "Sur un cluster Kubernetes compromis, quels artefacts forensiques cherchez-vous prioritairement ? (plusieurs réponses)",
+    "q": "Quelles sont les 3 sources OSINT industrielles principales pour cartographier les équipements OT exposés sur Internet ?",
     "opts": [
-      "<code>kubectl get events --all-namespaces</code> (events récents)",
-      "Manifests YAML/JSON des Pods + audit logs API server (<code>/var/log/audit/audit.log</code> ou kube-apiserver flag <code>--audit-log-path</code>)",
-      "Container images dans le registre (Docker Hub, ECR, GCR) — chercher images suspectes pulled récemment",
-      "ConfigMaps et Secrets accessibles (secrets en base64, pas chiffrés par défaut)",
-      "Le wallpaper du desktop"
+      "Shodan (shodan.io)",
+      "Censys (censys.io)",
+      "Onyphe (onyphe.io)",
+      "Google Hacking Database"
     ],
-    "answers": [0, 1, 2, 3],
-    "expl_ok": "Cibles K8s forensique : (1) <strong>kubectl events</strong> + <code>kubectl get pods -o wide --all-namespaces</code> = vue d'ensemble. (2) <strong>Audit logs</strong> kube-apiserver = qui a fait quoi via l'API (création Pods, exec, port-forward). Activation avec <code>--audit-policy-file</code>. (3) <strong>Container images</strong> — chercher des images pulled depuis des registres suspects, des tags <code>:latest</code> récents, des images sans signature. (4) <strong>Secrets/ConfigMaps</strong> — en K8s par défaut les Secrets sont juste en Base64 (pas chiffrés), facilement extractibles avec accès cluster. Tools : <code>kubectl-trace</code>, <code>Falco</code> (runtime security), <code>kube-bench</code>, <code>kube-hunter</code>, <code>kubeaudit</code>.",
-    "expl_ko": "K8s forensique : <strong>events + audit logs API server + images + secrets</strong>. Falco + audit policy activée = essentiels avant l'incident.",
-    "refs": ["Kubernetes — Auditing", "Falco Security — Runtime detection", "MITRE ATT&CK — Containers Matrix"],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl_ok": "<strong>Shodan + Censys + Onyphe</strong> = trio des moteurs de recherche IoT/ICS. Shodan = leader (700M+ équipements), Censys = data plus propre, Onyphe = focus européen avec nouveautés rapides. Déduplication entre sources nécessaire.",
+    "expl_ko": "Les 3 sources OSINT industrielles sont Shodan, Censys, Onyphe. GHDB est un répertoire de Google Dorks (utile pour autres recherches mais pas spécifique ICS).",
+    "refs": [
+      "Shodan documentation",
+      "Censys research",
+      "Onyphe blog"
+    ],
     "feedback": {
-      "4": "Aucun rapport avec K8s."
+      "3": "GHDB est utile pour Google Dorks (recherche web), pas pour scan IoT/ICS."
     },
-    "fiches": ["docker_kubernetes_forensique"]
+    "fiches": [
+      "ics_forensique",
+      "iot_forensique"
+    ]
   },
   {
-    "theme": "Spécificité des OS",
-    "theme_icon": "🖥️",
-    "chapter": "Windows Subsystem for Linux",
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "MITRE ATT&CK for ICS",
+    "diff": "hard",
+    "type": "single",
+    "q": "Cyber Av3ngers envoie la commande S07300 'PWNED' à un Veeder-Root exposé Internet. Quelle technique MITRE ATT&CK for ICS correspond ?",
+    "opts": [
+      "T0815 — Denial of View",
+      "T0832 — Manipulation of View",
+      "T0855 — Unauthorized Command Message",
+      "T0883 — Internet Accessible Device"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>T0832 — Manipulation of View</strong> couvre la modification de l'affichage opérateur (écran client). L'attaquant manipule ce que les opérateurs voient. T0855 couvre l'envoi de la commande non autorisée elle-même, T0883 couvre l'exposition. Plusieurs TTP peuvent s'appliquer en même temps.",
+    "expl_ko": "T0832 = Manipulation of View pour la modification de l'écran. T0815 = Denial of View (empêcher la lecture, différent). T0855 = la commande elle-même. T0883 = l'exposition Internet (condition préalable).",
+    "refs": [
+      "MITRE ATT&CK for ICS Framework",
+      "CISA advisories Cyber Av3ngers 2023"
+    ],
+    "feedback": {
+      "0": "T0815 = empêcher la vue (afficheur down), pas la modifier.",
+      "2": "T0855 couvre l'envoi de commande, pas spécifiquement l'effet d'affichage.",
+      "3": "T0883 = exposition Internet, condition préalable."
+    },
+    "fiches": [
+      "ics_forensique",
+      "mitre_attack"
+    ]
+  },
+  {
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "Attribution APT",
     "diff": "medium",
     "type": "single",
-    "q": "Comment détecter sur un Windows que <strong>WSL a été utilisé</strong> par un utilisateur même si les distributions ont été désinstallées ?",
+    "q": "Le Diamond Model of Intrusion Analysis (Caltagirone et al. 2013) structure l'analyse d'attribution autour de combien de sommets ?",
     "opts": [
-      "Impossible une fois désinstallé",
-      "Croiser : EID 4688 (<code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code>), clés registre <code>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</code> (traces de distros), Prefetch <code>WSL.EXE-*.pf</code>, Feature activée (DISM)",
-      "Uniquement par les logs de pare-feu",
-      "Dans le BIOS"
+      "2 sommets : Attaquant et Victime",
+      "3 sommets : Attaquant, Méthode, Cible",
+      "4 sommets : Adversary, Capability, Infrastructure, Victim",
+      "5 sommets : Who, What, When, Where, Why"
     ],
-    "answers": [1],
-    "expl_ok": "Indicateurs d'usage WSL : (1) <strong>EID 4688</strong> (process creation) avec <code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code>, <code>wslservice.exe</code>. (2) <strong>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</strong> = traces des distributions installées (même supprimées, les clés <code>{GUID}</code> peuvent persister + last-write timestamps). (3) <strong>Prefetch</strong> <code>WSL.EXE-*.pf</code> dans <code>C:\\Windows\\Prefetch\\</code>. (4) <strong>Optional features</strong> — vérifier <code>Get-WindowsOptionalFeature -Online | ? FeatureName -like \"*Linux*\"</code>. (5) Anciens fichiers <code>ext4.vhdx</code> dans <code>AppData\\Local\\Packages\\</code>. (6) Restes de <code>C:\\Users\\&lt;user&gt;\\.bash_history</code> si profil partagé.",
-    "expl_ko": "WSL = nombreuses traces résiduelles : <strong>EID 4688 + Lxss registry + Prefetch + DISM features</strong>. La désinstallation efface rarement tout proprement.",
-    "refs": ["Microsoft — WSL Architecture", "DFIR Report — WSL forensics"],
+    "answers": [
+      2
+    ],
+    "expl_ok": "Le <strong>Diamond Model</strong> structure l'analyse autour de 4 sommets : <strong>Adversary</strong> (qui ?), <strong>Capability</strong> (quoi ?), <strong>Infrastructure</strong> (où ?), <strong>Victim</strong> (qui ciblé ?). Chaque sommet est documenté par des preuves, les arêtes documentent les relations entre eux.",
+    "expl_ko": "Le Diamond Model a 4 sommets : Adversary, Capability, Infrastructure, Victim. C'est le standard d'attribution APT.",
+    "refs": [
+      "Caltagirone et al. (2013) — Diamond Model of Intrusion Analysis",
+      "Mandiant attribution methodology"
+    ],
     "feedback": {
-      "0": "Faux — les traces résiduelles sont nombreuses.",
-      "2": "Le pare-feu ne loggue pas WSL spécifiquement.",
-      "3": "WSL n'est pas dans le BIOS, c'est un service userland."
+      "0": "Trop simple — manque méthode et infrastructure.",
+      "1": "3 sommets ne couvrent pas tous les aspects.",
+      "3": "5W est journalistique, pas méthodologique forensique."
     },
-    "fiches": ["wsl_forensique", "windows_forensique"]
+    "fiches": [
+      "mitre_attack"
+    ]
+  },
+  {
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "Attribution APT",
+    "diff": "hard",
+    "type": "single",
+    "q": "Gamaredon (G0047 MITRE) est attribué à quel acteur étatique ?",
+    "opts": [
+      "GRU Unit 26165 (Russie militaire)",
+      "FSB Centre 18 (Russie sécurité)",
+      "MSS (Chine)",
+      "IRGC (Iran)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Gamaredon (G0047)</strong> est attribué au <strong>FSB Centre 18</strong> (service de sécurité russe). Actif depuis 2013, cible principalement Ukraine et soutiens UA en Europe. Attribution publique par CERT-UA, Mandiant, ESET, Sekoia, Microsoft.",
+    "expl_ko": "Gamaredon = FSB. GRU Unit 26165 = APT28/Fancy Bear (différent). MSS = APT chinois. IRGC = Cyber Av3ngers (autre APT, saga 4).",
+    "refs": [
+      "MITRE ATT&CK G0047",
+      "Mandiant Gamaredon reports",
+      "CERT-UA advisories"
+    ],
+    "feedback": {
+      "0": "GRU Unit 26165 = APT28 (Fancy Bear).",
+      "2": "MSS = services chinois (APT10, APT41, etc.).",
+      "3": "IRGC = Cyber Av3ngers (Iran)."
+    },
+    "fiches": [
+      "malware_forensique",
+      "mitre_attack"
+    ]
+  },
+  {
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "Attribution APT",
+    "diff": "hard",
+    "type": "single",
+    "q": "Cyber Av3ngers est attribué publiquement par CISA et FBI à quel acteur étatique ?",
+    "opts": [
+      "Lazarus Group (Corée du Nord)",
+      "APT41 (Chine)",
+      "IRGC (Iran)",
+      "Conti / TrickBot (criminalité organisée russophone)"
+    ],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>Cyber Av3ngers</strong> est un collectif hacktiviste pro-iranien lié à l'<strong>IRGC</strong> (Garde révolutionnaire iranienne). Attribution publique CISA + FBI en décembre 2023 (campagne contre Unitronics PLCs aux US). Cible : infrastructures critiques en Israël et pays soutenant Israël.",
+    "expl_ko": "Cyber Av3ngers = IRGC iranien. Lazarus = Corée du Nord (financier surtout). APT41 = Chine. Conti = criminalité organisée russe.",
+    "refs": [
+      "CISA/FBI Cyber Av3ngers advisory (déc. 2023)",
+      "Mandiant IRGC reports"
+    ],
+    "feedback": {
+      "0": "Lazarus = APT nord-coréen, focus financier.",
+      "1": "APT41 = APT chinois, double mission espionnage/criminalité.",
+      "3": "Conti / TrickBot = criminalité organisée russophone."
+    },
+    "fiches": [
+      "malware_forensique",
+      "ics_forensique"
+    ]
+  },
+  {
+    "theme": "Spécialisé",
+    "theme_icon": "🔬",
+    "chapter": "VPN et anonymisation",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous identifiez une attaque depuis une IP Mullvad VPN (exit node Roumanie). Vous voulez demander à Mullvad les logs de l'utilisateur. Quelle est la réalité ?",
+    "opts": [
+      "Mullvad fournit toujours les logs sur réquisition formelle",
+      "Mullvad applique une politique no-logs documentée et auditée — pas de logs utilisateurs à fournir",
+      "Mullvad bloque automatiquement les enquêtes",
+      "Mullvad partage les données seulement avec la Suède"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Mullvad VPN (entreprise suédoise) applique une politique no-logs documentée et auditée</strong>. Aucun log utilisateur conservé. Toute réquisition (même via EIMP Suède) recevra la réponse 'no logs available'. C'est connu comme dead end technique et juridique. L'attribution se construit autrement (convergence d'indices, corroboration multi-victimes).",
+    "expl_ko": "Mullvad ne conserve pas de logs utilisateurs (vérifié par audits indépendants). La politique no-logs est leur business model. Identifier l'opérateur individuel via Mullvad est techniquement impossible.",
+    "refs": [
+      "Mullvad VPN privacy policy",
+      "Mullvad audit reports"
+    ],
+    "feedback": {
+      "0": "Mullvad applique no-logs, donc n'a pas de logs à fournir.",
+      "2": "Mullvad ne bloque pas les enquêtes, ils n'ont juste pas les données.",
+      "3": "Mullvad applique no-logs partout, sans favoriser un pays."
+    },
+    "fiches": [
+      "malware_forensique",
+      "network_traffic_analysis_avance"
+    ]
   }
 ]

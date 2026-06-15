@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tutoriel TRM Labs — Investigation crypto pratique — CAS-IN</title>
+<meta name="description" content="Guide pratique TRM Labs · Forensics · Risk · investigation blockchain · workflow LE">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" aria-label="Retour en haut" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">TUTORIEL PRATIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-tutoriels">Tutoriels</a><span class="bc-sep">›</span>
+    <span class="bc-current">TRM Labs — Investigation crypto</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~15 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔬</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">TUTORIEL</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">TRM Labs</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Blockchain</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Workflow LE</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">TRM Labs — Investigation crypto pratique</h1>
+    <div class="meta">Guide opérationnel · TRM Forensics + TRM Risk · workflow type · export probant</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="forensique_cryptomonnaies.html" class="prereq-pill">📖 Forensique crypto</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../campaign.html?id=talus" class="tp-pill">🎮 Saga 1 (extension crypto)</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="osint_investigatif.html" class="related-pill">🔗 OSINT investigatif</a><a href="coordination_internationale_ch.html" class="related-pill">🔗 Coordination internationale</a></div>
+  </div>
+</div>
+
+<section class="page-wrap" style="padding-top:1.5rem">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe — TRM Labs en 3 mots : Trace, Cluster, Risk</div>
+  TRM Labs est une plateforme commerciale d'analyse blockchain utilisée par les forces de l'ordre, FIU et VASP régulés. Trois capacités centrales : <strong>tracer</strong> les flux entre adresses, <strong>clusteriser</strong> les adresses appartenant à un même propriétaire (exchange, mixer, ransomware actor), et <strong>scorer</strong> le risque d'une adresse selon des heuristiques propriétaires. Ce tutoriel décrit le workflow standard de 6 étapes, du point de départ (adresse suspecte) au rapport exportable. <strong>Note d'accès</strong> : TRM n'est pas un outil grand public — l'accès se fait par licence institutionnelle (fedpol, MROS, MPC, OFCS, OFJ, banques régulées CH), ou via partenaire d'enquête international.
+</div>
+
+<div class="sec-title">🎯 1. Cas d'usage et accès en Suisse</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Module TRM</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Public cible</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Usage typique CH</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TRM Forensics</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Police, MP, FIU</td><td style="padding:.5rem;border:1px solid var(--border)">Enquête pénale, traçage post-incident, séquestre</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TRM Risk (KYT)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">VASP, banques</td><td style="padding:.5rem;border:1px solid var(--border)">Screening temps réel transactions clients</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TRM Tactical</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Forces de l'ordre</td><td style="padding:.5rem;border:1px solid var(--border)">Opérations rapides, alerts, dark web</td></tr>
+</tbody>
+</table>
+
+<p><strong>Accès en Suisse</strong> : fedpol (via MROS ou Cybercrime Unit), MPC, OFCS, OFJ disposent typiquement d'accès institutionnels. Les VASP régulés FINMA (Bitcoin Suisse, SEBA/AMINA, Sygnum, Bity, Crypto Finance) utilisent souvent TRM Risk pour leur compliance KYT. Pour un enquêteur cantonal sans accès direct, deux voies : <strong>(a)</strong> demande de coordination via fedpol, <strong>(b)</strong> coopération internationale (Europol, FBI) qui fournit le résultat de l'analyse.</p>
+
+<div class="sec-title">📋 2. Workflow standard — 6 étapes</div>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1rem 0;text-align:center;font-family:var(--mono);font-size:.85rem;line-height:1.8">
+<pre style="margin:0;text-align:left;display:inline-block">
+   ┌────────────────────────────────────────────────────┐
+   │  INPUT : adresse crypto / TxID / hash               │
+   └─────────────────────┬──────────────────────────────┘
+                         │
+                         ▼
+   ┌────────────────────────────────────────────────────┐
+   │  ① Search    – import / recherche / batch          │
+   ├────────────────────────────────────────────────────┤
+   │  ② Identify  – cluster, entité connue, label       │
+   ├────────────────────────────────────────────────────┤
+   │  ③ Risk Score – scoring 0-100, catégories de risque│
+   ├────────────────────────────────────────────────────┤
+   │  ④ Trace     – flux entrants / sortants, hops      │
+   ├────────────────────────────────────────────────────┤
+   │  ⑤ Pivot     – TxIDs, dates, montants, contreparties│
+   ├────────────────────────────────────────────────────┤
+   │  ⑥ Export    – rapport PDF, CSV, screenshots horod.│
+   └─────────────────────┬──────────────────────────────┘
+                         │
+                         ▼
+   ┌────────────────────────────────────────────────────┐
+   │  OUTPUT : rapport probant + IOC + demande EIMP    │
+   └────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<div class="sec-title">① 3. Search — point d'entrée de l'enquête</div>
+
+<p>L'enquête démarre toujours par un <strong>identifiant blockchain</strong> : adresse (BTC, ETH, USDT), TxID (transaction hash), ou identifiant de wallet (xpub). Sources typiques :</p>
+
+<ul style="line-height:1.8">
+<li>Déclaration MROS d'un VASP (le VASP fournit l'adresse impliquée)</li>
+<li>Hardware wallet saisi en perquisition (extraction firmware Ledger/Trezor)</li>
+<li>Note de rançon (paiement demandé sur adresse spécifique)</li>
+<li>Capture réseau (analyse PCAP révélant une adresse C2 crypto)</li>
+<li>Information de threat intel (Chainalysis, abuse.ch, MISP)</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>📚 Bonne pratique — préserver l'intégrité</strong> : avant toute requête TRM, documenter l'adresse <strong>exactement comme reçue</strong> (copier-coller, screenshot horodaté de la source). Les adresses crypto sont sensibles à la casse pour Ethereum (checksum EIP-55) et aux caractères pour Bitcoin (Base58). Une typo = mauvaise enquête. Validez via un block explorer avant de traiter dans TRM.
+</div>
+
+<p><strong>Action TRM</strong> : <code>Search → Address/Transaction → Paste → Submit</code>. La plateforme reconnaît automatiquement le type d'asset (BTC/ETH/USDT/etc.) et la chaîne associée. Pour les enquêtes massives (centaines d'adresses), utiliser le <strong>batch import</strong> via CSV.</p>
+
+<div class="sec-title">② 4. Identify — clustering et entités</div>
+
+<p>Une fois l'adresse soumise, TRM applique son moteur de clustering propriétaire pour répondre à 3 questions :</p>
+
+<ul style="line-height:1.8">
+<li><strong>Est-ce une adresse connue ?</strong> Si oui, l'entité est labellisée (exchange Binance hot wallet, Tornado Cash router, Lazarus Group, etc.). TRM maintient une base de millions d'entités identifiées.</li>
+<li><strong>Quel cluster contient cette adresse ?</strong> Le clustering applique les heuristiques classiques (common input pour Bitcoin, behavioral pour Ethereum) + des signaux propriétaires.</li>
+<li><strong>Combien d'adresses dans ce cluster ?</strong> Un exchange majeur peut avoir des centaines de milliers d'adresses ; un wallet personnel quelques dizaines.</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚠️ Limite du clustering</strong> : un cluster n'est pas une preuve juridique en soi. C'est une <em>inférence probabiliste</em> basée sur des heuristiques. Toujours documenter : « TRM associe cette adresse au cluster X avec confiance Y, basé sur Z transactions co-utilisant des inputs communs ». La conclusion d'attribution finale repose sur la corroboration par les <strong>endpoints KYC</strong> (réquisition exchange).
+</div>
+
+<div class="sec-title">③ 5. Risk Score — l'évaluation algorithmique</div>
+
+<p>TRM attribue à chaque adresse un <strong>Risk Score de 0 à 100</strong> (0 = bénin, 100 = très haut risque). Le score agrège plusieurs indicateurs :</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Indicateur de risque</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Exemple de signal</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Direct exposure</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Reçu/envoyé directement à un mixer, sanction OFAC, ransomware connu</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Indirect exposure</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Connexion via 2-3 hops à une entité à haut risque</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Behavioral patterns</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Peel chain, structuring (sous-seuils), rapidité, montants typiques</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Counterparty mix</strong></td><td style="padding:.5rem;border:1px solid var(--border)">% des fonds reçus d'exchanges KYC vs DeFi vs darknet</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Sanctions exposure</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Lien direct/indirect avec adresses SDN OFAC ou listes EU/UN</td></tr>
+</tbody>
+</table>
+
+<p>Interprétation pratique pour un enquêteur :</p>
+
+<ul style="line-height:1.8">
+<li><strong>0-30</strong> = adresse normale, faible probabilité d'origine illicite. Pas d'enquête prioritaire.</li>
+<li><strong>30-60</strong> = exposition indirecte modérée. Justifie un suivi, pas nécessairement une réquisition immédiate.</li>
+<li><strong>60-85</strong> = adresse à risque. Justifie réquisition LBA, demande KYC à l'exchange d'entrée.</li>
+<li><strong>85-100</strong> = adresse hautement risquée. Souvent liée à sanctions, ransomware, darknet markets. Action rapide.</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚖️ Risk Score ≠ preuve pénale</strong> : un score TRM élevé est un <em>indicateur d'enquête</em>, pas un élément probant suffisant pour une condamnation. Le score peut être contesté par la défense — bonne pratique : ne jamais s'appuyer uniquement sur le score, toujours documenter les <strong>flux concrets</strong> (TxIDs, montants, dates, contreparties identifiées) qui justifient l'évaluation.
+</div>
+
+<div class="sec-title">④ 6. Trace — visualisation des flux</div>
+
+<p>L'écran <strong>Trace</strong> (équivalent du « Reactor » Chainalysis) affiche le graphe des flux entrants et sortants de l'adresse. Visualisation type :</p>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1rem 0;font-family:var(--mono);font-size:.8rem;line-height:1.6">
+<pre style="margin:0">
+   [Exchange Binance]  ──┐
+                         │ 0.5 BTC, 14.03.2026
+                         ▼
+                    [Adresse cible]  ── 2.1 BTC ──► [Tornado Cash]
+                         ▲
+                         │ 1.6 BTC, 15.03.2026
+   [Coinbase hot wallet]─┘
+</pre>
+</div>
+
+<p><strong>Paramètres clés à régler :</strong></p>
+
+<ul style="line-height:1.8">
+<li><strong>Hop depth</strong> — nombre de sauts en amont/aval (default 3, on monte à 5-6 pour enquêtes profondes)</li>
+<li><strong>Threshold</strong> — montant minimum affiché (filtrer le bruit, ex. ≥ 0.01 BTC)</li>
+<li><strong>Time window</strong> — restreindre la période (ex. 7 jours avant/après l'événement)</li>
+<li><strong>Asset filter</strong> — BTC seul ou multi-chain (utile en chain hopping)</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>📚 Astuce — analyse en remontant</strong> : en cas d'attribution incertaine, remonter vers <em>l'origine des fonds</em> (« upstream ») est souvent plus productif que descendre vers la destination. L'origine donne accès à un exchange KYC qui révèlera l'identité réelle. La destination peut être perdue dans un mixer ou un wallet froid.
+</div>
+
+<div class="sec-title">⑤ 7. Pivot — extraire les éléments probants</div>
+
+<p>Pour chaque flux pertinent, extraire et documenter :</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Élément</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Pourquoi le documenter</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TxID complet</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Vérifiable indépendamment sur block explorer = preuve immuable</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Adresses source / destination</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Points de pivot pour réquisitions KYC ultérieures</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Date + heure UTC</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Chronologie de l'enquête, recoupement avec autres événements</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Montant brut</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Quantification du dommage en CHF (cours à la date)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Entité identifiée (si applicable)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Exchange où réquisitionner, mixer à confirmer</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Justification du clustering</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Heuristique utilisée par TRM (vérifiable par contre-expertise)</td></tr>
+</tbody>
+</table>
+
+<p><strong>Pivot vers KYC = étape décisive.</strong> Une fois une adresse d'exchange identifiée :</p>
+<ul style="line-height:1.8">
+<li><strong>Exchange régulé CH</strong> (Bitcoin Suisse, SEBA, Sygnum, Bity) : réquisition LBA art. 9 + CPP art. 263 / 273</li>
+<li><strong>Exchange UE</strong> (Bitstamp, Kraken EU, Coinbase EU) : entraide EIMP via OFJ, ou ordonnance E-Evidence (UE 2023/1543) à partir du 18.8.2026</li>
+<li><strong>Exchange US</strong> (Coinbase, Kraken US, Binance US) : entraide TEJUS (RS 0.351.933.6) ou MLAT</li>
+<li><strong>Exchange non-coopératif</strong> (offshore, juridictions non conventionnées) : impasse partielle — utiliser pression indirecte (sanctions, partenaires)</li>
+</ul>
+
+<div class="sec-title">⑥ 8. Export — produire la preuve</div>
+
+<p>TRM permet plusieurs formats d'export, à choisir selon la destination :</p>
+
+<ul style="line-height:1.8">
+<li><strong>Rapport PDF</strong> — pour intégration dans le dossier pénal, le rapport contient les graphes de flux, le risk score, les justifications. Signé numériquement.</li>
+<li><strong>CSV des transactions</strong> — pour analyse offline, recoupement avec d'autres sources, expertise judiciaire.</li>
+<li><strong>JSON / API</strong> — pour intégration dans un SIEM ou outil interne d'analyse.</li>
+<li><strong>Screenshots horodatés</strong> — capture d'écran de l'interface TRM, horodatée et signée, pour usage probant en audience.</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Bonne pratique — chain of custody</strong> : tous les exports TRM doivent être <strong>horodatés et hashés</strong> au moment de la production (SHA-256 sur le fichier). Documenter qui a fait l'export, depuis quel compte TRM, à quelle date. Conserver les exports dans le dossier d'enquête, jamais sur poste personnel.
+</div>
+
+<div class="sec-title">🎓 9. Cas pratique court — workflow type</div>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;line-height:1.7">
+<strong>Scénario</strong> : ransomware sur une PME suisse. Note demande 2 BTC à l'adresse <code>bc1qxxxx...</code>. Paiement effectué le 12.03.2026.<br><br>
+
+<strong>① Search</strong> : adresse <code>bc1qxxxx...</code> entrée dans TRM Forensics.<br>
+<strong>② Identify</strong> : cluster avec 47 adresses ; pas labellisé directement mais 89% des fonds entrants viennent de victimes US/EU récentes (pattern ransomware connu, possible affiliate LockBit).<br>
+<strong>③ Risk Score</strong> : 92/100 — direct exposure ransomware + indirect exposure Tornado Cash.<br>
+<strong>④ Trace</strong> : flux sortants → cluster Binance hot wallet (1.2 BTC), Tornado Cash (0.8 BTC).<br>
+<strong>⑤ Pivot</strong> : extraction TxID Binance → demande EIMP via OFJ + MLAT US (Binance US). 0.8 BTC dans Tornado = perte de traçabilité.<br>
+<strong>⑥ Export</strong> : rapport PDF horodaté, intégré au dossier MPC.<br><br>
+
+<strong>Résultat probable</strong> : récupération partielle (0.5-1.0 BTC via Binance avec coopération), saisie sur compte fiat associé, IOC partagés via MISP communauté ransomware. Le reste (Tornado Cash) reste hors d'atteinte technique.
+</div>
+
+<div class="sec-title">⚠️ 10. Limites et pièges courants</div>
+
+<ul style="line-height:1.8">
+<li><strong>TRM ≠ vérité absolue</strong> — les heuristiques de clustering peuvent se tromper. Toujours valider par recoupement (Chainalysis, Elliptic, block explorer manuel).</li>
+<li><strong>Privacy coins (Monero, Zcash z-addresses) opaques</strong> — TRM ne peut pas tracer là où la crypto est conçue pour être opaque.</li>
+<li><strong>Délai de mise à jour</strong> — TRM met à jour ses labels avec un certain délai. Une adresse fraîchement utilisée par un acteur peut ne pas être encore identifiée.</li>
+<li><strong>Faux positifs sanctions</strong> — un score 100/100 « sanctions » peut être dû à une connexion très indirecte. Lire attentivement le détail.</li>
+<li><strong>Données off-chain absentes</strong> — TRM ne voit que la blockchain. Les transactions internes d'exchange (deposits/withdrawals consolidés) sont invisibles. D'où l'importance de la réquisition KYC.</li>
+<li><strong>Coût</strong> — licence TRM = budget significatif (typiquement 50-200 kCHF/an selon volume). Justifie une stratégie de mutualisation (fedpol coordonne pour cantons).</li>
+</ul>
+
+<div class="sec-title">🔄 11. Alternatives et complémentarités</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Outil</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Force relative</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Chainalysis Reactor</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Leader historique, base d'entités la plus large, utilisé par FBI/DOJ</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TRM Labs</strong></td><td style="padding:.5rem;border:1px solid var(--border)">UI plus moderne, fort sur sanctions/OFAC, expansion rapide</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Elliptic</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Bonne couverture dark web et ransomware, racines UK</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Crystal Blockchain</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Solution européenne (Bitfury), couverture marché EU/RU</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Etherscan + manual</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Gratuit, public — utile pour vérification croisée et premières étapes</td></tr>
+</tbody>
+</table>
+
+<p>Le bon réflexe : <strong>croiser au moins 2 outils</strong> pour les enquêtes sensibles. Une attribution Chainalysis + TRM concordante est plus solide qu'un seul outil. Pour vérification publique des transactions individuelles, Etherscan/blockchain.info restent incontournables.</p>
+
+<div class="sec-title">📖 Références</div>
+
+<ul style="font-size:.9rem;line-height:1.7">
+<li>TRM Labs — Documentation officielle (trmlabs.com)</li>
+<li>Chainalysis — <em>Crypto Crime Report</em> annuel</li>
+<li>Fiche CAS-IN — Forensique des cryptomonnaies</li>
+<li>OBA-FINMA art. 10 (Travel Rule CH)</li>
+<li>CP art. 305bis (blanchiment), 70-72 (confiscation)</li>
+<li>CPP art. 263 (séquestre), 273 (données accessoires télécom)</li>
+<li>EIMP (RS 351.1) — entraide internationale</li>
+<li>TEJUS (RS 0.351.933.6) — entraide CH-USA</li>
+<li>Règlement UE 2023/1543 (E-Evidence, applicable 18.8.2026)</li>
+</ul>
+
+</section>
+
+<footer style="margin-top:3rem;padding:2rem;border-top:1px solid var(--border);text-align:center;font-size:.85rem;color:var(--text-mute)">
+  <p>Tutoriel CAS-IN — TRM Labs en pratique</p>
+  <p style="margin-top:.5rem">Search → Identify → Risk → Trace → Pivot → Export — le workflow standard d'enquête crypto moderne</p>
+</footer>
+
+</body>
+</html>

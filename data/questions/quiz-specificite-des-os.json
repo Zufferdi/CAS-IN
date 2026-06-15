@@ -2,6 +2,690 @@
   {
     "theme": "Spécificité des OS",
     "theme_icon": "🖥️",
+    "chapter": "Active Directory Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel composant d'Active Directory contient les hashes NTLM de tous les utilisateurs du domaine et est la cible n°1 d'extraction lors d'une compromission ?",
+    "opts": [
+      "Le fichier <code>SYSVOL</code>",
+      "La base <code>NTDS.dit</code> sur le Domain Controller",
+      "Le registre <code>HKLM\\SAM</code>",
+      "Le fichier <code>krbtgt.bin</code>"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<code>NTDS.dit</code> est la base de données ESE (Extensible Storage Engine) du Domain Controller qui contient : tous les objets AD (utilisateurs, groupes, machines), le schéma, et surtout <strong>les hashes NTLM de tous les comptes</strong>. Fichier verrouillé par le processus LSASS en cours d'exécution → extraction via Volume Shadow Copy ou <code>ntdsutil \"ac i ntds\" \"ifm\" \"create full c:\\temp\\AD\"</code>. Post-acquisition, extraction des hashes avec <code>secretsdump.py -ntds NTDS.dit -system SYSTEM LOCAL</code>.",
+    "expl_ko": "Mémo : NTDS.dit = tous les hashes du domaine. SYSVOL = scripts/GPO partagés. SAM = base locale (par machine).",
+    "refs": [
+      "Microsoft — Active Directory Database Structure",
+      "Impacket secretsdump"
+    ],
+    "feedback": {
+      "0": "SYSVOL contient GPO et scripts logon, pas les hashes utilisateurs.",
+      "2": "HKLM\\SAM est la base locale d'une machine standalone, pas l'AD.",
+      "3": "krbtgt.bin n'existe pas — krbtgt est un compte AD spécial (pas un fichier)."
+    },
+    "fiches": [
+      "active_directory"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Active Directory Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur un Domain Controller, vous voyez EID 4769 avec <code>EncType=0x17 (RC4)</code> pour 50 comptes de service en 5 minutes depuis le même utilisateur. Que se passe-t-il ?",
+    "opts": [
+      "Maintenance Kerberos normale",
+      "<strong>Kerberoasting en cours</strong> — demande massive de TGS chiffrés en RC4 (crackable hors-ligne avec hashcat)",
+      "Échec de réplication AD entre DCs",
+      "Synchronisation horaire NTP"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Trois signaux clairs de <strong>Kerberoasting</strong> : (1) <strong>EncType 0x17 = RC4</strong> — l'attaquant demande spécifiquement ce chiffrement faible pour avoir des hashes faciles à cracker offline (vs AES qui résiste). (2) <strong>Volume anormal</strong> — un user normal demande 1-2 TGS par session, pas 50 en 5 minutes. (3) <strong>Cibles = comptes service avec SPN</strong> (MSSQLSvc, HTTP, HOST). Réponse forensique : RAM dump immédiat de la workstation source (Mimikatz/Rubeus/GetUserSPNs en mémoire), reset password des comptes service à risque, désactiver RC4 (<code>msDS-SupportedEncryptionTypes</code>).",
+    "expl_ko": "Kerberoasting signature : <strong>EID 4769 + EncType 0x17 + volume anormal</strong>. Règle Sigma <code>win_susp_kerberoasting</code> détecte ce pattern.",
+    "refs": [
+      "MITRE ATT&CK — T1558.003 Kerberoasting",
+      "SigmaHQ — win_susp_kerberoasting"
+    ],
+    "feedback": {
+      "0": "La maintenance Kerberos normale ne génère pas 50 TGS RC4 en 5 minutes pour des SPN.",
+      "2": "La réplication AD utilise DRSUAPI/RPC, pas Kerberos TGS.",
+      "3": "NTP n'a aucun rapport avec les events Kerberos."
+    },
+    "fiches": [
+      "active_directory"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Active Directory Forensique",
+    "diff": "hard",
+    "type": "single",
+    "q": "Une enquête révèle un Golden Ticket actif depuis 6 mois sur le domaine. Quelle est la procédure correcte pour éradiquer cette persistance ?",
+    "opts": [
+      "Reset une fois le mot de passe krbtgt et rebooter les DCs",
+      "Reset <strong>DEUX FOIS</strong> le mot de passe krbtgt (avec ~10h entre les deux pour la réplication), puis reset tous les Domain Admins et audit complet",
+      "Désactiver complètement Kerberos sur le domaine",
+      "Reformater tous les DCs"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Procédure officielle Microsoft : (1) <strong>Reset krbtgt DEUX FOIS</strong> avec ~10h entre les deux. Pourquoi deux fois ? AD garde les <strong>2 derniers</strong> mots de passe krbtgt valides pour éviter les ruptures Kerberos pendant le rollover — un seul reset laisse l'ancien hash encore valide. Microsoft fournit <code>Reset-KrbTgt-Password.ps1</code>. (2) Reset MDP de tous les Domain Admins et comptes privilégiés. (3) Audit complet AD : EID 4720 (comptes créés), 4728/4732 (ajouts groupe), 5136 (modifications GPO), ACL sur AdminSDHolder. (4) Inspecter SYSVOL pour scripts logon altérés. (5) Reset comptes service à risque (Silver Tickets). (6) Hunt workstations (Mimikatz, dumps LSASS).",
+    "expl_ko": "<strong>Toujours DEUX reset krbtgt</strong>. C'est la règle d'or, codée dans le script officiel Microsoft. Un seul reset = Golden Ticket toujours valide via l'ancien hash.",
+    "refs": [
+      "Microsoft — Reset-KrbTgt-Password.ps1",
+      "Sean Metcalf — ADSecurity Golden Ticket",
+      "ANSSI — Compromission AD"
+    ],
+    "feedback": {
+      "0": "Un seul reset laisse l'ancien hash krbtgt valide pendant le rollover — Golden Ticket toujours opérant.",
+      "2": "Désactiver Kerberos casse 95% des workflows AD — impossible en production.",
+      "3": "Rebuild AD complet est l'option ultime des cas extrêmes mais n'est pas la procédure standard."
+    },
+    "fiches": [
+      "active_directory"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Active Directory Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quelle est la différence entre <strong>Pass-the-Hash (PtH)</strong> et <strong>Pass-the-Ticket (PtT)</strong> ?",
+    "opts": [
+      "PtH utilise NTLM (réutilisation hash NTLM volé), PtT utilise Kerberos (vol de ticket TGT/TGS en RAM)",
+      "Les deux sont identiques",
+      "PtH cible les serveurs Linux, PtT les serveurs Windows",
+      "PtH ne marche que sur les DCs"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>Pass-the-Hash</strong> : utilise le hash NTLM volé en RAM (LSASS) ou dans SAM/NTDS.dit. L'attaquant prouve son identité via NTLM sans connaître le mot de passe en clair. Protocole : <strong>NTLM</strong> (legacy, plus facile à détecter — EID 4624 LogonType=3 + AuthPackage NtLmSsp + EID 4776). <strong>Pass-the-Ticket</strong> : vole un ticket Kerberos (TGT ou TGS) en RAM avec Mimikatz <code>sekurlsa::tickets /export</code> puis le réinjecte avec <code>kerberos::ptt</code>. Protocole : <strong>Kerberos</strong> (plus moderne, plus furtif). Détection : EID 4768/4769 depuis IP inhabituelle. Variante <strong>Overpass-the-Hash</strong> = utiliser le hash NTLM pour demander un TGT Kerberos.",
+    "expl_ko": "PtH = NTLM (legacy). PtT = Kerberos (moderne). Mitigation : Credential Guard (Win10+), Protected Users group, désactivation NTLM, MFA Kerberos.",
+    "refs": [
+      "Microsoft — Mitigating Pass-the-Hash Attacks",
+      "MITRE ATT&CK T1550.002 (PtH) et T1550.003 (PtT)"
+    ],
+    "feedback": {
+      "1": "Faux — protocoles et signatures totalement différents.",
+      "2": "Faux — les deux ciblent Windows. Linux/AD est rare et utilise SSSD/Samba.",
+      "3": "Faux — PtH fonctionne sur n'importe quelle machine Windows authentifiant via NTLM."
+    },
+    "fiches": [
+      "active_directory"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows Live Response",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi connaître <code>cmd.exe</code> reste-t-il pertinent en 2026 alors que PowerShell est omniprésent ?",
+    "opts": [
+      "cmd.exe est plus rapide",
+      "cmd.exe fonctionne universellement (XP → Server 2025), reste moins surveillé que PowerShell, et utilisable même si PS est désactivé/restreint par GPO",
+      "cmd.exe n'a pas de bugs",
+      "Microsoft va supprimer PowerShell"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur un système compromis ou legacy, PowerShell peut être <strong>désactivé par GPO</strong>, restreint en <strong>Constrained Language Mode</strong>, ou journalisé en détail (un attaquant le sait). <code>cmd.exe</code> reste universel (XP → Server 2025) et <strong>moins surveillé</strong> — ce qui rend sa connaissance utile en défense (live response sur n'importe quelle machine) comme en compréhension des techniques offensives. Commandes clés : <code>tasklist /v /fo csv</code>, <code>tasklist /m crypto.dll</code> (détection DLL injection), <code>tasklist /svc</code>, <code>sc query state= all</code>, <code>wmic process get</code>.",
+    "expl_ko": "cmd.exe = <strong>universel + moins surveillé</strong>. Indispensable en triage rapide, surtout sur des environnements legacy ou contraints.",
+    "refs": [
+      "SANS — Windows Live Response",
+      "Eric Zimmerman — cmd.exe forensics"
+    ],
+    "feedback": {
+      "0": "La vitesse n'est pas le critère.",
+      "2": "cmd.exe a aussi ses bugs, comme tout outil.",
+      "3": "Faux — Microsoft pousse PowerShell mais ne supprime pas cmd.exe."
+    },
+    "fiches": [
+      "cmd_windows_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows Live Response",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lors d'un triage live response Windows (premiers 15 minutes), quelles commandes en CLI permettent de détecter des indicateurs d'intrusion classiques ? (plusieurs réponses)",
+    "opts": [
+      "<code>tasklist /v /fo csv > tasks.csv</code> (processus actifs, ligne de commande)",
+      "<code>netstat -anob</code> (connexions réseau actives avec processus propriétaire)",
+      "<code>sc query state= all</code> (services installés, dont services malveillants persistants)",
+      "<code>schtasks /query /fo csv /v</code> (tâches planifiées suspectes)",
+      "<code>ping 8.8.8.8</code>"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Triage CLI (15 min) : (1) <strong>Processus actifs</strong> avec ligne de commande complète + parent — chercher <code>powershell.exe -Enc</code>, <code>rundll32.exe javascript:</code>, processus depuis <code>%TEMP%</code> ou <code>%APPDATA%</code>. (2) <strong>Connexions réseau</strong> — <code>netstat -anob</code> révèle quels processus écoutent/se connectent, chercher IPs étrangères, ports inhabituels (4444, 8080, 443 vers ASN suspect). (3) <strong>Services</strong> — <code>sc query</code> + <code>tasklist /svc</code> pour cartographier services malveillants persistants. (4) <strong>Scheduled Tasks</strong> — <code>schtasks /query</code> détecte les tâches récurrentes (persistance T1053.005). Le ping 8.8.8.8 teste la connectivité mais n'a pas de valeur forensique.",
+    "expl_ko": "Triage CLI = <strong>tasklist + netstat + sc query + schtasks</strong>. Sauvegarder en CSV pour analyse offline.",
+    "refs": [
+      "SANS FOR508 — Windows Live Triage",
+      "MITRE D3FEND — Process Monitoring"
+    ],
+    "feedback": {
+      "4": "Ping teste juste la connectivité — pas de valeur en triage forensique."
+    },
+    "fiches": [
+      "cmd_windows_forensique",
+      "powershell_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "easy",
+    "type": "single",
+    "q": "Un téléphone vient d'être saisi sur une scène. Combien de niveaux d'extraction mobile distincts existe-t-il du moins invasif au plus destructif ?",
+    "opts": [
+      "3 niveaux",
+      "4 niveaux",
+      "5 niveaux",
+      "7 niveaux"
+    ],
+    "answers": [
+      2
+    ],
+    "expl_ok": "Les <strong>5 niveaux d'extraction mobile</strong> sont : (1) Manual (photos d'écran), (2) Logical (backup ADB/iTunes), (3) File System (jailbreak/root), (4) Physical (image NAND), (5) Chip-off/JTAG (désoudage destructif).",
+    "expl_ko": "L'industrie standardise sur <strong>5 niveaux</strong> : Manual → Logical → File System → Physical → Chip-off, par ordre croissant de complexité et de risque.",
+    "refs": [
+      "NIST SP 800-101 — Mobile Device Forensics",
+      "SWGDE Mobile Forensics Guidelines"
+    ],
+    "feedback": {
+      "0": "Trop peu — il en existe plus, notamment File System (jailbreak/root) et Physical (image NAND).",
+      "1": "Il manque un niveau. Chip-off/JTAG est le 5ᵉ et dernier recours.",
+      "3": "Trop : la classification standard en mentionne 5, parfois fusionnée en 4 selon les outils mais pas plus."
+    },
+    "fiches": [
+      "mobile",
+      "ios_forensique",
+      "android_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "medium",
+    "type": "single",
+    "q": "iPhone saisi à 03h17, écran déverrouillé visible. Quelle est l'action prioritaire pour préserver l'état AFU (After First Unlock) ?",
+    "opts": [
+      "Éteindre l'appareil pour préserver la batterie",
+      "Le brancher à un chargeur et l'isoler en cage de Faraday sans l'éteindre",
+      "Redémarrer en mode DFU pour analyse immédiate",
+      "Activer le mode avion via les paramètres pour couper les communications"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>NE JAMAIS éteindre</strong> un iPhone allumé : il passerait en BFU (Before First Unlock), état dans lequel les clés de chiffrement ne sont plus en RAM et où l'extraction devient quasi impossible. La règle d'or : chargeur + Faraday pour empêcher wipe distant via Find My iPhone, sans interruption.",
+    "expl_ko": "En AFU, les clés <code>NSFileProtectionComplete</code> sont en RAM et permettent l'extraction. Éteindre = perdre ces clés = passer en BFU où seuls SMS opérateur et métadonnées restent accessibles sans bruteforce du passcode.",
+    "refs": [
+      "Apple Platform Security Guide",
+      "Cellebrite UFED — Best Practices Mobile Acquisition",
+      "art. 246 CPP — Saisie"
+    ],
+    "feedback": {
+      "0": "Erreur critique — éteindre fait perdre les clés en RAM et passer en BFU. La batterie se gère avec un chargeur.",
+      "2": "DFU = Device Firmware Update, casserait l'état actuel et déclencherait le passage en BFU au redémarrage.",
+      "3": "Naviguer dans les paramètres peut déclencher des protections (auto-lock court), un Faraday bag est immédiat et sans risque."
+    },
+    "fiches": [
+      "ios_forensique",
+      "mobile",
+      "premier_intervenant"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous saisissez un iPhone 8 (SoC A11). Quel exploit forensique permet une acquisition Full File System (FFS) et un bruteforce du passcode ?",
+    "opts": [
+      "checkm8 — exploit BootROM permanent sur A5-A11",
+      "BlastDoor bypass — contournement du sandboxing iMessage",
+      "TrustJacking — abus du protocole iTunes pairing",
+      "Pegasus zero-click — exploit NSO Group"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>checkm8</strong> (axi0mX, 2019) exploite une vulnérabilité du BootROM en lecture seule des SoC A5-A11. Comme le BootROM ne peut pas être patché logiciellement, l'exploit est <strong>permanent</strong>. Il permet de booter du code arbitraire avant le Secure Enclave, donc FFS chiffré + bruteforce GPU du passcode (10 minutes pour 6 chiffres).",
+    "expl_ko": "Pour A5-A11 (iPhone 5s → X), <strong>checkm8</strong> est l'exploit forensique de référence. Disponible via checkra1n (open source), palera1n, ou intégré dans Cellebrite/GrayKey/Magnet GRAYKEY.",
+    "refs": [
+      "axi0mX, GitHub checkm8 (2019)",
+      "Magnet GRAYKEY Documentation",
+      "Cellebrite Premium Documentation"
+    ],
+    "feedback": {
+      "1": "BlastDoor est une protection introduite par Apple en iOS 14 contre les exploits de messagerie, pas un outil forensique.",
+      "2": "TrustJacking concerne le pairing iTunes mais ne permet pas FFS ni bruteforce.",
+      "3": "Pegasus est un spyware NSO ciblant les communications, pas un outil d'acquisition forensique."
+    },
+    "fiches": [
+      "ios_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Artefacts iOS",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous cherchez à reconstruire la chronologie d'usage d'un iPhone (apps lancées, écran allumé, notifications). Quel artefact iOS est la « mine d'or temporelle » ?",
+    "opts": [
+      "knowledgeC.db — base SQLite tracant l'activité utilisateur",
+      "CallHistory.storedata — uniquement appels téléphoniques",
+      "interactionC.db — métriques publicitaires",
+      "AppleAccountsDB.sqlite — comptes iCloud"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<code>knowledgeC.db</code> est une base SQLite située dans <code>/private/var/mobile/Library/CoreDuet/Knowledge/</code>. Elle log l'activité granulaire : apps lancées, durée d'usage, screen on/off, plug/unplug, notifications, locations, Bluetooth pairings. C'est la principale source pour reconstruire le « parcours numérique » d'un iPhone, parfois sur plusieurs semaines.",
+    "expl_ko": "<strong>knowledgeC.db</strong> est unique en richesse : Apple l'utilise pour Siri suggestions et la batterie intelligente, mais pour le forensiste c'est une chronologie quasi-exhaustive de l'activité.",
+    "refs": [
+      "Sarah Edwards, mac4n6 — knowledgeC.db Research",
+      "iLEAPP — module knowledgeC"
+    ],
+    "feedback": {
+      "1": "CallHistory ne contient QUE l'historique téléphonique — utile mais très limité comparé à knowledgeC.",
+      "2": "interactionC concerne les interactions sociales (Contacts ranking), pas la chronologie d'usage globale.",
+      "3": "AppleAccountsDB stocke les comptes iCloud configurés, pas l'usage."
+    },
+    "fiches": [
+      "ios_forensique",
+      "sqlite_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "medium",
+    "type": "single",
+    "q": "Android 11+ utilise quel schéma de chiffrement par défaut, et quelle est la conséquence forensique principale ?",
+    "opts": [
+      "FDE (Full-Disk Encryption) — tout déchiffré dès le boot",
+      "FBE (File-Based Encryption) + metadata encryption — équivalent BFU iOS sans le passcode",
+      "RSA-4096 par fichier — bruteforce impossible",
+      "AES-128 partition unique — déchiffrable par tout outil forensique"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ko": "Depuis Android 10, <strong>FBE</strong> est obligatoire. À partir de Android 11, une couche de chiffrement des <strong>métadonnées</strong> (noms de fichiers, timestamps) s'ajoute. Sans le passcode utilisateur, on n'accède qu'aux fichiers DE (Device Encrypted : Alarmes, certains logs) — équivalent forensique du BFU iOS.",
+    "expl_ok": "<strong>FBE</strong> sépare CE (Credential Encrypted, dispo après unlock) et DE (Device Encrypted, dispo au boot pour Direct Boot apps). En Android 11+, l'ajout du metadata encryption empêche même de lister la structure du FS sans la clé. Conséquence : sans le PIN/passcode, l'extraction physique livre un blob inutilisable.",
+    "refs": [
+      "Android Open Source Project — File-Based Encryption",
+      "Cellebrite — Android Acquisition Best Practices"
+    ],
+    "feedback": {
+      "0": "FDE était le standard d'Android 5-9, remplacé par FBE depuis Android 7 (obligatoire Android 10+).",
+      "2": "Android utilise AES-256 dérivé du PIN + KEK matériel, pas RSA — le RSA serait beaucoup trop lent.",
+      "3": "AES-256 (pas 128) + clé liée au PIN + Secure Element ou TEE rendent le bruteforce coûteux."
+    },
+    "fiches": [
+      "android_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "hard",
+    "type": "single",
+    "q": "Téléphone Android avec SoC Qualcomm Snapdragon, locké par PIN, FBE actif. Quelle technique d'acquisition physique tentez-vous en priorité ?",
+    "opts": [
+      "ADB backup avec l'option --apk",
+      "EDL Mode (Emergency Download Mode) avec un programmer file approprié",
+      "Reset usine pour neutraliser le chiffrement",
+      "JTAG via tabs de soudure"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>EDL Mode</strong> (Emergency Download Mode) est un mode bas niveau présent sur tous les SoC Qualcomm. Activable par combinaison de touches ou court-circuit de pads de test. Avec un <em>programmer file (loader)</em> fuité ou signé, on lit la NAND complète. <strong>Limitation</strong> : la NAND lue est chiffrée si FBE actif → bruteforce du PIN nécessaire ensuite.",
+    "expl_ko": "EDL est la voie royale sur les SoC Qualcomm (Xiaomi, OnePlus, Samsung Snapdragon US, Sony, Motorola). Outils : EDL.py (bkerler), QFIL (Qualcomm), ou la base de loaders intégrée à Cellebrite Premium.",
+    "refs": [
+      "bkerler/EDL — GitHub",
+      "Cellebrite — Qualcomm EDL Mode Acquisition",
+      "Qualcomm QFIL Documentation"
+    ],
+    "feedback": {
+      "0": "ADB backup nécessite USB Debug activé et le device déverrouillé — impossible ici.",
+      "2": "Reset usine DÉTRUIT toutes les preuves — opération interdite en forensique.",
+      "3": "JTAG est possible mais beaucoup plus invasif et lent qu'EDL. EDL en premier, JTAG en dernier recours."
+    },
+    "fiches": [
+      "android_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Artefacts iOS",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous avez acquis un backup iTunes chiffré. Où se trouvent les fichiers sur Windows et comment sont-ils nommés ?",
+    "opts": [
+      "C:\\Backups\\iPhone\\ — fichiers nommés par nom d'origine",
+      "%AppData%\\Apple Computer\\MobileSync\\Backup\\ — fichiers nommés par hash SHA-1 du chemin",
+      "C:\\Program Files\\Apple\\iTunes\\Library\\ — fichiers nommés par UUID",
+      "Le backup chiffré est uniquement stocké sur iCloud"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur Windows : <code>%AppData%\\Apple Computer\\MobileSync\\Backup\\&lt;UDID&gt;\\</code>. Sur macOS : <code>~/Library/Application Support/MobileSync/Backup/</code>. Les fichiers sont nommés par <strong>SHA-1 du chemin d'origine</strong> et un fichier <code>Manifest.db</code> (SQLite) liste la correspondance hash → chemin.",
+    "expl_ko": "Cette structure est documentée Apple. Pour la décoder : iLEAPP, iPhone Backup Extractor, ou Magnet AXIOM lisent Manifest.db pour reconstruire l'arborescence d'origine.",
+    "refs": [
+      "Apple — About backups of iOS and iPadOS devices",
+      "iLEAPP Documentation"
+    ],
+    "feedback": {
+      "0": "Ce chemin n'existe pas par défaut, et les noms d'origine ne sont jamais conservés.",
+      "2": "iTunes n'est plus l'outil de référence (remplacé par Finder sur macOS Catalina+), et le chemin est faux.",
+      "3": "Les backups peuvent être locaux (iTunes/Finder) OU iCloud, pas uniquement iCloud."
+    },
+    "fiches": [
+      "ios_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Artefacts iOS",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Quels artefacts iOS sont chiffrés par la <strong>Keychain</strong> et nécessitent un accès device-level (pas backup) pour être déchiffrés ? (plusieurs réponses)",
+    "opts": [
+      "Mots de passe Wi-Fi sauvegardés",
+      "Cookies HTTP Safari",
+      "Tokens d'authentification d'apps (Facebook, Instagram)",
+      "Photos HEIC dans Camera Roll",
+      "Certificats clients VPN"
+    ],
+    "answers": [
+      0,
+      2,
+      4
+    ],
+    "expl_ok": "La <strong>Keychain</strong> iOS chiffre les secrets sensibles : mots de passe Wi-Fi, tokens OAuth d'apps, certificats clients, clés SSH stockées. L'extraction Keychain nécessite un FFS (jailbreak ou exploit) — un backup iTunes ne contient qu'une Keychain chiffrée avec le passcode du backup. Les photos sont en clair dans <code>DCIM/</code>, les cookies Safari sont dans Cookies.binarycookies (non chiffrés par Keychain).",
+    "expl_ko": "Mémorisez : <strong>Keychain</strong> = secrets d'authentification (Wi-Fi, tokens, certificats). Pas les photos (clair), pas les cookies (fichier dédié), pas les SMS (Messages.app DB).",
+    "refs": [
+      "Apple Platform Security Guide — Keychain",
+      "Sarah Edwards — Keychain Forensics"
+    ],
+    "feedback": {
+      "1": "Cookies Safari → <code>~/Library/Cookies/Cookies.binarycookies</code>, format propriétaire mais pas via Keychain.",
+      "3": "Photos en clair dans <code>DCIM/</code>, métadonnées EXIF accessibles directement après acquisition."
+    },
+    "fiches": [
+      "ios_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi la mise en cage de Faraday est-elle systématique dès la saisie d'un téléphone ?",
+    "opts": [
+      "Pour éviter qu'un wipe distant via Find My iPhone / Find My Device n'efface les preuves",
+      "Pour préserver la batterie le plus longtemps possible",
+      "Pour bloquer les radiations potentiellement nocives",
+      "Pour empêcher l'appareil photo de prendre des photos automatiques"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "La <strong>cage de Faraday</strong> bloque tous les signaux radio (cellulaire, Wi-Fi, Bluetooth, GPS). Cela empêche : (1) un wipe distant via iCloud Find My iPhone ou Google Find My Device, (2) une notification au propriétaire alertant de la saisie, (3) une mise à jour d'application qui modifierait l'état du device. Protocole standard en Suisse selon art. 246-248 CPP.",
+    "expl_ko": "Sans Faraday, un suspect peut effacer son téléphone à distance en quelques secondes — perte totale des preuves. C'est la première mesure conservatoire.",
+    "refs": [
+      "NIST SP 800-101 — Mobile Forensics",
+      "art. 246-248 CPP",
+      "Cellebrite Best Practices"
+    ],
+    "feedback": {
+      "1": "La batterie se gère avec un chargeur, pas avec une cage Faraday.",
+      "2": "Faux — la cage protège des signaux entrants, pas des « radiations » émises par l'appareil.",
+      "3": "L'appareil photo n'est pas un sujet — la cage protège contre les commandes réseau distantes."
+    },
+    "fiches": [
+      "mobile",
+      "ios_forensique",
+      "android_forensique",
+      "premier_intervenant"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quel rôle joue le « Secure Enclave » dans la sécurité iOS et l'investigation forensique ?",
+    "opts": [
+      "Co-processeur isolé stockant les clés cryptographiques, limitant le bruteforce du passcode",
+      "Application iOS pour le coffre-fort de mots de passe utilisateur",
+      "Région chiffrée de la NAND uniquement accessible en mode DFU",
+      "Service cloud Apple stockant les sauvegardes"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>Secure Enclave</strong> (SEP) est un co-processeur cryptographique isolé présent dès l'iPhone 5s (2013). Il stocke les clés dérivées du passcode, gère Touch ID/Face ID, et impose des <strong>délais croissants entre tentatives de bruteforce</strong> (1s, 1min, 5min, 15min, 1h…). Configuré à 10 tentatives max, il efface les clés. C'est ce qui rend le bruteforce passcode si difficile sans exploits dédiés.",
+    "expl_ko": "Le SEP est l'élément central qui transforme un PIN à 6 chiffres (1 million de combinaisons, bruteforçable en secondes) en quelque chose de pratiquement inviolable.",
+    "refs": [
+      "Apple Platform Security Guide — Secure Enclave",
+      "Tarjei Mandt et al. — Demystifying the Secure Enclave Processor"
+    ],
+    "feedback": {
+      "1": "Confusion avec l'app Trousseau (Keychain) — le SEP est du hardware, pas une app.",
+      "2": "Le SEP n'est pas une région NAND, c'est un co-processeur silicon à part.",
+      "3": "Pas un service cloud — c'est du hardware embarqué sur le SoC de chaque appareil."
+    },
+    "fiches": [
+      "ios_forensique",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Mobile — Acquisition et chiffrement",
+    "diff": "hard",
+    "type": "single",
+    "q": "Un suspect refuse de fournir le code de déverrouillage de son téléphone. En droit suisse, peut-on le contraindre à donner son passcode ?",
+    "opts": [
+      "Oui, par injonction du procureur sous menace de l'art. 292 CP",
+      "Non — le droit au silence (art. 113 CPP) protège le suspect, mais la biométrie (Face ID, Touch ID) peut être imposée selon la doctrine majoritaire",
+      "Oui, le procureur peut imposer toute mesure pour obtenir les preuves",
+      "Non, ni passcode ni biométrie ne peuvent jamais être imposés"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Passcode</strong> = élément cognitif protégé par le droit au silence et la protection contre l'auto-incrimination (art. 113 CPP, art. 6 §1 CEDH, ATF 138 IV 47). En revanche, <strong>Face ID / Touch ID</strong> = caractéristique physique relevant des mesures coercitives ordinaires (art. 251 CPP par analogie aux empreintes digitales), donc imposables selon la doctrine majoritaire suisse. Cas limite : nemo tenetur s'applique-t-il à la biométrie ? Débat actif.",
+    "expl_ko": "Distinction <strong>passcode</strong> (cognition, protégé) vs <strong>biométrie</strong> (physique, imposable). En pratique : si le téléphone est saisi en état AFU, déclencher Face ID rapidement avant qu'il ne passe en BFU et exige le code.",
+    "refs": [
+      "art. 113 CPP — Statut du prévenu",
+      "ATF 138 IV 47 — Auto-incrimination",
+      "Marc Forster — Code de procédure pénale, comm.",
+      "CourEDH J.B. c. Suisse (2001)"
+    ],
+    "feedback": {
+      "0": "L'art. 292 CP (insoumission décision autorité) ne couvre pas l'obligation de révéler un secret — limite du nemo tenetur.",
+      "2": "Faux — le droit au silence est un droit fondamental, le procureur n'a pas tous les pouvoirs.",
+      "3": "Faux — la biométrie est généralement considérée comme imposable, même si débat doctrinal."
+    },
+    "fiches": [
+      "mobile",
+      "droit",
+      "preuve"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows Subsystem for Linux",
+    "diff": "medium",
+    "type": "single",
+    "q": "Un attaquant utilise WSL2 sur un Windows pour échapper aux EDR. Où est stocké le filesystem ext4 de la distribution Linux WSL2 ?",
+    "opts": [
+      "Dans <code>C:\\Linux\\</code>",
+      "Dans un fichier <code>ext4.vhdx</code> sous <code>%USERPROFILE%\\AppData\\Local\\Packages\\&lt;DistroID&gt;\\LocalState\\</code>",
+      "Sur une partition ext4 native",
+      "Dans le cloud Microsoft"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ko": "WSL2 utilise un fichier image disque virtuel <strong><code>ext4.vhdx</code></strong> géré par Hyper-V, situé sous <code>%USERPROFILE%\\AppData\\Local\\Packages\\&lt;DistroID&gt;\\LocalState\\</code> (par exemple <code>CanonicalGroupLimited.UbuntuonWindows_*</code>). Le fichier est verrouillé tant que la VM WSL tourne. Pour analyser : (1) arrêter WSL avec <code>wsl --shutdown</code>, (2) monter le VHDX avec <code>Mount-VHD</code> ou <code>guestmount</code> sur copie, (3) parser l'ext4 (Autopsy, fls/icat). Détecter l'usage WSL : EID 4688 avec <code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code> ; clés registre <code>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</code>.",
+    "expl_ok": "<code>ext4.vhdx</code> dans AppData = filesystem complet WSL2. Verrouillé en cours d'usage → toujours <code>wsl --shutdown</code> avant copie forensique.",
+    "refs": [
+      "Microsoft — WSL Architecture",
+      "DFIR Report — WSL forensics"
+    ],
+    "feedback": {
+      "0": "Pas un chemin Windows standard, et WSL n'utilise pas ce dossier.",
+      "2": "WSL2 utilise un VHDX (image disque), pas une partition native (c'était WSL1).",
+      "3": "Local seulement, pas cloud."
+    },
+    "fiches": [
+      "wsl_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "USB Forensique Windows",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel emplacement du registre Windows conserve la <strong>liste complète des périphériques USB</strong> ayant déjà été connectés à la machine ?",
+    "opts": [
+      "<code>HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\USB</code>",
+      "<code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR</code> (périphériques de stockage) + <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USB</code> (tous USB)",
+      "<code>HKCU\\Network\\USB</code>",
+      "<code>C:\\Windows\\System32\\usb.log</code>"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Windows historise tous les USB dans <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR\\</code> (stockage : clés, disques externes) et <code>HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USB\\</code> (tous USB : HID, audio…). Chaque entrée est nommée <code>Disk&Ven_KINGSTON&Prod_DTXM30&Rev_PMAP\\&lt;Serial&gt;</code>. <strong>Triade USB</strong> : VID (Vendor ID, 4 hex), PID (Product ID, 4 hex), Serial (numéro unique). Complémentaire : <code>setupapi.dev.log</code> (premier branchement avec timestamp), <code>HKLM\\SYSTEM\\MountedDevices</code> (lettre de drive), <code>NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MountPoints2\\</code> (par user).",
+    "expl_ko": "Mémo USB : <strong>USBSTOR (stockage) + USB (tous) + setupapi.dev.log + MountedDevices + MountPoints2</strong>.",
+    "refs": [
+      "Microsoft — Device Enumeration",
+      "Eric Zimmerman — Registry Explorer / USBDeview"
+    ],
+    "feedback": {
+      "0": "Pas le bon chemin.",
+      "2": "HKCU\\Network n'a aucun rapport.",
+      "3": "Il n'y a pas de fichier usb.log dans System32."
+    },
+    "fiches": [
+      "usb_forensique",
+      "usb_removable_media_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "USB Forensique Windows",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Pour <strong>attribuer un branchement USB à un utilisateur précis</strong> (et pas seulement à la machine), quels artefacts croisez-vous ? (plusieurs réponses)",
+    "opts": [
+      "<code>NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MountPoints2</code> (par user)",
+      "Logs Security EID 6416 (External Device Recognized) + EID 4624 (logon session de l'utilisateur)",
+      "Shellbags de l'utilisateur (accès à \\\\?\\Volume{GUID}\\ correspondant)",
+      "Jump Lists / RecentDocs de l'utilisateur référençant la lettre de drive",
+      "Le poids du périphérique"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Attribuer USB ↔ user nécessite de croiser plusieurs sources : (1) <strong>MountPoints2</strong> dans NTUSER.DAT (par utilisateur) = clés <code>{GUID}</code> avec timestamps last-write. (2) <strong>EID 6416 + 4624</strong> = corrélation horaire « tel device + telle session active ». (3) <strong>Shellbags</strong> = preuve de navigation dans l'arborescence du périphérique. (4) <strong>Jump Lists / RecentDocs</strong> = ouverture de fichiers depuis la clé. Le tout horodaté à la seconde permet d'établir qui a branché et utilisé l'USB. Outils : RegRipper, USBDeview, JLECmd (Zimmerman).",
+    "expl_ko": "Attribution USB ↔ user = <strong>MountPoints2 + EID + shellbags + Jump Lists</strong>. Aucun seul ne suffit ; c'est la corrélation qui fait la preuve.",
+    "refs": [
+      "SANS FOR500 — USB Attribution",
+      "NIST SP 800-86 — Integration of Forensic Techniques"
+    ],
+    "feedback": {
+      "4": "Le poids est sans valeur forensique."
+    },
+    "fiches": [
+      "usb_forensique",
+      "usb_removable_media_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows Subsystem for Linux",
+    "diff": "medium",
+    "type": "single",
+    "q": "Comment détecter sur un Windows que <strong>WSL a été utilisé</strong> par un utilisateur même si les distributions ont été désinstallées ?",
+    "opts": [
+      "Impossible une fois désinstallé",
+      "Croiser : EID 4688 (<code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code>), clés registre <code>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</code> (traces de distros), Prefetch <code>WSL.EXE-*.pf</code>, Feature activée (DISM)",
+      "Uniquement par les logs de pare-feu",
+      "Dans le BIOS"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Indicateurs d'usage WSL : (1) <strong>EID 4688</strong> (process creation) avec <code>wsl.exe</code>, <code>bash.exe</code>, <code>wslhost.exe</code>, <code>wslservice.exe</code>. (2) <strong>HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\</strong> = traces des distributions installées (même supprimées, les clés <code>{GUID}</code> peuvent persister + last-write timestamps). (3) <strong>Prefetch</strong> <code>WSL.EXE-*.pf</code> dans <code>C:\\Windows\\Prefetch\\</code>. (4) <strong>Optional features</strong> — vérifier <code>Get-WindowsOptionalFeature -Online | ? FeatureName -like \"*Linux*\"</code>. (5) Anciens fichiers <code>ext4.vhdx</code> dans <code>AppData\\Local\\Packages\\</code>. (6) Restes de <code>C:\\Users\\&lt;user&gt;\\.bash_history</code> si profil partagé.",
+    "expl_ko": "WSL = nombreuses traces résiduelles : <strong>EID 4688 + Lxss registry + Prefetch + DISM features</strong>. La désinstallation efface rarement tout proprement.",
+    "refs": [
+      "Microsoft — WSL Architecture",
+      "DFIR Report — WSL forensics"
+    ],
+    "feedback": {
+      "0": "Faux — les traces résiduelles sont nombreuses.",
+      "2": "Le pare-feu ne loggue pas WSL spécifiquement.",
+      "3": "WSL n'est pas dans le BIOS, c'est un service userland."
+    },
+    "fiches": [
+      "wsl_forensique",
+      "windows_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
     "chapter": "Windows — Artefacts et exécution",
     "diff": "easy",
     "type": "single",

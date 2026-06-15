@@ -2,6 +2,613 @@
   {
     "theme": "Forensique",
     "theme_icon": "🔬",
+    "chapter": "PowerShell Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi PowerShell est-il considéré comme « l'arme n°1 des attaquants modernes » sur Windows ?",
+    "opts": [
+      "Parce qu'il faut l'installer sur chaque machine",
+      "Parce qu'il est <strong>installé par défaut</strong> sur tout Windows depuis 7/2008 R2, signé Microsoft, capable d'exécuter du code en mémoire (fileless), et pré-configuré pour télécharger des charges réseau",
+      "Parce qu'il est plus rapide que Python",
+      "Parce qu'il n'est pas surveillé par les antivirus"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "PowerShell est l'archétype du <strong>Living-off-the-Land Binary (LOLBin)</strong> : installé par défaut depuis Windows 7/Server 2008 R2, signé Microsoft (whitelist par défaut sur les EDR), capable d'exécuter du code <strong>en mémoire sans toucher le disque</strong>, et pré-configuré avec des cmdlets de téléchargement (<code>Net.WebClient</code>, <code>Invoke-WebRequest</code>). Mappé sur <strong>MITRE ATT&amp;CK T1059.001</strong>, c'est l'une des techniques d'exécution les plus fréquentes (Empire, PowerSploit, Invoke-Mimikatz, Cobalt Strike beacons).",
+    "expl_ko": "PowerShell = LOLBin parfait. AMSI et ScriptBlock Logging sont les contre-mesures principales.",
+    "refs": [
+      "MITRE ATT&CK — T1059.001",
+      "Microsoft — PowerShell Security Documentation"
+    ],
+    "feedback": {
+      "0": "Faux — précisément le contraire : PowerShell est natif sur tout Windows moderne.",
+      "2": "La vitesse n'est pas la raison.",
+      "3": "Faux — au contraire, AMSI (Win10+) scanne explicitement le contenu PowerShell avant exécution."
+    },
+    "fiches": [
+      "powershell_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "PowerShell Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quel Event ID Windows est considéré comme « l'artefact n°1 » du DFIR PowerShell ?",
+    "opts": [
+      "EID 4624 — Logon réussi",
+      "EID 4104 — Script Block Logging (code <strong>de-obfusqué</strong> tel qu'exécuté)",
+      "EID 4688 — Process Creation",
+      "EID 1116 — AMSI detection"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>EID 4104</strong> dans le canal <code>Microsoft-Windows-PowerShell/Operational</code> capture le <strong>texte complet du script block exécuté, de-obfusqué par le moteur PowerShell juste avant exécution</strong>. C'est la seule façon de voir le code que l'attaquant a réellement fait tourner — même s'il a été reçu encodé en Base64, même s'il a été chiffré XOR, même s'il n'a jamais touché le disque. Activable par GPO (<em>Turn on PowerShell Script Block Logging</em>) ou registre (<code>EnableScriptBlockLogging=1</code>).",
+    "expl_ko": "EID 4104 = ScriptBlock = code <strong>de-obfusqué</strong>. C'est pourquoi il est l'artefact principal : pas besoin de décoder soi-même Base64/XOR/ROT.",
+    "refs": [
+      "Microsoft — PowerShell Logging",
+      "Mandiant — PowerShell Forensics"
+    ],
+    "feedback": {
+      "0": "4624 concerne les connexions de session, pas le contenu PowerShell.",
+      "2": "EID 4688 montre la ligne de commande (souvent <code>-Enc &lt;base64&gt;</code>) — utile mais moins riche que 4104.",
+      "3": "EID 1116 (Windows Defender/Operational) signale qu'AMSI a flaggé un script, mais 4104 contient le détail."
+    },
+    "fiches": [
+      "powershell_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "PowerShell Forensique",
+    "diff": "hard",
+    "type": "single",
+    "q": "Lors d'une enquête, vous voyez Sysmon EID 1 montrant <code>powershell.exe -Version 2 ...</code> mais aucun EID 4104 correspondant. Que se passe-t-il ?",
+    "opts": [
+      "Le log a été supprimé par l'attaquant",
+      "C'est un <strong>downgrade attack</strong> — PowerShell 2.0 n'a ni ScriptBlock Logging (v5+) ni AMSI (v5 + Win10), donc le runtime est aveugle",
+      "L'utilisateur a désactivé Sysmon",
+      "PowerShell 2.0 n'existe plus depuis 2018"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Downgrade attack</strong> : PowerShell 2.0 ne supporte ni ScriptBlock Logging (introduit en v5), ni Module Logging (v3+), ni AMSI (v5 + Win10). En forçant <code>-Version 2</code>, l'attaquant exécute son code dans un runtime <strong>aveugle</strong>. Le seul vestige possible est l'<strong>EID 400</strong> dans <code>Windows PowerShell.evtx</code> avec <code>HostVersion=2.0</code>, et la ligne de commande dans Security EID 4688 / Sysmon EID 1. <strong>Mitigation</strong> : <code>Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root</code> sur tout le parc.",
+    "expl_ko": "Downgrade PS v2 = bypass classique. Détection par <strong>absence</strong> de 4104 alors que Sysmon EID 1 montre que powershell.exe a tourné — c'est de la corrélation, pas de la signature.",
+    "refs": [
+      "Mandiant — PowerShell Downgrade Attack",
+      "ANSSI — Guide de durcissement PowerShell"
+    ],
+    "feedback": {
+      "0": "Possible mais moins probable que le downgrade. Si le log était supprimé, on perdrait aussi EID 400 — mais celui-ci est généralement présent.",
+      "2": "Sysmon EID 1 prouve justement le contraire — Sysmon a vu le lancement.",
+      "3": "Faux — PowerShell 2.0 est encore une fonctionnalité optionnelle installable sur Windows 10/11."
+    },
+    "fiches": [
+      "powershell_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "PowerShell Forensique",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Quels patterns dans un EID 4104 doivent déclencher une alerte forensique immédiate ? (plusieurs réponses)",
+    "opts": [
+      "<code>IEX (New-Object Net.WebClient).DownloadString(...)</code>",
+      "<code>amsiInitFailed</code> ou <code>AmsiUtils</code>",
+      "<code>-EncodedCommand</code> ou <code>-Enc</code> avec long blob Base64",
+      "<code>Get-Process</code> sans paramètre",
+      "<code>[Reflection.Assembly]::Load(...)</code>"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "Patterns suspects à alerter : (1) <strong>Download cradle</strong> classique (IEX + DownloadString), signature de la quasi-totalité des loaders (Lumma, RedLine, IcedID, Cobalt Strike). (2) <strong>amsiInitFailed/AmsiUtils</strong> = bypass AMSI documenté, signaturé par Defender depuis 2018. (3) <strong>-EncodedCommand</strong> avec long blob = obfuscation par défaut. (4) <strong>[Reflection.Assembly]::Load</strong> = chargement réflectif de .NET (souvent Mimikatz, Cobalt Strike). <code>Get-Process</code> seul est une commande légitime banale, pas suspecte.",
+    "expl_ko": "Règle SIEM minimale : <code>EID=4104 AND ScriptBlockText CONTAINS (\"DownloadString\" OR \"amsiInit\" OR \"FromBase64\" OR \"Reflection.Assembly\")</code>.",
+    "refs": [
+      "SigmaHQ — PowerShell detection rules",
+      "Mandiant — PowerShell Hunting Patterns"
+    ],
+    "feedback": {
+      "3": "<code>Get-Process</code> est une cmdlet de listing standard, présente dans tous les scripts admin légitimes — pas un IOC."
+    },
+    "fiches": [
+      "powershell_forensique",
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Threat Intelligence & IOC",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que signifie le niveau <strong>TLP:AMBER+STRICT</strong> dans le Traffic Light Protocol 2.0 (août 2022) ?",
+    "opts": [
+      "Partage public illimité",
+      "Diffusion <strong>uniquement à son organisation</strong>, pas aux clients ni partenaires",
+      "Confidentiel défense",
+      "Diffusion dans toute la communauté ISAC"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>TLP 2.0</strong> (août 2022) définit 4 niveaux : <strong>RED</strong> (strictement personnel, ne jamais partager hors réunion/mail privé), <strong>AMBER</strong> (organisation + clients/partenaires qui ont besoin d'agir), <strong>AMBER+STRICT</strong> (uniquement à son organisation), <strong>GREEN</strong> (communauté, ISAC, partenaires connus, pas de canaux publics), <strong>CLEAR</strong> (anciennement WHITE — diffusion publique illimitée, renommé en 2022 pour inclusivité).",
+    "expl_ko": "AMBER+STRICT est plus restrictif que AMBER classique : <strong>pas de partage hors organisation</strong>, même aux clients de confiance.",
+    "refs": [
+      "FIRST.org — TLP 2.0 Specification (août 2022)",
+      "ENISA — Information Sharing Guidelines"
+    ],
+    "feedback": {
+      "0": "C'est TLP:CLEAR (anciennement WHITE).",
+      "2": "TLP n'inclut pas de classification militaire.",
+      "3": "C'est TLP:GREEN (communauté, ISAC)."
+    },
+    "fiches": [
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Threat Intelligence & IOC",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous recevez d'un partenaire un fichier STIX 2.1 contenant un objet <code>indicator</code> avec le pattern <code>[domain-name:value = 'evil.com']</code>. Que devez-vous vérifier <strong>avant</strong> d'alimenter votre SIEM ?",
+    "opts": [
+      "Rien — STIX est toujours fiable",
+      "La validité temporelle (<code>valid_from</code>/<code>valid_until</code>), le marquage TLP (<code>object_marking_refs</code>), et la confiance/source",
+      "L'IP correspondante",
+      "Le port TCP cible"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Trois vérifications minimum avant injection en SIEM : (1) <strong>Validité temporelle</strong> — <code>valid_from</code>/<code>valid_until</code>. Un domaine C2 burnable peut être réassigné à un usage légitime après 30 jours. Bloquer un IOC expiré = faux positifs garantis. (2) <strong>TLP</strong> — si <code>marking-definition</code> dit TLP:RED, ne pas l'ingérer en production sans validation manuelle. AMBER+STRICT → ne pas le partager au-delà des SOC dédiés. (3) <strong>Confiance/source</strong> — qui est <code>created_by_ref</code> ? Quelle <code>confidence</code> (0-100) ? Quelle <code>kill_chain_phase</code> ? Bonus : vérifier les <strong>warning lists</strong> (CDN légitimes comme <code>cloudfront.net</code>, <code>akamaiedge.net</code>) — bloquer un CDN casse la moitié d'Internet.",
+    "expl_ko": "STIX 2.1 fournit le contexte, pas la garantie. Toujours valider : <strong>temps + TLP + source + warning list</strong>.",
+    "refs": [
+      "OASIS STIX 2.1 Specification",
+      "MISP — Warning Lists Documentation"
+    ],
+    "feedback": {
+      "0": "Dangereux — la qualité STIX dépend du contributeur.",
+      "2": "L'IP n'est pas le pattern principal ici (c'est un domain-name).",
+      "3": "Le port TCP n'est pas dans le pattern de l'exemple."
+    },
+    "fiches": [
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Threat Intelligence & IOC",
+    "diff": "hard",
+    "type": "single",
+    "q": "Un client suisse vous demande s'il peut partager un IOC contenant une IP source d'attaque (compte client compromis) avec son ISAC sectoriel. Que lui répondez-vous ?",
+    "opts": [
+      "Oui, librement — les IOCs ne sont pas concernés par la nLPD",
+      "Oui avec précautions juridiques : nLPD applicable (IP = donnée personnelle), base légale (intérêt prépondérant), TLP:AMBER min, pseudonymisation, accord ISAC signé",
+      "Non — le partage d'IOC est interdit en Suisse",
+      "Oui mais seulement en TLP:CLEAR"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Réponse nuancée : <strong>oui mais avec précautions</strong>. (1) <strong>nLPD applicable</strong> — le PFPDT considère qu'une IP est une donnée personnelle dès qu'elle peut, même indirectement, identifier une personne. (2) <strong>Base légale</strong> (art. 31 nLPD) — soit consentement (compliqué pour un compte compromis), soit <strong>intérêt prépondérant</strong> (sécurité du SI vs protection des données du tiers victime). (3) <strong>TLP:AMBER minimum</strong>, pas CLEAR. <strong>Pseudonymiser</strong> si possible (partager TTPs et ASN au lieu de l'IP exacte). (4) <strong>Accord de partage</strong> ISAC signé. (5) <strong>Notification OFCS/NCSC</strong> obligatoire si infrastructure critique (LSI). Recommandation : MISP avec workflow de revue + DPO en amont.",
+    "expl_ko": "Partage CTI en CH = nLPD applicable + intérêt prépondérant + TLP AMBER + pseudonymisation. Toujours impliquer le DPO.",
+    "refs": [
+      "nLPD art. 31 — Justification",
+      "PFPDT — Guide IOC sharing",
+      "loi LSI — notification incident"
+    ],
+    "feedback": {
+      "0": "Faux — la nLPD s'applique aux IP comme données personnelles.",
+      "2": "Le partage CTI est légal sous conditions (intérêt prépondérant).",
+      "3": "TLP:CLEAR exposerait l'IP publiquement — trop large pour ce contexte."
+    },
+    "fiches": [
+      "threat_intel_ioc",
+      "nldp"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Threat Intelligence & IOC",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Selon le <strong>Diamond Model</strong> de l'analyse d'intrusion (Caltagirone et al., 2013), quels sont les 4 sommets utilisés pour pivoter et enrichir l'analyse d'un incident ? (plusieurs réponses)",
+    "opts": [
+      "Adversaire (qui attaque ?)",
+      "Capacité (avec quoi ? malware, exploits, TTPs)",
+      "Infrastructure (depuis où ? C2, domaines, IPs)",
+      "Victime (vers qui ? secteur, organisation, géo)",
+      "Budget (combien ça coûte ?)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Le <strong>Diamond Model</strong> (Caltagirone, Pendergast, Betz, 2013) est un modèle fondateur de la CTI. Il pose qu'une intrusion peut être décrite par <strong>4 sommets</strong> : Adversaire (APT29 / Cozy Bear), Capacité (SUNBURST, WellMess), Infrastructure (avsvmcloud.com), Victime (agences fédérales US). <strong>Méthode du pivot</strong> : connaissant un IOC, on pivote vers les autres sommets — qui possède ce domaine ? quel malware s'y connecte ? qui d'autre a été ciblé ? Le budget n'est pas un sommet du modèle.",
+    "expl_ko": "Mémo : <strong>4 sommets — A·C·I·V</strong> (Adversaire/Capacité/Infrastructure/Victime). Pivot pour enrichir.",
+    "refs": [
+      "Caltagirone, Pendergast, Betz — The Diamond Model (2013)",
+      "Center for Cyber Intelligence Analysis"
+    ],
+    "feedback": {
+      "4": "Le budget peut être analysé en CTI stratégique mais n'est pas un sommet du Diamond Model standard."
+    },
+    "fiches": [
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Malware Forensics",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle approche d'analyse malware consiste à observer le comportement réel d'un binaire en l'exécutant dans un environnement isolé contrôlé ?",
+    "opts": [
+      "Analyse statique",
+      "Analyse dynamique (sandbox)",
+      "Analyse comportementale",
+      "Analyse contractuelle"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>analyse dynamique</strong> exécute le malware dans une <strong>sandbox</strong> (Cuckoo Sandbox, Hybrid Analysis, Joe Sandbox, ANY.RUN) et observe : appels système, créations de fichiers/processus, connexions réseau (C2), modifications du registre, écritures mémoire. Trois approches complémentaires : <strong>statique</strong> (analyse du binaire sans exécution : strings, PE headers, IAT, signatures YARA), <strong>dynamique</strong> (sandbox), <strong>comportementale</strong> (IOC, YARA, MITRE ATT&amp;CK sur traces réelles).",
+    "expl_ko": "Triade malware forensique : <strong>statique + dynamique + comportementale</strong>. La dynamique = sandbox = exécution observée.",
+    "refs": [
+      "NIST SP 800-83 — Malware Incident Prevention",
+      "Cuckoo Sandbox Documentation"
+    ],
+    "feedback": {
+      "0": "Statique = analyse sans exécution (binaire au repos).",
+      "2": "Comportementale = construction d'IOC/YARA à partir des traces, pas l'exécution elle-même.",
+      "3": "Faux — pas une catégorie reconnue."
+    },
+    "fiches": [
+      "malware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Malware Forensics",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur le format Portable Executable (PE) de Windows, quel hash <strong>résiste aux modifications mineures du binaire</strong> en hashant uniquement la table des imports (DLL + fonctions) ?",
+    "opts": [
+      "MD5",
+      "IMPHASH (Import Hash)",
+      "SHA-512",
+      "CRC-32"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>IMPHASH</strong> (Mandiant, 2014) hashe uniquement la <strong>Import Address Table (IAT)</strong> du PE : noms ordonnés des DLL importées + fonctions appelées. Conséquence : deux variantes du même malware (compilées avec petites modifs) auront <strong>le même IMPHASH</strong> alors que MD5/SHA-256 changent complètement. Très utilisé pour clustering de familles malware sur VirusTotal. Limites : packers/protectors peuvent masquer la vraie IAT. <strong>SSDEEP/TLSH</strong> (fuzzy hashes) jouent un rôle similaire mais sur le contenu global.",
+    "expl_ko": "IMPHASH = empreinte de la <strong>table des imports</strong>. Résiste aux modifs cosmétiques. Pivot rapide pour clustering.",
+    "refs": [
+      "Mandiant — Tracking Malware with Import Hashing",
+      "VirusTotal Intelligence — IMPHASH"
+    ],
+    "feedback": {
+      "0": "MD5 hashe le fichier entier — change au moindre octet modifié.",
+      "2": "SHA-512 idem MD5 mais 512 bits — change toujours au moindre octet modifié.",
+      "3": "CRC-32 est un checksum d'intégrité, pas adapté au clustering malware."
+    },
+    "fiches": [
+      "malware_forensique",
+      "reverse_engineering_101"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Malware Forensics",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Quels sont les mécanismes de persistance Windows les plus courants surveillés par <code>Autoruns</code> de Sysinternals ? (plusieurs réponses)",
+    "opts": [
+      "Clés <code>Run</code>/<code>RunOnce</code> du registre (HKLM et HKCU)",
+      "Scheduled Tasks (<code>schtasks.exe</code>, <code>\\Windows\\System32\\Tasks\\</code>)",
+      "Services Windows",
+      "Browser extensions / shell extensions",
+      "Numéro de série du processeur"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "<strong>Autoruns</strong> (Mark Russinovich, Sysinternals) énumère ~30 mécanismes de persistance Windows : <strong>Run/RunOnce</strong> (HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run, idem HKCU), <strong>Scheduled Tasks</strong> (<code>C:\\Windows\\System32\\Tasks\\</code>), <strong>Services</strong> (HKLM\\System\\CurrentControlSet\\Services), <strong>Drivers</strong>, <strong>Logon scripts</strong>, <strong>Image File Execution Options (IFEO)</strong>, <strong>AppInit_DLLs</strong>, <strong>Browser/Shell extensions</strong>, <strong>WMI subscriptions</strong>. Outil incontournable en triage. Events Windows critiques : EID 7045 (service installé), EID 4698 (tâche planifiée créée), EID 13 (Sysmon — registry value set).",
+    "expl_ko": "Autoruns = ~30 emplacements de persistance. Triade : Run keys + Scheduled Tasks + Services + Shell ext.",
+    "refs": [
+      "Microsoft Sysinternals — Autoruns",
+      "MITRE ATT&CK T1547 — Boot or Logon Autostart"
+    ],
+    "feedback": {
+      "4": "Le numéro de série du processeur n'est pas un mécanisme de persistance."
+    },
+    "fiches": [
+      "malware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Malware Forensics",
+    "diff": "hard",
+    "type": "single",
+    "q": "YARA est devenu le standard de signatures malware. Quels sont les 3 éléments principaux d'une règle YARA ?",
+    "opts": [
+      "<code>title</code>, <code>author</code>, <code>date</code>",
+      "<code>meta</code>, <code>strings</code>, <code>condition</code>",
+      "<code>imports</code>, <code>exports</code>, <code>resources</code>",
+      "<code>sha256</code>, <code>md5</code>, <code>imphash</code>"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une règle YARA contient trois blocs : <strong><code>meta:</code></strong> (description, auteur, date, références, hash de référence — purement informatif), <strong><code>strings:</code></strong> (chaînes texte/hex/regex à matcher, identifiées par <code>$nom</code>), <strong><code>condition:</code></strong> (expression booléenne combinant les strings et propriétés du fichier — ex. <code>any of ($s*) and filesize &lt; 1MB</code>). YARA peut aussi importer des modules (PE, ELF, hash, math) pour des conditions structurelles : <code>pe.imphash() == \"...\"</code>, <code>hash.sha256(0, filesize) == \"...\"</code>.",
+    "expl_ko": "Triade YARA : <strong>meta</strong> (doc) + <strong>strings</strong> (motifs) + <strong>condition</strong> (logique). Mémoriser ces 3 mots.",
+    "refs": [
+      "YARA Documentation — virustotal.github.io/yara",
+      "Florian Roth — YARA Best Practices"
+    ],
+    "feedback": {
+      "0": "Ce sont des champs de <code>meta:</code>, pas la structure principale.",
+      "2": "Ce sont des éléments du format PE, pas la structure YARA.",
+      "3": "Ce sont des types d'IOC, pas la structure d'une règle YARA."
+    },
+    "fiches": [
+      "malware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Reverse Engineering",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quels sont les 2 octets de signature qui identifient un fichier exécutable Windows PE (.exe, .dll, .sys) à l'offset 0 ?",
+    "opts": [
+      "<code>0x4D 0x5A</code> (« MZ », initiales de Mark Zbikowski)",
+      "<code>0x50 0x4B</code> (« PK », ZIP)",
+      "<code>0x7F 0x45</code> (ELF)",
+      "<code>0xCA 0xFE</code> (JVM)"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Tout exécutable Windows commence par <strong>0x4D 0x5A</strong> = « MZ » à l'offset 0 — les initiales de <strong>Mark Zbikowski</strong>, l'ingénieur Microsoft à l'origine du format DOS MZ dont PE est l'héritier. Ensuite : un DOS stub legacy, puis à l'offset stocké dans <code>e_lfanew</code> (offset 0x3C), la vraie signature PE = <code>0x50 0x45 0x00 0x00</code> (« PE\\0\\0 »). Suivent les COFF Header, Optional Header, puis les sections (.text, .data, .rsrc, .reloc).",
+    "expl_ko": "Magic bytes Windows PE : <strong>« MZ »</strong> à l'offset 0, puis <strong>« PE\\0\\0 »</strong> plus loin (offset indiqué par e_lfanew).",
+    "refs": [
+      "Microsoft — PE Format Specification",
+      "Mark Russinovich — Windows Internals"
+    ],
+    "feedback": {
+      "1": "« PK » identifie les fichiers ZIP (et donc DOCX, JAR, APK qui sont des ZIP).",
+      "2": "ELF est le format exécutable Linux/Unix.",
+      "3": "« CAFE » (en réalité <code>CAFEBABE</code>) est la signature des fichiers <code>.class</code> Java."
+    },
+    "fiches": [
+      "reverse_engineering_101",
+      "malware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Reverse Engineering",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Vous reversez un binaire PE suspect. Quels « red flags » indiquent une probable nature malveillante ? (plusieurs réponses)",
+    "opts": [
+      "Section <code>.text</code> très petite et section anonyme (<code>UPX0</code>, <code>.packed</code>, etc.) très grande — signe de packing",
+      "Entropie élevée (&gt;7.0/8) sur une section — signe de chiffrement ou compression",
+      "Imports inhabituels : <code>VirtualAlloc</code>, <code>WriteProcessMemory</code>, <code>CreateRemoteThread</code> (injection de code)",
+      "Timestamp de compilation dans le futur ou clairement antidaté",
+      "Présence de la section <code>.rsrc</code> avec une icône"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Red flags PE : (1) <strong>Packing</strong> — <code>.text</code> minuscule + section anonyme énorme (UPX, Themida, VMProtect). (2) <strong>Entropie élevée</strong> (&gt;7.0/8) = données très aléatoires = chiffré/compressé (calcul via <code>pefile</code> ou <code>die</code>). (3) <strong>Imports d'injection</strong> : <code>VirtualAlloc</code>/<code>VirtualProtect</code> (allocation/protection mémoire), <code>WriteProcessMemory</code> (écriture cross-process), <code>CreateRemoteThread</code> (injection thread distant), <code>NtUnmapViewOfSection</code> (process hollowing). (4) <strong>Timestamp aberrant</strong> — futur ou 1970/2000 antidaté. Une section <code>.rsrc</code> avec icône est totalement normale (tous les .exe légitimes en ont une).",
+    "expl_ko": "Mnémo : <strong>packing + entropie + imports d'injection + timestamp suspect</strong>. Outils : <code>pefile</code>, <code>die</code> (Detect It Easy), <code>PEStudio</code>, <code>CFF Explorer</code>.",
+    "refs": [
+      "Practical Malware Analysis — Sikorski & Honig",
+      "MITRE ATT&CK T1027.002 — Software Packing"
+    ],
+    "feedback": {
+      "4": "Section .rsrc avec icône est normale pour tout .exe avec interface graphique."
+    },
+    "fiches": [
+      "reverse_engineering_101",
+      "malware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Microsoft 365 Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la source forensique centrale n°1 dans toute investigation Microsoft 365 ?",
+    "opts": [
+      "Les emails Exchange directement",
+      "Le <strong>Unified Audit Log (UAL)</strong> — journal centralisé de toutes les activités M365",
+      "OneDrive sync logs",
+      "Outlook .pst locaux"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>Unified Audit Log (UAL)</strong> enregistre les activités de TOUS les services M365 : Exchange Online, SharePoint, OneDrive, Teams, Azure AD/Entra ID, Power Platform. C'est la <strong>première source forensique</strong> dans tout incident. <strong>Attention</strong> : il n'est <strong>pas activé par défaut</strong> sur tous les tenants — son absence ou désactivation est elle-même un IOC majeur. <strong>Rétention</strong> : 180 jours (Audit Standard, défaut depuis oct. 2023) ou 365 jours (E5/Audit Premium). Vérification : <code>Get-AdminAuditLogConfig | Select UnifiedAuditLogIngestionEnabled</code>.",
+    "expl_ko": "UAL = source centrale M365. Vérifier activation ET rétention en ouverture d'enquête.",
+    "refs": [
+      "Microsoft — Search the Unified Audit Log",
+      "Microsoft DART — M365 Incident Response Playbook (2024)"
+    ],
+    "feedback": {
+      "0": "Les emails directs n'ont pas la traçabilité (qui a accédé/déplacé/supprimé).",
+      "2": "OneDrive sync logs sont une sous-source du UAL, pas la source centrale.",
+      "3": ".pst locaux sont des artefacts client, ne couvrent pas SharePoint/Teams/Entra ID."
+    },
+    "fiches": [
+      "m365_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Microsoft 365 Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lors d'une enquête M365 de Business Email Compromise (BEC), vous exécutez <code>Get-AdminAuditLogConfig</code> et constatez <code>UnifiedAuditLogIngestionEnabled = False</code>. Que cela signifie-t-il forensiquement ?",
+    "opts": [
+      "Le tenant n'a pas activé le UAL → pas d'historique audit → chercher sources alternatives (Defender XDR, Entra ID Sign-in 30j, Exchange Message Tracking 90j)",
+      "Le UAL marche normalement mais en mode debug",
+      "L'admin a temporairement désactivé un module",
+      "C'est l'état par défaut sécurisé"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<code>UnifiedAuditLogIngestionEnabled=False</code> = les logs UAL <strong>ne sont pas collectés</strong>. C'est un déficit forensique majeur. <strong>Plan B</strong> : (1) <strong>Microsoft Defender XDR</strong> (security.microsoft.com) — alertes et detections. (2) <strong>Entra ID Sign-in logs</strong> — rétention 30 jours sur tenants gratuits, 90j P1, illimité P2. (3) <strong>Exchange Message Tracking</strong> — 90 jours (traçabilité des emails reçus/envoyés/supprimés). (4) <strong>Mailbox audit logging</strong> par boîte si activé. (5) Headers/PST si récupérables localement. <strong>Note</strong> : son absence sur un tenant compromis est elle-même un IOC (l'attaquant peut désactiver le UAL).",
+    "expl_ko": "UAL désactivé = handicap majeur. Toujours croiser plusieurs sources de logs et timestamper les acquisitions.",
+    "refs": [
+      "Microsoft — Enable Mailbox Audit Logging",
+      "M365 DART Playbook"
+    ],
+    "feedback": {
+      "1": "Pas un mode debug — c'est un état d'activation booléen.",
+      "2": "Un admin peut désactiver mais ce n'est pas l'état par défaut depuis 2019.",
+      "3": "Faux — depuis 2019, par défaut UAL=True sur les nouveaux tenants."
+    },
+    "fiches": [
+      "m365_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Microsoft 365 Forensique",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Dans un incident BEC (Business Email Compromise) sur M365, quels artefacts forensiques typiques recherchez-vous ? (plusieurs réponses)",
+    "opts": [
+      "Règles de boîte aux lettres malveillantes (auto-forward, suppression auto vers RSS Subscriptions)",
+      "Délégations de boîte ajoutées (Add-MailboxPermission)",
+      "Connexions Entra ID depuis des géolocalisations anormales (ASN, pays)",
+      "OAuth consent grants à des apps tierces inconnues (mailbox.read.all, etc.)",
+      "Heure d'envoi du dernier email signature"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Artefacts BEC classiques : (1) <strong>Règles malveillantes</strong> — auto-forward externe (souvent <code>RSS Subscriptions</code>, <code>Conversation History</code>, <code>Archive</code> pour cacher), suppression auto de mots-clés (« facture », « invoice », « wire »). Détection : UAL operation <code>New-InboxRule</code>. (2) <strong>Délégations mailbox</strong> — l'attaquant donne accès à un alias contrôlé. Détection : <code>Add-MailboxPermission</code>, <code>Set-MailboxFolderPermission</code>. (3) <strong>Anomalies Entra ID Sign-in</strong> — pays inhabituel, ASN VPN/hébergeur, impossible travel. (4) <strong>OAuth consent</strong> — apps tierces avec permissions <code>Mail.ReadWrite</code>, <code>Mail.Send</code>. (5) Activation du <strong>MailItemsAccessed</strong> (Audit Premium) pour voir quels emails ont été lus.",
+    "expl_ko": "BEC = règles malveillantes + délégations + OAuth abuse + sign-in anormaux. Toujours dump du <code>Get-InboxRule</code> et <code>Get-MailboxPermission</code> sur les comptes suspects.",
+    "refs": [
+      "Microsoft — Investigating BEC Attacks",
+      "FBI IC3 BEC Report 2024"
+    ],
+    "feedback": {
+      "4": "L'heure d'envoi du dernier email n'est pas un artefact BEC pertinent."
+    },
+    "fiches": [
+      "m365_forensique",
+      "email_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Microsoft 365 Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Une entreprise suisse doit obtenir des données d'un tenant M365 d'un suspect. Quel est le levier le plus adapté pour préserver les preuves <strong>avant</strong> la procédure légale formelle ?",
+    "opts": [
+      "Litigation Hold / eDiscovery Hold dans Microsoft Purview",
+      "Faire un screenshot rapide de la mailbox",
+      "Exporter en .pst manuellement",
+      "Attendre la MLAT (6-18 mois)"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>Litigation Hold</strong> (anciennement) ou <strong>eDiscovery Hold</strong> dans <strong>Microsoft Purview</strong> permet de geler immédiatement (préservation) une ou plusieurs mailboxes/sites SharePoint/OneDrive — <strong>tout est conservé même si l'utilisateur supprime</strong> (les données vont en <code>Recoverable Items</code>). Rétention indéfinie tant que le hold est actif. Couvert juridiquement, fait partie du workflow eDiscovery légal. <strong>Niveaux</strong> : Core eDiscovery (basique), Advanced eDiscovery (E5/Compliance, custodian management, review, tagging, export). Sert de Preservation Request avant la procédure MLAT formelle qui peut prendre 6-18 mois.",
+    "expl_ko": "<strong>eDiscovery Hold = Preservation Request native M365</strong>. À activer dès l'ouverture d'investigation pour ne rien perdre par rétention/suppression.",
+    "refs": [
+      "Microsoft Purview — eDiscovery Hold",
+      "M365 Compliance Documentation"
+    ],
+    "feedback": {
+      "1": "Screenshot = perte de tous les en-têtes/métadonnées, inadmissible.",
+      "2": "Export .pst manuel ne préserve pas ce qui sera supprimé après.",
+      "3": "Attendre = perdre des preuves expirant à la rétention par défaut (180j UAL)."
+    },
+    "fiches": [
+      "m365_forensique",
+      "cloud_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Threat Intelligence & IOC",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quelle est la différence fondamentale entre <strong>STIX</strong> et <strong>TAXII</strong> dans le partage CTI ?",
+    "opts": [
+      "Les deux sont synonymes",
+      "<strong>STIX</strong> = format/structure des données (le « quoi »), <strong>TAXII</strong> = API REST sur HTTPS pour transporter (le « comment »)",
+      "STIX est commercial, TAXII est open source",
+      "TAXII est plus récent, remplace STIX"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>STIX 2.1</strong> (<em>Structured Threat Information eXpression</em>) définit la <strong>structure des données</strong> : 18 SDO (Indicator, Malware, Threat-Actor, Campaign, Attack-Pattern, etc.) + SRO (Relationship, Sighting). Format JSON. <strong>TAXII 2.1</strong> (<em>Trusted Automated Exchange of Intelligence Information</em>) définit l'<strong>API REST sur HTTPS</strong> pour transporter les bundles STIX entre serveurs/clients. Trois modèles : hub-and-spoke (CISA AIS), source-subscriber (feeds vendors), peer-to-peer (TLP:AMBER+STRICT). Standards OASIS, version 2.1 actuelle (2021). <strong>Indépendants</strong> : STIX peut voyager par email/FTP/S3, TAXII peut transporter d'autres formats, mais STIX 2.1 + TAXII 2.1 est <strong>le standard de facto</strong>.",
+    "expl_ko": "STIX = format. TAXII = transport. Indépendants en théorie, complémentaires en pratique.",
+    "refs": [
+      "OASIS STIX 2.1 Specification",
+      "OASIS TAXII 2.1 Specification"
+    ],
+    "feedback": {
+      "0": "Faux — rôles totalement distincts.",
+      "2": "Faux — les deux sont des standards OASIS ouverts.",
+      "3": "Faux — les deux évoluent ensemble (versions 2.1 simultanées)."
+    },
+    "fiches": [
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
     "chapter": "Acquisition et préservation",
     "diff": "hard",
     "type": "single",
@@ -8037,6 +8644,1883 @@
     "feedback": {},
     "fiches": [
       "ics_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "SQLite Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quels sont les magic bytes (signature) qui identifient un fichier SQLite à coup sûr ?",
+    "opts": [
+      "<code>SQLite format 3\\0</code> (16 octets en début de fichier)",
+      "<code>%PDF-1.4</code>",
+      "<code>0x4D5A</code> (MZ Windows)",
+      "<code>89 50 4E 47</code> (PNG)"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Tout fichier SQLite valide commence par la chaîne <code>SQLite format 3\\0</code> aux offsets 0-15 (soit <code>53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00</code> en hex). Si ces 16 octets sont absents ou différents, le fichier n'est pas un SQLite standard — soit il est chiffré (SQLCipher), corrompu, ou pas un SQLite du tout.",
+    "expl_ko": "<code>SQLite format 3\\0</code> est la signature standard. Mémorisable : « SQLite format 3 » + un null byte = 16 octets exactement.",
+    "refs": [
+      "SQLite File Format — sqlite.org/fileformat.html",
+      "Paul Sanderson — SQLite Forensics"
+    ],
+    "feedback": {
+      "1": "%PDF-1.x est la magic d'un PDF, pas SQLite.",
+      "2": "0x4D5A (MZ) est la magic d'un exécutable Windows (DOS/PE).",
+      "3": "89 50 4E 47 est la magic d'un PNG."
+    },
+    "fiches": [
+      "sqlite_forensique",
+      "sqlite_forensique_avance"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "SQLite Forensique",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Vous trouvez un fichier <code>msgstore.db</code> WhatsApp dans une extraction Android. Quels fichiers complémentaires DEVEZ-vous obligatoirement copier ensemble avant analyse ? (plusieurs réponses)",
+    "opts": [
+      "<code>msgstore.db-wal</code> (Write-Ahead Log)",
+      "<code>msgstore.db-shm</code> (Shared Memory)",
+      "<code>msgstore.db-journal</code> (Rollback Journal, si présent)",
+      "<code>msgstore.db.backup</code>",
+      "<code>system32.dll</code>"
+    ],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl_ok": "Trois fichiers techniques accompagnent une base SQLite et contiennent des données potentiellement non encore committées : <code>.db-wal</code> (modifications en attente du checkpoint), <code>.db-shm</code> (table partagée du WAL), <code>.db-journal</code> (rollback journal, mode legacy). Sans ces fichiers, les messages les plus récents (parfois ceux que l'utilisateur a tenté d'effacer) peuvent être perdus.",
+    "expl_ko": "Règle : <strong>copier la base + tous ses fichiers compagnons</strong> avant analyse. WAL et journal peuvent contenir des modifications fraîches non encore intégrées dans le fichier principal.",
+    "refs": [
+      "SQLite WAL Documentation — sqlite.org/wal.html",
+      "Forensic Focus — WhatsApp DB Analysis"
+    ],
+    "feedback": {
+      "3": ".backup n'est pas un format SQLite standard — c'est éventuellement un export utilisateur, pas un fichier compagnon technique.",
+      "4": "Aucun rapport avec SQLite. system32.dll est une lib Windows."
+    },
+    "fiches": [
+      "sqlite_forensique",
+      "messagerie_im"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "SQLite Forensique",
+    "diff": "hard",
+    "type": "single",
+    "q": "Une base Chrome <code>History</code> contient <code>last_visit_time = 13340285970000000</code>. Comment convertit-on ce timestamp en date UTC ?",
+    "opts": [
+      "<code>datetime(13340285970000000, 'unixepoch')</code> — directement",
+      "<code>datetime(13340285970000000/1000000 - 11644473600, 'unixepoch')</code> — epoch WebKit (µs depuis 1601-01-01)",
+      "<code>datetime(13340285970000000/1000 + 978307200, 'unixepoch')</code> — epoch Cocoa",
+      "Le timestamp est invalide, trop grand pour être valide"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Chrome utilise l'<strong>epoch WebKit</strong> : microsecondes depuis le 1<sup>er</sup> janvier 1601 UTC (héritage Microsoft FILETIME). Conversion : (1) diviser par 1'000'000 pour passer en secondes depuis 1601, (2) soustraire 11'644'473'600 (différence entre 1601 et 1970) pour obtenir un Unix timestamp standard. Résultat : <strong>2023-09-27 11:39:30 UTC</strong>.",
+    "expl_ko": "Mémo : Chrome utilise WebKit (µs depuis 1601), Firefox utilise Unix µs (depuis 1970), iOS utilise Cocoa (s depuis 2001), WhatsApp Android utilise Unix ms (depuis 1970). Chaque conversion a son offset propre.",
+    "refs": [
+      "Chromium Source — base/time/time.h",
+      "Hindsight — Chrome forensic timeline"
+    ],
+    "feedback": {
+      "0": "Si on appliquait <code>'unixepoch'</code> directement à 13'340'285'970'000'000, on obtient une date en l'an 422'725'378 — impossible.",
+      "2": "L'epoch Cocoa (iOS/macOS) part de 2001, pas adapté à Chrome.",
+      "3": "Le timestamp est parfaitement valide une fois converti correctement."
+    },
+    "fiches": [
+      "sqlite_forensique",
+      "browser_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "SQLite Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous analysez une base SQLite. <code>PRAGMA freelist_count</code> renvoie 847. Quelle action est INTERDITE en forensique ?",
+    "opts": [
+      "Analyser les 847 pages libres avec <code>undark</code> ou <code>sqlite_dissect</code>",
+      "Exécuter <code>VACUUM</code> pour optimiser la base",
+      "Calculer le SHA-256 de la base avant analyse",
+      "Travailler sur une copie en mode read-only"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<code>VACUUM</code> reconstruit la base et <strong>écrase définitivement la freelist</strong> — donc toutes les données supprimées récupérables sont perdues. C'est l'opération la plus destructrice en SQLite forensique. Les 847 pages libres contiennent potentiellement 847 enregistrements supprimés à récupérer via carving (<code>undark</code>, <code>sqlite_dissect</code> de la CIA, Autopsy).",
+    "expl_ko": "Règle absolue : <strong>JAMAIS de VACUUM sur une base forensique</strong>. Toujours travailler sur une copie hashée en read-only.",
+    "refs": [
+      "sqlite.org — VACUUM Documentation",
+      "CIA — sqlite_dissect GitHub",
+      "Paul Sanderson — SQLite Recovery"
+    ],
+    "feedback": {
+      "0": "Au contraire — c'est exactement ce qu'il faut faire pour récupérer les données supprimées.",
+      "2": "Le hash de la base avant analyse est une exigence de la chaîne de custody (ISO/IEC 27037).",
+      "3": "Read-only protège la base : <code>sqlite3 file:base.db?mode=ro</code> est la bonne pratique."
+    },
+    "fiches": [
+      "sqlite_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Email Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quels sont les trois mécanismes principaux d'authentification email anti-spoofing recommandés conjointement ?",
+    "opts": [
+      "SPF, DKIM et DMARC",
+      "TLS, SMTP et POP3",
+      "AES, RSA et SHA-256",
+      "SPAM, IMAP et MX"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>SPF</strong> (Sender Policy Framework) déclare quelles IPs sont autorisées à envoyer pour un domaine. <strong>DKIM</strong> (DomainKeys Identified Mail) signe cryptographiquement les emails. <strong>DMARC</strong> (Domain-based Message Authentication, Reporting & Conformance) définit la politique en cas d'échec SPF/DKIM + recevoir les rapports. Les trois sont complémentaires : SPF + DKIM côté technique, DMARC côté politique.",
+    "expl_ko": "Mémo : <strong>SPF</strong> (qui peut envoyer ?) + <strong>DKIM</strong> (qui a signé ?) + <strong>DMARC</strong> (que faire si ça échoue ?). Indispensables en investigation phishing.",
+    "refs": [
+      "RFC 7208 (SPF)",
+      "RFC 6376 (DKIM)",
+      "RFC 7489 (DMARC)"
+    ],
+    "feedback": {
+      "1": "Ce sont des protocoles de transport, pas d'authentification anti-spoofing.",
+      "2": "Algorithmes cryptographiques génériques, pas spécifiques à l'email.",
+      "3": "SPAM est un type de message, IMAP/MX des protocoles — pas l'authentification."
+    },
+    "fiches": [
+      "email_forensique",
+      "email_headers_smtp_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Email Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Un email phishing présente <code>From: ceo@entreprise.ch</code> mais <code>Return-Path: noreply@attacker-host.ru</code>. Que faut-il en conclure forensiquement ?",
+    "opts": [
+      "L'email est légitime, c'est juste un alias de réponse",
+      "Spoofing du champ From : Return-Path révèle la vraie origine d'envoi",
+      "Erreur du client mail, à ignorer",
+      "Conflit normal pour les emails marketing"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le champ <code>From:</code> est <strong>trivialement falsifiable</strong> (header SMTP modifiable par l'attaquant). Le <code>Return-Path:</code> est ajouté par le serveur SMTP qui a reçu l'email et reflète le <code>MAIL FROM</code> de l'enveloppe SMTP — beaucoup plus fiable. Divergence From/Return-Path = indicateur fort de spoofing. Comparer aussi : <code>Received: from</code> headers (chaîne de serveurs), résultat SPF (<code>Authentication-Results:</code>).",
+    "expl_ko": "Règle : ne jamais faire confiance au <code>From</code> seul. Toujours croiser avec <code>Return-Path</code>, <code>Received:</code>, <code>Authentication-Results:</code> et résultats SPF/DKIM/DMARC.",
+    "refs": [
+      "RFC 5321 (SMTP)",
+      "RFC 5322 (Internet Message Format)",
+      "Microsoft — Analyse en-têtes"
+    ],
+    "feedback": {
+      "0": "Faux — les alias de réponse légitimes utilisent <code>Reply-To:</code>, pas un <code>Return-Path:</code> divergent.",
+      "2": "Pas une erreur client : Return-Path est ajouté par le MTA récepteur, c'est une donnée serveur fiable.",
+      "3": "Faux — même pour le marketing, From et Return-Path doivent être cohérents pour passer DMARC."
+    },
+    "fiches": [
+      "email_forensique",
+      "email_headers_smtp_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Email Forensique",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Vous enquêtez sur un email frauduleux. Quels en-têtes contiennent des informations forensiquement précieuses ? (plusieurs réponses)",
+    "opts": [
+      "<code>Received:</code> (chaîne complète des serveurs traversés avec timestamps)",
+      "<code>Message-ID:</code> (identifiant unique, peut révéler le MTA d'origine)",
+      "<code>Authentication-Results:</code> (résultats SPF/DKIM/DMARC en clair)",
+      "<code>X-Originating-IP:</code> (IP source, présent chez certains webmails)",
+      "<code>X-Priority:</code> (uniquement utilisé pour le tri visuel)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "<code>Received:</code> trace la route complète (chaque MTA ajoute son hop en tête) — c'est le pilier de l'analyse forensique. <code>Message-ID:</code> contient souvent le hostname du MTA générateur (utile pour attribution). <code>Authentication-Results:</code> documente SPF/DKIM/DMARC. <code>X-Originating-IP:</code> est ajouté par certains webmails (Yahoo, anciennement Hotmail) et révèle l'IP du client. <code>X-Priority:</code> est juste un indicateur d'urgence visuel sans valeur forensique.",
+    "expl_ko": "Les <strong>Received headers</strong> se lisent <strong>du bas vers le haut</strong> (le plus bas = origine, le plus haut = destination). Chaque hop horodaté révèle la latence et permet d'identifier les MTA compromis.",
+    "refs": [
+      "RFC 5321 §4.4 (Trace Information)",
+      "MXToolbox — Email Header Analyzer",
+      "Microsoft Message Header Analyzer"
+    ],
+    "feedback": {
+      "4": "X-Priority (High/Normal/Low) n'apporte rien de forensique — juste un drapeau pour le tri visuel utilisateur."
+    },
+    "fiches": [
+      "email_forensique",
+      "email_headers_smtp_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Email Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quel format d'export est considéré comme le « gold standard » forensique pour la préservation des emails Outlook ?",
+    "opts": [
+      "<code>.txt</code> — copier-coller le texte de chaque email",
+      "<code>.pst</code> ou <code>.ost</code> — formats binaires Outlook préservant tous les métadonnées",
+      "Screenshots PNG de chaque email",
+      "<code>.zip</code> du dossier Documents"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<code>.pst</code> (Personal Storage Table) et <code>.ost</code> (Offline Storage Table) sont les formats binaires natifs d'Outlook qui préservent <strong>tous les en-têtes RFC 5322</strong>, les pièces jointes intactes, les métadonnées (lu/non lu, drapeaux, propriétés MAPI), l'arborescence des dossiers. Outils d'analyse : <strong>Aid4Mail</strong>, <strong>libpff</strong> (open source), <strong>X-Ways</strong>, <strong>Magnet AXIOM</strong>, <strong>FTK</strong>. Format alternatif : <code>.mbox</code> (Thunderbird, Apple Mail).",
+    "expl_ko": "Mémorisez : <strong>.pst/.ost</strong> Outlook, <strong>.mbox</strong> Thunderbird/Apple Mail, <strong>.eml</strong> par message individuel (format RFC 5322 brut).",
+    "refs": [
+      "Microsoft — PST File Format Specification (MS-PST)",
+      "libpff — Open source PST parser"
+    ],
+    "feedback": {
+      "0": ".txt perd tous les en-têtes, métadonnées, pièces jointes — inadmissible juridiquement.",
+      "2": "Screenshots = perte totale des en-têtes, pas de chaîne de custody possible.",
+      "3": ".zip ne préserve que les fichiers internes mais pas la structure logique Outlook."
+    },
+    "fiches": [
+      "email_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries chiffrées",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi le chiffrement bout-à-bout (E2EE) des messageries modernes (WhatsApp, Signal, Telegram secret chats) complique-t-il l'interception classique ?",
+    "opts": [
+      "Les messages sont chiffrés sur l'appareil, les serveurs ne voient que du blob illisible",
+      "Le wifi est plus rapide qu'avant",
+      "Les opérateurs téléphoniques ne fournissent plus de logs",
+      "Le SMS est obsolète"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "En <strong>E2EE</strong>, les messages sont chiffrés <strong>sur l'appareil émetteur</strong> avec la clé publique du destinataire, et déchiffrés uniquement sur l'appareil cible. Le serveur (WhatsApp, Signal) ne voit que des blobs binaires non déchiffrables même par lui. Conséquence : l'écoute SMTP/SMS classique ne fonctionne plus. <strong>Solution forensique</strong> : saisie du device (acquisition mobile) pour extraire les bases <code>msgstore.db</code> / <code>signal.db</code> en clair localement.",
+    "expl_ko": "E2EE = chiffrement <strong>device-to-device</strong>. Le serveur transporte mais ne lit pas. L'investigation passe par l'endpoint (smartphone), pas par le réseau.",
+    "refs": [
+      "Signal Protocol — Whitepaper",
+      "Open Whisper Systems",
+      "art. 269ter CPP (interception et chiffrement)"
+    ],
+    "feedback": {
+      "1": "Le débit wifi n'a aucun rapport avec le chiffrement.",
+      "2": "Les opérateurs fournissent toujours métadonnées et logs CDR — c'est le CONTENU qui est inaccessible.",
+      "3": "SMS reste utilisé, et c'est l'un des derniers vecteurs où l'interception classique fonctionne (non chiffré)."
+    },
+    "fiches": [
+      "messagerie_im",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries chiffrées",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous saisissez un Android avec Signal installé. La base <code>signal.db</code> est inutilisable directement (<em>file is not a database</em>). Pourquoi et comment l'ouvrir ?",
+    "opts": [
+      "C'est un fichier corrompu, à abandonner",
+      "Signal utilise SQLCipher (AES-256-CBC) — il faut la clé de l'Android Keystore ou un dump RAM device déverrouillé",
+      "Signal utilise un format propriétaire incompatible SQLite",
+      "Le fichier doit être renommé en .db3"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Signal chiffre sa base SQLite avec <strong>SQLCipher</strong> (AES-256-CBC). La clé est dérivée du Signal PIN via PBKDF2 (~256'000 itérations) et stockée dans l'<strong>Android Keystore</strong> (HW-backed Trusted Execution Environment) ou l'<strong>iOS Keychain</strong>. Voies d'accès : (1) device déverrouillé → <strong>dump RAM</strong> (clé en clair pendant la session), (2) accès root → extraction depuis Keystore, (3) sur Desktop, la clé est dans <code>config.json</code> du dossier Signal. Sans la clé, déchiffrement impossible en pratique.",
+    "expl_ko": "Signal = <strong>SQLCipher</strong>. Outils d'accès : <code>sqlcipher signal.db</code> puis <code>PRAGMA key = 'x''CLEHEX''';</code>. Cellebrite UFED Premium et Magnet AXIOM intègrent des extracteurs Signal pour devices supportés.",
+    "refs": [
+      "Open Whisper Systems — Signal Database Encryption",
+      "SQLCipher Documentation",
+      "Sarah Edwards — Signal Forensics"
+    ],
+    "feedback": {
+      "0": "Pas corrompu — c'est du SQLCipher attendu pour Signal.",
+      "2": "Faux — c'est bien du SQLite, mais chiffré par SQLCipher (extension chiffrement transparente).",
+      "3": "L'extension n'a rien à voir — le contenu reste chiffré."
+    },
+    "fiches": [
+      "messagerie_im",
+      "sqlite_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries chiffrées",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Pour acquérir légalement les communications WhatsApp d'un suspect en Suisse, quels leviers sont disponibles ? (plusieurs réponses)",
+    "opts": [
+      "Saisie du smartphone (art. 246 CPP) puis extraction <code>msgstore.db</code>",
+      "Surveillance en temps réel via art. 269bis CPP (Government Software)",
+      "Demande d'historique au serveur WhatsApp via MLAT (Meta Platforms, Inc., USA)",
+      "Casser le chiffrement TLS du trafic WhatsApp en MITM passif",
+      "Demander l'export utilisateur si le suspect coopère"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "Quatre voies légales : (1) <strong>saisie device</strong> = la plus directe, extraction logique/physique, déchiffrement msgstore.crypt15 avec clé locale (<code>/data/data/com.whatsapp/files/key</code>). (2) <strong>Government Software</strong> (GovWare, art. 269bis CPP) = injection silencieuse pour surveiller en temps réel — usage restreint et soumis à autorisation. (3) <strong>MLAT</strong> avec Meta — fournit métadonnées (qui a contacté qui, quand) mais pas le contenu (E2EE). (4) <strong>Export utilisateur</strong> légitime si consentement. <strong>Le MITM TLS passif ne fonctionne pas</strong> : Signal Protocol fait du E2EE par-dessus TLS.",
+    "expl_ko": "Voies : <strong>device, GovWare, MLAT, consentement</strong>. Pas de MITM possible sur E2EE moderne avec certificate pinning.",
+    "refs": [
+      "art. 246 CPP — Saisie",
+      "art. 269bis CPP — GovWare",
+      "Convention Budapest art. 17 (préservation)",
+      "Meta Law Enforcement Online Requests"
+    ],
+    "feedback": {
+      "3": "Le MITM TLS classique échoue : WhatsApp/Signal font du E2EE par-dessus TLS + certificate pinning. Même en cassant TLS, on ne lit que des blobs chiffrés."
+    },
+    "fiches": [
+      "messagerie_im",
+      "lscpt",
+      "mobile"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Browser Forensics",
+    "diff": "easy",
+    "type": "single",
+    "q": "Où se trouve, sur Windows 10/11, la base SQLite contenant l'historique de Chrome ?",
+    "opts": [
+      "<code>C:\\Program Files\\Google\\Chrome\\history.db</code>",
+      "<code>%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\History</code>",
+      "<code>C:\\Users\\Public\\Chrome\\browsing.dat</code>",
+      "<code>%APPDATA%\\Roaming\\Microsoft\\Chrome\\hist.bin</code>"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Chrome stocke ses bases SQLite dans <code>%LOCALAPPDATA%\\Google\\Chrome\\User Data\\&lt;Profile&gt;\\</code>. Le profil par défaut s'appelle <code>Default</code>. La base <code>History</code> (sans extension, mais c'est du SQLite) contient les tables <code>urls</code>, <code>visits</code>, <code>downloads</code>, <code>keyword_search_terms</code>. <strong>Important</strong> : copier aussi <code>History-journal</code> ou <code>History-wal/History-shm</code> selon le mode.",
+    "expl_ko": "Profil par défaut = <code>Default</code>. Multi-profils = <code>Profile 1</code>, <code>Profile 2</code>… Chaque profil a sa propre base History.",
+    "refs": [
+      "Chromium Documentation — User Data Directory",
+      "Hindsight — Chrome forensic timeline"
+    ],
+    "feedback": {
+      "0": "C:\\Program Files contient les binaires, pas les données utilisateur.",
+      "2": "C:\\Users\\Public est partagé entre utilisateurs, Chrome n'y stocke pas son historique.",
+      "3": "%APPDATA% (Roaming) n'est pas utilisé par Chrome pour son User Data."
+    },
+    "fiches": [
+      "browser_forensique",
+      "sqlite_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Browser Forensics",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous trouvez sur un poste Chrome avec « navigation privée » (Incognito) toujours active. Quelles traces forensiques restent typiquement disponibles ?",
+    "opts": [
+      "Aucune — c'est le but du mode privé",
+      "Cache DNS, logs ISP, fichiers Pagefile.sys/Hiberfil.sys, RAM si capturée à temps",
+      "Uniquement l'historique Chrome",
+      "Uniquement les bookmarks"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Incognito empêche Chrome d'écrire dans History/Cookies/Cache <strong>localement</strong>, mais ne neutralise pas : (1) <strong>Cache DNS</strong> du système (<code>ipconfig /displaydns</code>), (2) <strong>Logs ISP/proxy</strong> côté réseau, (3) <strong>Pagefile.sys</strong> + <strong>Hiberfil.sys</strong> qui peuvent contenir des fragments mémoire, (4) <strong>RAM live</strong> si capturée pendant la session (Volatility peut extraire les URLs), (5) <strong>System32\\config\\SOFTWARE</strong> registre, (6) timestamps de fichiers téléchargés manuellement.",
+    "expl_ko": "Le mode privé est <strong>local-only</strong>. Le réseau, la RAM, et les artefacts système le contournent. Toujours capturer la RAM en premier si un poste suspect est trouvé allumé.",
+    "refs": [
+      "Hugo Sokoty — Chrome Incognito Forensics",
+      "Volatility — chromehistory plugin"
+    ],
+    "feedback": {
+      "0": "Faux — Incognito couvre seulement Chrome, pas l'écosystème complet de l'OS et du réseau.",
+      "2": "Faux : Chrome n'écrit justement PAS l'historique en mode privé.",
+      "3": "Les bookmarks sont préservés mais c'est l'inverse de l'inférence d'activité en navigation privée."
+    },
+    "fiches": [
+      "browser_forensique",
+      "anti_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Browser Forensics",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous récupérez la base <code>Login Data</code> de Chrome. Les mots de passe stockés sont-ils en clair ou chiffrés, et comment les déchiffrer ?",
+    "opts": [
+      "En clair, base SQLite simple",
+      "Chiffrés par DPAPI Windows : nécessite la clé masterkey utilisateur + son mot de passe Windows",
+      "Hashés MD5 — irréversibles",
+      "Stockés dans Google Cloud, inaccessibles localement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Chrome chiffre les mots de passe avec la <strong>DPAPI Windows</strong> (Data Protection API). Les blobs chiffrés sont dans la base <code>Login Data</code> (SQLite, table <code>logins</code>, colonne <code>password_value</code>). Pour déchiffrer : il faut (1) la <strong>masterkey utilisateur</strong> (<code>%APPDATA%\\Microsoft\\Protect\\&lt;SID&gt;\\</code>), (2) le <strong>mot de passe Windows</strong> du compte ou le hash NT. Outils : <strong>DonPAPI</strong>, <strong>Mimikatz</strong> (<code>dpapi::masterkey</code>), <strong>SecretsDump</strong>. Sur macOS : Keychain Access. Sur Linux : Secret Service API (GNOME Keyring).",
+    "expl_ko": "DPAPI = couche de chiffrement par utilisateur Windows. Récupérer le mot de passe Windows ou hash NT permet de chaîner et déchiffrer tous les secrets DPAPI (Chrome, Edge, Outlook, RDP, WiFi…).",
+    "refs": [
+      "Microsoft DPAPI Documentation",
+      "DonPAPI — GitHub",
+      "Benjamin Delpy — Mimikatz dpapi module"
+    ],
+    "feedback": {
+      "0": "Faux — Chrome chiffre toujours les mots de passe via OS-level API (DPAPI/Keychain).",
+      "2": "Faux — chiffrés (réversibles avec la bonne clé), pas hashés.",
+      "3": "Les Sync passwords sont sur Google Cloud MAIS la base locale est aussi chiffrée DPAPI."
+    },
+    "fiches": [
+      "browser_forensique",
+      "active_directory"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Browser Forensics",
+    "diff": "medium",
+    "type": "single",
+    "q": "Le moteur de Firefox stocke l'historique dans quel fichier, et avec quel format de timestamp ?",
+    "opts": [
+      "<code>history.dat</code> en JSON, timestamps Unix secondes",
+      "<code>places.sqlite</code>, timestamps Unix microsecondes (depuis 1970)",
+      "<code>history.db</code> en SQLCipher, timestamps WebKit",
+      "<code>browsing.xml</code>, timestamps ISO 8601"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Firefox utilise <code>places.sqlite</code> dans <code>%APPDATA%\\Mozilla\\Firefox\\Profiles\\xxxx.default\\</code>. Tables clés : <code>moz_places</code> (URLs), <code>moz_historyvisits</code> (chaque visite individuelle), <code>moz_bookmarks</code>. Timestamps en <strong>microsecondes depuis l'epoch Unix (1970-01-01)</strong> — différent de Chrome (qui part de 1601). Conversion SQL : <code>datetime(visit_date/1000000, 'unixepoch')</code>.",
+    "expl_ko": "Firefox places.sqlite = µs depuis 1970. Chrome History = µs depuis 1601. iOS = s depuis 2001. WhatsApp Android = ms depuis 1970. Ne pas confondre !",
+    "refs": [
+      "Mozilla — places.sqlite Schema",
+      "MDN — Firefox profile contents"
+    ],
+    "feedback": {
+      "0": "Firefox n'utilise pas history.dat depuis longtemps — places.sqlite depuis Firefox 3 (2008).",
+      "2": "Le format n'est PAS chiffré, et utilise Unix epoch (pas WebKit).",
+      "3": "Pas de XML — Firefox utilise SQLite pour la performance et l'intégrité."
+    },
+    "fiches": [
+      "browser_forensique",
+      "sqlite_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Tor & Darkweb",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le réseau Tor fonctionne par routage en couches successives (« onion routing »). Combien de relais (hops) traverse typiquement une connexion Tor avant d'atteindre le site de destination ?",
+    "opts": [
+      "1 relais",
+      "3 relais (Guard + Middle + Exit)",
+      "7 relais",
+      "Variable, généralement 10+"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une connexion Tor utilise un <strong>circuit de 3 relais</strong> par défaut : (1) <strong>Guard/Entry</strong> connaît votre IP réelle mais pas la destination, (2) <strong>Middle</strong> ne connaît ni l'origine ni la destination, (3) <strong>Exit</strong> connaît la destination mais pas votre IP. Chaque relai déchiffre une couche du chiffrement (oignon). Les <strong>hidden services .onion</strong> ajoutent 3 relais côté serveur + Rendezvous Point = 6 hops au total.",
+    "expl_ko": "Mémo : <strong>3 relais standard, 6 pour les hidden services</strong>. Le Guard reste stable plusieurs mois (anti-corrélation), Middle et Exit changent à chaque circuit (~10 min).",
+    "refs": [
+      "Tor Project — How Tor Works",
+      "Roger Dingledine et al. — Tor Design Paper (2004)"
+    ],
+    "feedback": {
+      "0": "1 relais = simple proxy, pas d'anonymat — c'est exactement ce que Tor PRÉVIENT.",
+      "2": "Pas 7. C'est 3 (clearnet) ou 6 (hidden services .onion).",
+      "3": "Plus de hops = plus de latence sans plus d'anonymat. 3 est le compromis Tor."
+    },
+    "fiches": [
+      "tor_darkweb"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Tor & Darkweb",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous saisissez un ordinateur Windows utilisé pour accéder au darkweb via Tor Browser. Quel artefact forensique principal cherchez-vous ?",
+    "opts": [
+      "Le fichier <code>tor.log</code> qui enregistre toutes les URLs visitées",
+      "L'<strong>écosystème entier de Tor Browser Bundle</strong> (TBB) — installé en portable, parfois sur USB, possiblement effacé",
+      "L'historique Chrome — Tor utilise Chrome",
+      "Le registre Windows liste toutes les <code>.onion</code> visitées"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Tor Browser Bundle (TBB) est conçu pour <strong>ne laisser AUCUNE trace persistante</strong> par défaut : pas d'historique disque, pas de cache, pas de cookies persistants. Indices forensiques : (1) <strong>installation</strong> sur disque ou USB (<code>tor.exe</code>, <code>firefox.exe</code> modifié, <code>torrc</code> config), (2) <strong>prefetch</strong> Windows (<code>C:\\Windows\\Prefetch\\TOR.EXE-*.pf</code>), (3) <strong>shellbags</strong> et <strong>UserAssist</strong> du registre, (4) <strong>RAM</strong> si capturée — contient circuits actifs, .onion visités, mots de passe. (5) <strong>Logs ISP/proxy</strong> côté réseau (connexions sortantes vers Tor guards listés publiquement).",
+    "expl_ko": "Tor est <em>conçu</em> contre la forensique disque. Compenser par : <strong>RAM, prefetch, registre, logs réseau</strong>. L'analyse réseau (NetFlow, captures) reste souvent la voie la plus productive.",
+    "refs": [
+      "Tor Project — Tor Browser Forensics",
+      "Mattia Epifani — Tor Browser Forensic Analysis"
+    ],
+    "feedback": {
+      "0": "tor.log n'existe pas par défaut — Tor minimise les logs.",
+      "2": "Tor Browser est un Firefox modifié, pas un Chrome.",
+      "3": "Le registre ne loggue PAS les .onion visités."
+    },
+    "fiches": [
+      "tor_darkweb",
+      "anti_forensique",
+      "browser_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Tor & Darkweb",
+    "diff": "hard",
+    "type": "single",
+    "q": "Quelle technique d'attribution légale a permis le démantèlement de marchés du darkweb comme Silk Road, AlphaBay ou Hansa, malgré l'usage de Tor ?",
+    "opts": [
+      "Cassage cryptographique des couches Tor par la NSA",
+      "Erreurs OPSEC opérateurs (réutilisation de pseudos, leaks d'IP via mauvaise config), infiltration et analyse de la blockchain Bitcoin",
+      "Identification des Tor exit nodes",
+      "Décryptage des hidden services .onion"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Tor n'a presque jamais été <em>cassé cryptographiquement</em>. Les démantèlements (Silk Road 2013, AlphaBay 2017, Hansa 2017, Wall Street Market 2019) résultent de combinaisons : (1) <strong>OPSEC failures</strong> — DPR/Ulbricht avait posté son vrai mail StackOverflow, sysadmin AlphaBay avait laissé une URL non-routée révélant son IP, (2) <strong>infiltration</strong> — agents undercover sur les forums, (3) <strong>chainalysis Bitcoin</strong> — Chainalysis, CipherTrace, Elliptic remontent les flux de cryptomonnaies vers les exchanges KYC, (4) <strong>prise de contrôle des serveurs</strong> par les autorités (Hansa fut opéré secrètement par la police néerlandaise pendant un mois après sa saisie).",
+    "expl_ko": "Le maillon faible n'est jamais Tor : c'est l'<strong>humain (OPSEC)</strong> + le <strong>flux financier</strong> (blockchain analyse). Toujours partir de ces deux angles.",
+    "refs": [
+      "DOJ — United States v. Ulbricht",
+      "Europol — AlphaBay Operation Bayonet",
+      "Chainalysis Reactor"
+    ],
+    "feedback": {
+      "0": "Aucune preuve publique d'un cassage cryptographique Tor par la NSA.",
+      "2": "Connaître les exit nodes est facile (liste publique) mais n'identifie pas les utilisateurs.",
+      "3": "Les hidden services restent cryptographiquement solides."
+    },
+    "fiches": [
+      "tor_darkweb",
+      "cryptomonnaies",
+      "osint"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cryptomonnaies forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Bitcoin est souvent qualifié d'« anonyme ». Quel est le terme techniquement correct ?",
+    "opts": [
+      "Bitcoin est totalement anonyme",
+      "Pseudonyme : adresses publiques, toutes les transactions sont traçables sur la blockchain",
+      "Bitcoin est complètement caché",
+      "Bitcoin n'utilise pas de clés cryptographiques"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Bitcoin est <strong>pseudonyme, pas anonyme</strong>. Chaque adresse (commençant par <code>1</code>, <code>3</code> ou <code>bc1</code>) est un pseudonyme cryptographique. La blockchain Bitcoin est <strong>publique et immuable</strong> : tous les flux sont visibles à jamais. Le défi forensique est de relier une adresse à une identité réelle, généralement via : (1) interaction avec un exchange KYC, (2) IP de premier broadcast (rare), (3) heuristiques de clustering (Chainalysis), (4) OPSEC failures du suspect.",
+    "expl_ko": "Mantra : <strong>Bitcoin ≠ anonyme, Bitcoin = pseudonyme</strong>. La blockchain est un registre public dont chaque transaction est traçable. Monero et Zcash sont des cryptomonnaies réellement anonymes.",
+    "refs": [
+      "Satoshi Nakamoto — Bitcoin Whitepaper (2008)",
+      "Chainalysis Crypto Crime Report"
+    ],
+    "feedback": {
+      "0": "Erreur classique entretenue par les non-experts : pseudonyme ne veut pas dire anonyme.",
+      "2": "Au contraire — la blockchain est l'opposé de cachée, c'est un registre public mondial.",
+      "3": "Bitcoin utilise massivement la crypto (ECDSA secp256k1, SHA-256), c'est sa base technique."
+    },
+    "fiches": [
+      "cryptomonnaies"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cryptomonnaies forensiques",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lors d'une perquisition d'un suspect actif en crypto, quels éléments cherchez-vous prioritairement ? (plusieurs réponses)",
+    "opts": [
+      "Hardware wallets (Ledger, Trezor, Coldcard)",
+      "Phrases mnémoniques (12-24 mots écrits sur papier, métal, ou caché)",
+      "Fichiers <code>wallet.dat</code> sur disque (Bitcoin Core)",
+      "Configurations Mac/Linux Bluetooth",
+      "Apps mobiles wallet (MetaMask, Trust Wallet, Phantom)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "Cibles forensiques crypto : (1) <strong>Hardware wallets</strong> — souvent sur table de chevet ou coffre. (2) <strong>Seed phrases</strong> — 12 à 24 mots BIP-39, parfois gravés sur métal (Cryptosteel, etc.) ou cachés (livres, encadrés). Une seed = accès total aux fonds. (3) <strong>wallet.dat</strong> (Bitcoin Core, format Berkeley DB) — peut être chiffré par passphrase. (4) <strong>Apps mobiles</strong> — extraction physique du device, les seeds peuvent être stockées dans Keystore/Keychain. Bluetooth Mac/Linux n'a aucun rapport avec les wallets crypto.",
+    "expl_ko": "Le seul élément critique en crypto = <strong>la clé privée ou la seed phrase</strong>. Avec ces 12-24 mots, on récupère TOUS les fonds, peu importe le wallet utilisé. Sans, même avec un hardware wallet en main, on ne peut rien faire sans le PIN.",
+    "refs": [
+      "BIP-39 — Mnemonic code",
+      "BIP-32 — Hierarchical Deterministic Wallets",
+      "Chainalysis Investigation Guide"
+    ],
+    "feedback": {
+      "3": "Bluetooth n'est pas une cible forensique crypto — c'est sans rapport."
+    },
+    "fiches": [
+      "cryptomonnaies"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cryptomonnaies forensiques",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous tracez sur la blockchain Bitcoin un flux d'extorsion de 50 BTC. Vous arrivez sur une adresse qui envoie ensuite ces fonds à un <strong>mixer/tumbler</strong> (Wasabi, Samourai, Tornado Cash). Quelle est la stratégie d'enquête restante ?",
+    "opts": [
+      "Abandonner — le mixer rend le tracking impossible",
+      "Analyser les patterns de timing (CoinJoin time analysis), regarder la sortie du mixer, suivre vers les exchanges KYC, demander aux autorités US (Tornado Cash sanctionné OFAC)",
+      "Pirater le mixer pour récupérer les logs",
+      "Casser la cryptographie ECDSA"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les mixers <strong>complexifient mais ne suppriment pas totalement</strong> la traçabilité. Techniques : (1) <strong>Timing analysis</strong> — corréler entrées et sorties par horodatage et montants. (2) <strong>Output clustering</strong> — Chainalysis identifie souvent les sorties post-mixer par heuristiques. (3) <strong>Cash-out tracking</strong> — suivre les fonds jusqu'à un exchange KYC qui fournira l'identité via MLAT. (4) <strong>Tornado Cash</strong> est sanctionné OFAC depuis août 2022 — son usage par une entité ayant des liens US est un délit en soi, indépendamment du tracking. (5) Coopération internationale — Europol/FBI ont démantelé plusieurs mixers (Helix, ChipMixer).",
+    "expl_ko": "Mixer = ralentissement, pas immunité. La voie royale reste le <strong>cash-out point</strong> chez un exchange KYC — c'est là que l'identité réelle apparaît.",
+    "refs": [
+      "Chainalysis — Crypto Crime Report 2024",
+      "OFAC SDN — Tornado Cash designation",
+      "DOJ — ChipMixer takedown (2023)"
+    ],
+    "feedback": {
+      "0": "Trop défaitiste — les analyses post-mixer fonctionnent souvent en pratique.",
+      "2": "Piratage = illégal, et inutile car les mixers décentralisés (Tornado Cash) n'ont pas de logs centralisés.",
+      "3": "ECDSA secp256k1 reste solide cryptographiquement — pas de raccourci."
+    },
+    "fiches": [
+      "cryptomonnaies",
+      "tor_darkweb",
+      "eimp_entraide"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cryptomonnaies forensiques",
+    "diff": "medium",
+    "type": "single",
+    "q": "En Suisse, quel est le cadre légal qui s'applique aux activités d'échange et de stockage de cryptomonnaies par les entreprises ?",
+    "opts": [
+      "Pas de régulation — le crypto est libre",
+      "LBA (Loi blanchiment d'argent) + supervision FINMA pour les prestataires (exchanges, custody), avec règle de Travel Rule depuis 2020",
+      "Uniquement la TVA",
+      "Régulation européenne RGPD"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La Suisse est l'une des juridictions les plus avancées en régulation crypto. Cadre principal : <strong>LBA</strong> (Loi sur le blanchiment d'argent) — les exchanges, custody providers et brokers crypto sont assujettis comme tout intermédiaire financier (KYC, surveillance des transactions, MROS reporting). <strong>FINMA</strong> supervise via les Selbstregulierungsorganisationen (SRO) ou directement. Depuis 2020, la <strong>Travel Rule</strong> (recommandation 16 GAFI) impose la transmission d'infos émetteur/bénéficiaire pour transactions ≥ 1'000 CHF. Loi DLT (2021) — adapte 8 lois fédérales pour la blockchain.",
+    "expl_ko": "Crypto en Suisse = <strong>LBA + FINMA + Travel Rule</strong>. Crypto Valley (Zoug) est un hub réglementé, pas un far-west.",
+    "refs": [
+      "LBA — RS 955.0",
+      "FINMA — Circulaire 2018/3 Activités crypto",
+      "Loi DLT — RO 2021 33",
+      "GAFI Travel Rule R.16"
+    ],
+    "feedback": {
+      "0": "Faux — la Suisse régule strictement les prestataires crypto via FINMA depuis 2018.",
+      "2": "La TVA s'applique mais c'est minime par rapport à la LBA/FINMA.",
+      "3": "Le RGPD est européen — la Suisse a sa propre nLPD, mais le sujet ici est l'AML/CFT, pas la protection des données."
+    },
+    "fiches": [
+      "cryptomonnaies",
+      "droit",
+      "nldp"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Email Forensique",
+    "diff": "hard",
+    "type": "single",
+    "q": "Un email présente une signature DKIM valide pour <code>d=trusted-bank.ch</code> mais le contenu est manifestement frauduleux. Quelle hypothèse est la plus probable ?",
+    "opts": [
+      "Le domaine <code>trusted-bank.ch</code> est compromis (ses clés DKIM privées ont fuité ou son MTA est piraté)",
+      "DKIM est un mécanisme cassé",
+      "L'email vient bien de la banque, c'est un test interne",
+      "DKIM ne signifie rien"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "DKIM signe le corps + certains headers avec la <strong>clé privée du domaine émetteur</strong>. Si la signature est valide pour <code>d=trusted-bank.ch</code>, c'est que : (1) la <strong>clé privée DKIM de la banque a fuité</strong> (clés stockées sans HSM, ancienne clé non révoquée), ou (2) un <strong>compte ou serveur interne</strong> a été compromis et l'attaquant a accès au MTA légitime, ou (3) <strong>BEC</strong> (Business Email Compromise) avancé. Réponse forensique : alerter immédiatement la banque, conserver l'email avec tous ses en-têtes, déclencher une investigation côté émetteur. Ne PAS supposer que DKIM est cassé.",
+    "expl_ko": "DKIM valide + contenu suspect = <strong>l'émetteur lui-même est compromis</strong>. Le mécanisme fonctionne ; c'est l'infrastructure côté domaine d'origine qui pose problème.",
+    "refs": [
+      "RFC 6376 (DKIM)",
+      "FBI IC3 — BEC trends",
+      "ETH Zurich — DKIM Key Compromise Cases"
+    ],
+    "feedback": {
+      "1": "DKIM n'est pas cassé — la signature valide est cryptographiquement solide.",
+      "2": "Une banque ne ferait pas de test phishing depuis ses domaines de production avec contenu frauduleux.",
+      "3": "Faux : DKIM est un standard largement déployé et fiable."
+    },
+    "fiches": [
+      "email_forensique",
+      "email_headers_smtp_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Browser Forensics",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lors d'une enquête, quels artefacts de navigateur sont préservés <strong>même en mode privé/Incognito</strong> grâce à des couches OS sous-jacentes ? (plusieurs réponses)",
+    "opts": [
+      "Cache DNS Windows (<code>ipconfig /displaydns</code>)",
+      "Fichier swap/pagefile (<code>pagefile.sys</code>) contenant fragments mémoire",
+      "Hibernation file (<code>hiberfil.sys</code>) si l'ordinateur a hiberné après la session",
+      "Historique Chrome <code>History</code>",
+      "Logs du proxy d'entreprise / IDS / SIEM si l'utilisateur passait par un réseau supervisé"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "Le mode privé n'est efficace que sur le périmètre Chrome lui-même. Les couches OS persistent : (1) <strong>DNS cache</strong> — Windows met en cache les résolutions de noms même en Incognito. (2) <strong>pagefile.sys</strong> — RAM paginée sur disque, peut contenir des fragments d'URL/contenu. (3) <strong>hiberfil.sys</strong> — snapshot complet RAM au moment de l'hibernation = <strong>jackpot</strong> forensique. (4) <strong>Logs réseau</strong> — proxy, IDS, SIEM, NetFlow voient le trafic même chiffré (au moins SNI/DNS). Seul Chrome History n'est pas écrit en Incognito.",
+    "expl_ko": "Règle : Incognito = anti-trace <strong>local Chrome seulement</strong>. Tous les artefacts en dehors de Chrome (OS, réseau) sont préservés normalement.",
+    "refs": [
+      "Microsoft — DNS Client Cache",
+      "Volatility — page table reconstruction",
+      "ENISA — Hibernation Analysis"
+    ],
+    "feedback": {
+      "3": "Faux — c'est précisément ce que Incognito empêche d'écrire."
+    },
+    "fiches": [
+      "browser_forensique",
+      "anti_forensique",
+      "windows_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Tor & Darkweb",
+    "diff": "medium",
+    "type": "single",
+    "q": "Que sont les « hidden services » Tor (.onion) et comment se distinguent-ils des sites web classiques ?",
+    "opts": [
+      "Des sites cachés derrière un mot de passe",
+      "Des services accessibles uniquement via Tor, dont l'adresse <code>xxx.onion</code> est dérivée de la clé publique du service — anonymat <strong>côté client ET côté serveur</strong>",
+      "Des sites en HTTPS",
+      "Des CDN privés"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>hidden services .onion</strong> (v3 actuellement) sont uniquement accessibles via Tor. L'adresse <code>56-character.onion</code> est dérivée de la <strong>clé publique Ed25519</strong> du service — donc l'adresse <em>est</em> l'identité cryptographique. Le client et le serveur sont mutuellement anonymes : ni le client ne connaît l'IP du serveur, ni vice-versa. Le circuit utilise <strong>6 hops</strong> (3 côté client + 3 côté serveur + 1 Rendezvous Point négocié). Usages : darknet markets, leak sites, mais aussi BBC, SecureDrop, Facebook (oui), Wikipedia.",
+    "expl_ko": "<strong>.onion</strong> v3 = 56 caractères dérivés d'une clé publique. C'est de la <strong>cryptographie ad-hoc</strong>, pas du DNS classique. Pour blacklister, il faut bloquer Tor à la racine — bloquer un .onion individuellement est complexe.",
+    "refs": [
+      "Tor Project — Onion Services Protocol",
+      "Rendezvous Specification (rend-spec-v3.txt)"
+    ],
+    "feedback": {
+      "0": "Aucun lien avec un mot de passe — l'accès est universel via Tor, l'anonymat est cryptographique.",
+      "2": "HTTPS est compatible avec .onion (Tor supporte HTTPS over .onion) mais ce n'est pas la définition.",
+      "3": "Pas un CDN privé — c'est un mécanisme cryptographique distribué."
+    },
+    "fiches": [
+      "tor_darkweb"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "SQLite Forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quelle est l'utilité du fichier <code>.db-wal</code> en SQLite pour l'investigation forensique ?",
+    "opts": [
+      "Backup automatique de la base",
+      "Write-Ahead Log : contient les modifications les plus récentes non encore intégrées dans le fichier principal, souvent des messages effacés juste avant la saisie",
+      "Index de recherche full-text",
+      "Fichier temporaire à supprimer"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>Write-Ahead Log</strong> (<code>.db-wal</code>) est un mécanisme de SQLite (mode <code>journal_mode=WAL</code>) où les écritures vont d'abord dans ce fichier annexe, puis sont périodiquement <em>checkpointées</em> dans la base principale. <strong>Conséquence forensique critique</strong> : les transactions des dernières minutes/heures (suppressions de messages, modifications) peuvent être présentes UNIQUEMENT dans le WAL si le checkpoint n'a pas eu lieu. Toujours <strong>copier le WAL avant ouverture</strong> de la base.",
+    "expl_ko": "WAL = <strong>buffer d'écritures en attente</strong>. Sur WhatsApp/Signal/etc., contient souvent des messages qu'on a tenté de supprimer juste avant la saisie. À ne JAMAIS oublier.",
+    "refs": [
+      "sqlite.org — Write-Ahead Logging",
+      "Paul Sanderson — SQLite WAL Forensics"
+    ],
+    "feedback": {
+      "0": "Pas un backup — c'est un journal des écritures en cours.",
+      "2": "L'index FTS est dans des tables séparées (fts_*), pas dans le WAL.",
+      "3": "Surtout pas — c'est une mine d'or forensique."
+    },
+    "fiches": [
+      "sqlite_forensique",
+      "sqlite_forensique_avance",
+      "messagerie_im"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries chiffrées",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Pour WhatsApp sur Android, quels fichiers contiennent ensemble les données critiques pour la forensique ? (plusieurs réponses)",
+    "opts": [
+      "<code>/data/data/com.whatsapp/databases/msgstore.db</code>",
+      "<code>/data/data/com.whatsapp/files/key</code> (clé de déchiffrement pour les backups crypt15)",
+      "<code>/sdcard/WhatsApp/Databases/msgstore.db.crypt15</code> (backup chiffré local)",
+      "<code>/sdcard/WhatsApp/Media/</code> (médias non chiffrés)",
+      "<code>/system/build.prop</code>"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Cible WhatsApp Android complète : (1) <code>msgstore.db</code> = base SQLite principale (messages, métadonnées). (2) <code>files/key</code> = clé AES qui déchiffre les backups <code>.crypt15</code>. (3) <code>msgstore.db.crypt15</code> = backups quotidiens chiffrés sur la SD card — souvent l'unique source si la base interne a été checkpointée. (4) <code>Media/</code> = images, vidéos, audios, documents — non chiffrés. <code>build.prop</code> est un fichier système Android sans rapport.",
+    "expl_ko": "Pour WhatsApp Android : <strong>la base interne + la clé + les backups SD + les médias</strong>. Outils : <code>wa-crypt-tools</code>, WhatsApp Viewer, Cellebrite UFED, Magnet AXIOM.",
+    "refs": [
+      "wa-crypt-tools — GitHub",
+      "Cellebrite — WhatsApp Forensics Guide"
+    ],
+    "feedback": {
+      "4": "build.prop contient des infos sur le device (modèle, version Android) mais pas de données WhatsApp."
+    },
+    "fiches": [
+      "messagerie_im",
+      "sqlite_forensique",
+      "android_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cryptomonnaies forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Une seed phrase BIP-39 contient combien de mots, et que permet-elle de récupérer ?",
+    "opts": [
+      "4 mots, juste un pseudo",
+      "12 ou 24 mots, permet de régénérer toutes les clés privées d'un wallet HD et donc accéder à tous les fonds",
+      "256 caractères aléatoires",
+      "Uniquement un PIN à 4 chiffres"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "BIP-39 (<em>Bitcoin Improvement Proposal 39</em>) définit une <strong>seed phrase de 12, 15, 18, 21 ou 24 mots</strong> (12 et 24 sont les plus courants), choisis dans une liste de 2'048 mots. Cette phrase encode l'entropie (128 bits pour 12 mots, 256 bits pour 24 mots) qui sert de graine au BIP-32 pour dériver de façon déterministe TOUTES les clés privées du wallet HD (Hierarchical Deterministic). <strong>Conséquence forensique</strong> : 12-24 mots écrits = accès total à tous les comptes du suspect, peu importe le hardware ou software wallet utilisé.",
+    "expl_ko": "Mémo : <strong>12 ou 24 mots BIP-39</strong>. Souvent cachés sur papier, métal (Cryptosteel), ou dissimulés (livres, encadrés, photos). À chercher systématiquement en perquisition crypto.",
+    "refs": [
+      "BIP-39 — Mnemonic code",
+      "BIP-32 — HD Wallets",
+      "BIP-44 — Multi-Account Hierarchy"
+    ],
+    "feedback": {
+      "0": "4 mots = 44 bits d'entropie = bruteforçable en quelques secondes, jamais utilisé.",
+      "2": "C'est l'entropie sous-jacente mais l'utilisateur voit des mots, pas des caractères.",
+      "3": "Un PIN est facultatif, pas la seed."
+    },
+    "fiches": [
+      "cryptomonnaies"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Tor & Darkweb",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lors d'une enquête sur un suspect utilisateur du darkweb, quels vecteurs d'attribution sont productifs en pratique ? (plusieurs réponses)",
+    "opts": [
+      "OPSEC failures (pseudo réutilisé sur clearnet, photos avec EXIF)",
+      "Analyse blockchain (Chainalysis) pour suivre les paiements crypto",
+      "Saisie physique du device (RAM live, prefetch, browser artifacts résiduels)",
+      "Casser cryptographiquement le routage Tor",
+      "Coopération internationale (Europol, FBI) et infiltration des marchés"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "Les 4 vecteurs réellement productifs : (1) <strong>OPSEC failures</strong> — la majorité des arrestations majeures (Silk Road DPR/Ulbricht, AlphaBay, Hansa, Welcome to Video) résultent d'erreurs humaines. (2) <strong>Blockchain analysis</strong> — Chainalysis/Elliptic/TRM Labs tracent les paiements jusqu'aux exchanges KYC. (3) <strong>Device seizure</strong> — RAM live, prefetch, registre, swap. (4) <strong>Coopération internationale</strong> — démantèlements coordonnés. <strong>Casser Tor cryptographiquement</strong> n'est jamais publiquement documenté comme méthode opérationnelle.",
+    "expl_ko": "Pyramide d'attribution darkweb : <strong>humain (OPSEC) > finances (blockchain) > device > collaboration</strong>. Toujours commencer par chercher les erreurs OPSEC.",
+    "refs": [
+      "DOJ — Welcome to Video takedown",
+      "Europol — Operation Bayonet (AlphaBay)",
+      "Chainalysis Crypto Crime Report"
+    ],
+    "feedback": {
+      "3": "Aucune preuve publique de cassage cryptographique Tor — toujours via OPSEC, blockchain ou infiltration."
+    },
+    "fiches": [
+      "tor_darkweb",
+      "cryptomonnaies",
+      "osint"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cloud — Préservation et entraide",
+    "diff": "easy",
+    "type": "single",
+    "q": "Une enquête PJ révèle que les preuves clés sont dans un compte Microsoft 365. Quelle est la première action légale à entreprendre auprès du provider ?",
+    "opts": [
+      "Demander directement l'accès aux comptes via API",
+      "Envoyer une Preservation Request pour geler les données avant qu'elles n'expirent",
+      "Bloquer le compte utilisateur",
+      "Lancer une procédure MLAT immédiatement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La <strong>Preservation Request</strong> (Litigation Hold) demande au provider de conserver les données au-delà de leur rétention normale (souvent 90 jours). Elle est rapide à émettre (heures) et permet ensuite de lancer une procédure MLAT (6-18 mois) sans perdre les preuves entretemps.",
+    "expl_ko": "Toujours préserver AVANT de demander. Les logs M365 par défaut sont en rétention 90 jours seulement — une enquête plus longue les verrait disparaître si une Preservation Request n'avait pas été émise.",
+    "refs": [
+      "Microsoft — Compliance Documentation",
+      "Stored Communications Act (US, 18 USC § 2703(f))",
+      "Convention Budapest art. 16"
+    ],
+    "feedback": {
+      "0": "Impossible juridiquement et techniquement sans réquisition formelle ou consentement.",
+      "2": "Bloquer un compte risque d'alerter le suspect et de déclencher une suppression — contre-productif.",
+      "3": "MLAT est long (6-18 mois) — toujours faire Preservation AVANT, MLAT ensuite."
+    },
+    "fiches": [
+      "cloud_forensique",
+      "preuve",
+      "eimp_entraide"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cloud — Préservation et entraide",
+    "diff": "medium",
+    "type": "single",
+    "q": "Le US CLOUD Act (2018) permet quoi exactement ?",
+    "opts": [
+      "Aux autorités US d'accéder aux données stockées par des providers US, même à l'étranger",
+      "Aux providers US d'ignorer les MLAT internationaux",
+      "À tout pays d'accéder aux données stockées aux USA",
+      "Aux autorités suisses d'accéder aux serveurs US sans MLAT"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>Clarifying Lawful Overseas Use of Data Act</strong> (2018) permet aux autorités américaines d'exiger d'un provider US (Microsoft, Google, Apple, Meta, AWS) la divulgation des données qu'il contrôle, <strong>peu importe où elles sont physiquement stockées</strong>. C'est un point de friction majeur avec la souveraineté européenne/suisse — d'où le US-Swiss Data Privacy Framework (2024).",
+    "expl_ko": "L'extraterritorialité du CLOUD Act est unilatérale : les autorités US peuvent atteindre les données hors USA, mais l'inverse nécessite toujours MLAT ou Executive Agreement (e.g. CLOUD Act Agreement UK-US 2019).",
+    "refs": [
+      "US CLOUD Act, 18 USC § 2713",
+      "US-Swiss Data Privacy Framework (DPF) 2024",
+      "Schrems II — CJUE C-311/18"
+    ],
+    "feedback": {
+      "1": "Le CLOUD Act ne dispense pas des MLAT, mais permet une voie supplémentaire pour les autorités US.",
+      "2": "Seules les autorités US ont ce levier ; pour les autres pays, MLAT ou accord bilatéral.",
+      "3": "La Suisse passe toujours par EIMP/MLAT, pas par le CLOUD Act qui est unilatéral US."
+    },
+    "fiches": [
+      "cloud_forensique",
+      "eimp_entraide",
+      "droit"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Cloud — Préservation et entraide",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Quels défis fondamentaux distinguent le cloud forensique de l'investigation locale classique ? (plusieurs réponses)",
+    "opts": [
+      "Juridiction multiple — données potentiellement réparties sur plusieurs pays",
+      "Accès indirect — l'enquêteur dépend du provider, pas d'accès direct aux disques",
+      "Volatilité — logs effacés selon la politique de rétention (souvent 90j)",
+      "Multi-tenancy avec chiffrement isolation",
+      "Impossibilité totale d'obtenir une image disque bit-à-bit"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Les 4 défis fondamentaux du cloud forensique : <strong>(1) Juridiction multiple</strong> (où sont les données ?), <strong>(2) Accès limité</strong> (dépendance au provider), <strong>(3) Volatilité</strong> (rétention courte), <strong>(4) Multi-tenancy + chiffrement</strong> (isolation entre clients). On peut souvent obtenir des exports JSON/CSV des logs et données — pas une image bit-à-bit du serveur, mais des données utilisables.",
+    "expl_ko": "Ces 4 défis forment le cœur du métier cloud-forensique. La réponse 5 est trop absolue : les providers fournissent souvent des exports structurés (logs, mails, fichiers) qui suffisent juridiquement, même sans image disque.",
+    "refs": [
+      "NIST SP 800-201 — Cloud Computing Forensic Reference Architecture",
+      "ISO/IEC 27050-3 — Electronic Discovery"
+    ],
+    "feedback": {
+      "4": "Trop absolu : si on n'a pas d'image bit-à-bit du serveur, on a des exports structurés (logs JSON, mailbox PST/MBOX) qui suffisent juridiquement."
+    },
+    "fiches": [
+      "cloud_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "easy",
+    "type": "single",
+    "q": "Un ransomware vient de chiffrer le système d'un hôpital. Combien d'étapes compte la « Kill Chain Ransomware » typique selon le framework standard ?",
+    "opts": [
+      "3 étapes",
+      "5 étapes",
+      "7 étapes",
+      "12 étapes"
+    ],
+    "answers": [
+      2
+    ],
+    "expl_ok": "La <strong>Kill Chain Ransomware</strong> en 7 étapes : (1) Initial Access, (2) Execution, (3) Persistence, (4) Privilege Escalation, (5) Lateral Movement / Discovery, (6) Exfiltration (double extortion), (7) Encryption + Ransom Note. Comprendre cette chaîne permet d'identifier les IOCs à chaque phase et de couper l'attaque AVANT le chiffrement.",
+    "expl_ko": "Les <strong>7 étapes</strong> sont la grille de lecture standard, dérivée du Lockheed Martin Cyber Kill Chain et de MITRE ATT&CK adapté au ransomware.",
+    "refs": [
+      "MITRE ATT&CK — Ransomware Tactics",
+      "CISA Ransomware Guide (2023)",
+      "Lockheed Martin Cyber Kill Chain"
+    ],
+    "feedback": {
+      "0": "Trop simpliste — il y a au moins Initial Access, Movement et Encryption, mais beaucoup d'étapes intermédiaires.",
+      "1": "Proche mais 7 est le nombre standard, qui inclut Persistence et Privilege Escalation comme étapes distinctes.",
+      "3": "Trop détaillé — 12 mélangerait des sous-étapes, le modèle standard est en 7."
+    },
+    "fiches": [
+      "ransomware_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lors d'un incident ransomware, le « dwell time » désigne :",
+    "opts": [
+      "La durée totale du chiffrement des fichiers",
+      "Le temps entre la première intrusion et la détection de l'attaque",
+      "Le délai accordé pour payer la rançon",
+      "La durée pendant laquelle les backups doivent être conservés"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>dwell time</strong> est la durée pendant laquelle l'attaquant est présent dans le SI sans être détecté. Moyenne globale 2023 : ~16 jours (Mandiant M-Trends). Pour les ransomwares, c'est souvent plus court (1-10 jours) car l'attaquant veut exfiltrer + chiffrer rapidement. Réduire le dwell time = augmenter les chances d'interrompre la kill chain.",
+    "expl_ko": "Dwell time = temps de présence non détectée. Plus court = meilleure défense. Les organisations matures visent &lt; 48h via EDR + SIEM correctement tunés.",
+    "refs": [
+      "Mandiant M-Trends Report 2024",
+      "CrowdStrike Global Threat Report",
+      "MITRE D3FEND"
+    ],
+    "feedback": {
+      "0": "C'est le encryption time (souvent &lt; 1h pour un ransomware moderne), pas le dwell time.",
+      "2": "C'est le ransom deadline (souvent 72h-7 jours), pas le dwell time.",
+      "3": "C'est la rétention backup (typiquement 30j-1 an selon politique), différent du dwell time."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "incident_response"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Vous découvrez les commandes suivantes dans l'historique PowerShell d'un serveur compromis. Lesquelles sont des IOCs critiques typiques d'un ransomware en phase de pré-chiffrement ? (plusieurs réponses)",
+    "opts": [
+      "<code>vssadmin delete shadows /all /quiet</code>",
+      "<code>wbadmin delete catalog -quiet</code>",
+      "<code>Get-Service | Where-Object {$_.Status -eq 'Running'}</code>",
+      "<code>bcdedit /set {default} bootstatuspolicy ignoreallfailures</code>",
+      "<code>cipher /w:C:\\</code>"
+    ],
+    "answers": [
+      0,
+      1,
+      3,
+      4
+    ],
+    "expl_ok": "Toutes ces commandes (sauf 3) sont des <strong>commandes destructives</strong> classiques du ransomware : (0) supprime les Volume Shadow Copies, (1) supprime le catalogue de backups Windows, (3) désactive Windows Recovery Environment, (4) écrase l'espace libre du disque pour empêcher la récupération de fichiers supprimés. La commande 3 (Get-Service) est légitime, utilisée pour énumération.",
+    "expl_ko": "Mémorisez ces 4 IOCs : vssadmin delete, wbadmin delete catalog, bcdedit ignoreallfailures, cipher /w. Toute apparition dans les logs PowerShell/CMD doit déclencher une alerte EDR immédiate.",
+    "refs": [
+      "MITRE ATT&CK T1490 — Inhibit System Recovery",
+      "CISA Ransomware Guide",
+      "Sigma Rules — ransomware-iocs"
+    ],
+    "feedback": {
+      "2": "<code>Get-Service</code> peut être utilisé pour énumération (reconnaissance), mais c'est une commande système courante, pas un IOC destructif spécifique."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "powershell_forensique",
+      "threat_intel_ioc"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "medium",
+    "type": "single",
+    "q": "Une entreprise suisse subit un ransomware. Quelle est la délai légal pour notifier le PFPDT en cas de violation de données personnelles selon la nLPD ?",
+    "opts": [
+      "24 heures dès la connaissance",
+      "72 heures dès la connaissance, dans les meilleurs délais",
+      "30 jours après la fin de l'incident",
+      "Notification optionnelle si moins de 1000 personnes touchées"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>art. 24 nLPD</strong> impose à tout responsable du traitement de notifier le PFPDT « dans les meilleurs délais » d'une violation de la sécurité présentant un risque élevé pour les droits fondamentaux des personnes concernées. La pratique aligne sur le <strong>72h RGPD</strong>. La notification doit inclure : nature de la violation, conséquences probables, mesures prises ou envisagées.",
+    "expl_ko": "Le délai pratique est <strong>72h</strong>, aligné sur le RGPD pour les entreprises opérant aussi en UE. La nLPD utilise « dans les meilleurs délais » mais l'esprit est identique.",
+    "refs": [
+      "nLPD art. 24 — Annonce des violations de la sécurité des données",
+      "RGPD art. 33 (référence)",
+      "PFPDT — Guide notification"
+    ],
+    "feedback": {
+      "0": "24h serait pour les opérateurs CII (LCSI, art. 74e), pas le cadre général nLPD.",
+      "2": "30 jours est beaucoup trop long — bien au-delà des standards internationaux.",
+      "3": "Le seuil n'est pas le nombre de personnes mais le risque élevé pour les droits fondamentaux."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "nldp",
+      "droit"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "hard",
+    "type": "single",
+    "q": "Une entreprise suisse envisage de payer la rançon en bitcoin à un groupe ransomware. Quel est le principal risque légal extraterritorial à considérer ?",
+    "opts": [
+      "Le paiement est strictement interdit par le droit suisse",
+      "Sanctions OFAC américaines si le groupe est listé SDN, application extraterritoriale aux entreprises ayant des liens US",
+      "TVA suisse de 7.7% applicable au montant payé",
+      "Obligation d'autorisation préalable de la FINMA"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>sanctions OFAC</strong> (Office of Foreign Assets Control, US Treasury) frappent les groupes ransomware listés <strong>SDN</strong> (Specially Designated Nationals). Une entreprise suisse ayant des liens US (filiale, banque correspondante USD, fournisseurs US) peut être sanctionnée pour avoir payé un groupe listé. OFAC Advisory de 2020 (renouvelé 2023) prévoit responsabilité même sans intention. Conséquence : amendes massives, exclusion du système bancaire USD.",
+    "expl_ko": "Le paiement n'est pas interdit en droit suisse pur, mais le risque OFAC est concret. Toujours faire un <strong>OFAC check</strong> avant paiement (groupe sur SDN List ?) et impliquer un avocat US si l'entreprise a des liens transatlantiques.",
+    "refs": [
+      "OFAC Advisory on Ransomware Payments (Oct 2020, updated 2023)",
+      "OFAC SDN List",
+      "FedPol — Guide ransomware paiement"
+    ],
+    "feedback": {
+      "0": "Le paiement n'est pas explicitement interdit en droit suisse, mais déconseillé (renforce le marché).",
+      "2": "Pas de TVA sur un paiement de rançon — c'est une perte, pas une prestation de service.",
+      "3": "La FINMA ne régule pas les paiements de rançon (sauf via les règles AML générales sur les transactions crypto)."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "cryptomonnaies",
+      "droit"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "easy",
+    "type": "single",
+    "q": "Lors des 60 premières minutes d'un incident ransomware, quelle action est CONTRE-indiquée ?",
+    "opts": [
+      "Isoler les machines compromises du réseau (sans les éteindre)",
+      "Éteindre immédiatement tous les serveurs pour stopper le chiffrement",
+      "Activer le plan de communication de crise",
+      "Capturer la RAM des machines actives pour analyse forensique"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Éteindre brutalement</strong> détruit les preuves volatiles en RAM (clés de chiffrement potentiellement récupérables, processus du ransomware, connexions C2 en cours). La bonne pratique : <strong>isoler du réseau</strong> (débrancher LAN, désactiver Wi-Fi) tout en laissant la machine allumée pour capture RAM, puis acquérir disque off-line.",
+    "expl_ko": "Règle d'or IR ransomware : <strong>isoler n'est pas éteindre</strong>. Les clés de chiffrement peuvent être en RAM, parfois récupérables (cf. White Phoenix, GitHub).",
+    "refs": [
+      "SANS — Ransomware Incident Response Playbook",
+      "ENISA — Ransomware Mitigation Guide"
+    ],
+    "feedback": {
+      "0": "Correct : isolation réseau immédiate, sans éteindre.",
+      "2": "Correct : la communication interne et externe doit démarrer en parallèle.",
+      "3": "Correct : capture RAM peut révéler clés de chiffrement, C2, processus en cours."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "incident_response",
+      "ram_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Ransomware Forensics",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Quels outils sont des références en analyse forensique post-incident ransomware ? (plusieurs réponses)",
+    "opts": [
+      "KAPE — Kroll Artifact Parser and Extractor (collecte triage rapide)",
+      "Velociraptor — collecte distribuée endpoint",
+      "Volatility 3 — analyse mémoire",
+      "Photoshop — édition d'images",
+      "Plaso / log2timeline — création de super-timeline"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl_ok": "<strong>KAPE</strong> et <strong>Velociraptor</strong> pour la collecte rapide d'artefacts (triage), <strong>Volatility 3</strong> pour l'analyse mémoire (extraire clés, processus du ransomware), <strong>Plaso</strong> pour reconstruire la timeline complète des événements. Photoshop n'a aucun usage forensique légitime — au contraire, c'est l'outil le plus suspect en cas d'altération d'images.",
+    "expl_ko": "La triade incident response : <strong>KAPE/Velociraptor</strong> (collecte) + <strong>Volatility</strong> (mémoire) + <strong>Plaso</strong> (timeline). À mémoriser.",
+    "refs": [
+      "KAPE Documentation",
+      "Velociraptor — Velocidex",
+      "Volatility Foundation",
+      "Plaso/log2timeline GitHub"
+    ],
+    "feedback": {
+      "3": "Photoshop n'est pas un outil forensique. Au contraire, l'identifier dans les métadonnées d'une image saisie est un indicateur d'altération potentielle."
+    },
+    "fiches": [
+      "ransomware_forensique",
+      "kape_velociraptor",
+      "volatility_memory_forensics",
+      "incident_response"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Containers & Virtualisation",
+    "diff": "easy",
+    "type": "single",
+    "q": "Sur Linux, les containers Docker s'appuient sur quels mécanismes du noyau pour isoler les processus et leurs ressources ?",
+    "opts": [
+      "VirtualBox + VMware Tools",
+      "Namespaces + cgroups",
+      "Hyper-V + WSL2",
+      "iptables uniquement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Docker s'appuie sur deux primitives Linux : <strong>namespaces</strong> (isolation : PID, network, mount, UTS, IPC, user, cgroup) et <strong>cgroups</strong> (limitation CPU, RAM, I/O). C'est ce qui rend Docker beaucoup plus léger qu'une VM (pas de noyau dédié) — mais aussi plus exposé : <strong>tous les containers partagent le noyau de l'hôte</strong>. Conséquence forensique : <code>docker exec</code>, <code>nsenter</code> et l'inspection des <code>cgroups</code> permettent d'extraire des artefacts sans arrêter le container.",
+    "expl_ko": "Docker = namespaces (isolation) + cgroups (ressources). Pas un noyau dédié comme une VM — l'hôte voit tout.",
+    "refs": [
+      "Linux kernel — namespaces(7)",
+      "Docker — Engine Architecture"
+    ],
+    "feedback": {
+      "0": "VirtualBox/VMware sont des hyperviseurs (VMs), pas Docker.",
+      "2": "Hyper-V est l'hyperviseur Windows ; WSL2 utilise Hyper-V mais n'est pas la base Docker Linux.",
+      "3": "iptables gère le pare-feu réseau ; insuffisant pour l'isolation processus/fs/users."
+    },
+    "fiches": [
+      "docker_kubernetes_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Containers & Virtualisation",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Vous enquêtez sur un hôte Linux compromis avec containers Docker actifs. Quelles approches d'acquisition sont valables sans arrêter les containers ? (plusieurs réponses)",
+    "opts": [
+      "<code>docker inspect &lt;container&gt;</code> pour métadonnées complètes",
+      "<code>docker logs &lt;container&gt;</code> pour stdout/stderr",
+      "<code>docker exec -it &lt;container&gt; /bin/sh</code> pour live forensics",
+      "<code>docker commit &lt;container&gt; forensic-snapshot</code> pour figer l'état",
+      "Reformater le disque hôte"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Acquisition <strong>live</strong> d'un container Docker : (1) <code>docker inspect</code> = configuration, network, volumes, mounts (JSON complet). (2) <code>docker logs</code> = stdout/stderr capturé. (3) <code>docker exec</code> = shell live pour exécuter <code>ps</code>, <code>netstat</code>, lister <code>/proc</code>, dump des artefacts. (4) <code>docker commit</code> = créer une image-snapshot exportable avec <code>docker save</code> en .tar. Côté hôte : artefacts dans <code>/var/lib/docker/containers/&lt;id&gt;/</code> (config.v2.json, hostconfig.json, logs). Pour les containers arrêtés : <code>docker container inspect</code> + le filesystem dans <code>/var/lib/docker/overlay2/</code>.",
+    "expl_ko": "Triade live Docker : <strong>inspect + logs + exec</strong>. + <code>docker commit</code> pour figer l'état. Reformater l'hôte détruit toutes les preuves.",
+    "refs": [
+      "Docker — docker commit reference",
+      "DFIR — Container Forensics"
+    ],
+    "feedback": {
+      "4": "Reformater = destruction de preuves, interdit en forensique."
+    },
+    "fiches": [
+      "docker_kubernetes_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Réseau forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Un attaquant exfiltre des données via <strong>DNS tunneling</strong>. Quel pattern dans les logs DNS permet de détecter cette technique ?",
+    "opts": [
+      "Faible volume de requêtes vers des domaines connus",
+      "Requêtes de sous-domaines très longs encodés Base32/Base64, volume anormal vers un même domaine de second niveau",
+      "Uniquement des requêtes A vers google.com",
+      "Aucun signe observable"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Signes typiques du <strong>DNS tunneling</strong> (Iodine, dnscat2, OzymanDNS) : (1) <strong>Sous-domaines très longs</strong> (50+ caractères), encodés en Base32/Base64 — le data utile est dans le label DNS. (2) <strong>Volume anormal</strong> vers un même domaine 2LD (parfois 1000+ requêtes/min). (3) <strong>Type TXT/NULL/CNAME</strong> inhabituel (les réponses contiennent les commandes C2). (4) <strong>Entropie élevée</strong> des labels (vs noms de domaines humains). Détection : Splunk/Elastic avec règles sur la longueur de la query, ratio NXDOMAIN, fréquence, ou ML (Anomalize). MITRE ATT&CK <strong>T1071.004</strong>.",
+    "expl_ko": "DNS tunneling = sous-domaines longs et aléatoires + volume anormal. Bypass typique des proxies HTTPS qui laissent passer le DNS sortant.",
+    "refs": [
+      "MITRE ATT&CK T1071.004 — DNS Tunneling",
+      "SANS — Detecting DNS Tunneling"
+    ],
+    "feedback": {
+      "0": "Au contraire — c'est le volume ANORMAL qui révèle l'attaque.",
+      "2": "Trafic légitime classique, pas un IOC.",
+      "3": "Faux — plusieurs signes observables, c'est même un cas d'école en NDR."
+    },
+    "fiches": [
+      "dns_forensique_avance"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Réseau forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle technologie chiffre les requêtes DNS sur le port 443 en les enveloppant dans HTTPS, rendant l'inspection passive impossible ?",
+    "opts": [
+      "DoT (DNS over TLS, port 853)",
+      "DoH (DNS over HTTPS, port 443)",
+      "DNSSEC",
+      "DoS (DNS over Sockets)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>DoH</strong> (DNS over HTTPS, RFC 8484) encapsule les requêtes DNS dans des connexions HTTPS standard sur le port 443. Conséquence : indistinguable du trafic HTTPS normal côté proxy/firewall. Adopté par Firefox (2018), Chrome, Edge, Cloudflare (1.1.1.1), Google (8.8.8.8). À distinguer de <strong>DoT</strong> (port 853, identifiable) et <strong>DNSSEC</strong> (signature d'authenticité, mais pas de chiffrement). Implication forensique : le DNS chiffré masque les requêtes aux outils de monitoring classiques — passer par la capture SNI/JA3 sur HTTPS ou imposer un résolveur DNS d'entreprise.",
+    "expl_ko": "DoH = port 443 = invisible côté réseau. DoT = port 853 = bloquable mais identifiable. DNSSEC ≠ chiffrement, c'est de la signature.",
+    "refs": [
+      "RFC 8484 — DoH",
+      "RFC 7858 — DoT",
+      "Cloudflare — DNS Resolver 1.1.1.1"
+    ],
+    "feedback": {
+      "0": "DoT utilise le port 853 distinct — identifiable au réseau.",
+      "2": "DNSSEC signe l'intégrité, ne chiffre rien.",
+      "3": "« DoS » est l'attaque déni de service, pas un protocole DNS."
+    },
+    "fiches": [
+      "dns_forensique_avance"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Systèmes spéciaux",
+    "diff": "easy",
+    "type": "single",
+    "q": "Lors d'une perquisition, vous trouvez une Apple Watch d'un suspect. Quel type d'artefacts forensiques peut-elle révéler ?",
+    "opts": [
+      "Aucun — c'est juste une montre",
+      "Géolocalisation, fréquence cardiaque, pas effectués, notifications miroir de l'iPhone, données santé (Activity.app)",
+      "Uniquement l'heure",
+      "Le mot de passe iCloud en clair"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'Apple Watch est un témoin numérique riche : <strong>géolocalisation</strong> (GPS depuis Series 2+ ; sinon via iPhone appairé), <strong>biométrie</strong> (fréquence cardiaque continue, ECG depuis Series 4, SpO2 depuis Series 6), <strong>activité physique</strong> (pas, distance, calories), <strong>notifications miroir</strong> de l'iPhone (SMS, iMessage, emails), <strong>Wallet/Apple Pay</strong> (transactions), <strong>messages dictés</strong>. Les données sont synchronisées avec l'<strong>app Santé iPhone</strong> (<code>healthdb_secure.sqlite</code>) et iCloud. Cas d'enquête : MJ Burns (2018, USA) — une Apple Watch a permis de placer le suspect sur la scène à la minute près.",
+    "expl_ko": "Wearable = riche : géoloc + biométrie + activité + notifications miroir. Toujours saisir la montre ET le smartphone appairé.",
+    "refs": [
+      "Apple — HealthKit Documentation",
+      "Sarah Edwards — Apple Watch Forensics"
+    ],
+    "feedback": {
+      "0": "Une smartwatch moderne est un mini-ordinateur avec capteurs.",
+      "2": "Bien plus que l'heure — c'est un témoin biométrique et géolocalisé.",
+      "3": "Faux — les mots de passe iCloud ne sont jamais stockés en clair."
+    },
+    "fiches": [
+      "iot_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Systèmes spéciaux",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur une Tesla saisie après un accident, quels artefacts forensiques peut-on extraire ?",
+    "opts": [
+      "Rien — Tesla chiffre tout",
+      "Logs MCU/IC (Media Control Unit / Instrument Cluster), Autopilot logs, vidéos Sentry Mode/Dashcam, EDR (Event Data Recorder), historique de charge/position",
+      "Uniquement la batterie",
+      "Le numéro de série uniquement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une Tesla contient plus de 100 ECU et stocke abondamment : <strong>MCU</strong> (Media Control Unit — Linux/Ubuntu modifié, contient cartes, contacts, calendriers, navigation, journaux d'utilisation), <strong>IC</strong> (Instrument Cluster), <strong>Autopilot</strong> (logs des décisions du système, capteurs caméras/radar), <strong>Sentry Mode + Dashcam</strong> (vidéos haute résolution stockées sur clé USB ou mémoire interne, prévisualisables jusqu'à ~1h en boucle), <strong>EDR</strong> (Event Data Recorder type SAE J1698-3 : vitesse, accélération, freinage, ceinture — 30s avant impact en général). Tesla coopère avec NHTSA/police via leur portail Tesla Service. Outils : Berla iVe + Tesla USB extraction.",
+    "expl_ko": "Tesla = mine d'or forensique : MCU + Sentry Mode (vidéos) + EDR + Autopilot logs. Berla iVe est l'outil commercial standard.",
+    "refs": [
+      "Tesla — Vehicle Data Privacy",
+      "Berla iVe — Vehicle Forensics",
+      "NHTSA — EDR Guidelines"
+    ],
+    "feedback": {
+      "0": "Tesla coopère avec les autorités via Tesla Service Portal.",
+      "2": "Faux — c'est un ordinateur complet sur roues.",
+      "3": "Très réducteur — le VIN n'est qu'un identifiant."
+    },
+    "fiches": [
+      "vehicules_forensique",
+      "iot_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Systèmes spéciaux",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous saisissez une VM VMware au format VMDK avec plusieurs snapshots. Quel est le principal écueil forensique à éviter ?",
+    "opts": [
+      "Démarrer la VM pour vérifier qu'elle fonctionne",
+      "Ne pas considérer la chaîne de snapshots (<code>-flat.vmdk</code>, <code>-000001.vmdk</code>, <code>-000002.vmdk</code>) : chaque snapshot est un delta — il faut soit consolider, soit analyser dans l'ordre",
+      "Renommer les fichiers",
+      "Convertir en RAW"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ko": "Au moins 3 fichiers compagnons critiques pour un VMDK : <code>-flat.vmdk</code> (base), <code>-delta.vmdk</code> ou <code>-000001.vmdk</code>, <code>-000002.vmdk</code> (snapshots successifs). Chaque snapshot ne contient que les <strong>blocs modifiés depuis le snapshot précédent</strong>. Pour analyser : (1) soit <strong>consolider</strong> avec <code>vmware-vdiskmanager -r</code> (mais altère, à faire sur copie hashée), (2) soit <strong>analyser dans l'ordre temporel</strong> pour reconstruire les états successifs (chaque snapshot = un point dans le temps). Format alternatif : VHDX (Hyper-V) avec parent/child analogues, QCOW2 (KVM/QEMU) avec backing chain.",
+    "expl_ok": "Snapshots VMware = chaîne de deltas. <strong>Toujours préserver TOUS les fichiers</strong> du dossier VM avant analyse. Démarrer la VM ferait perdre des états.",
+    "refs": [
+      "VMware — Virtual Disk Format Specification",
+      "SANS FOR526 — Memory Forensics"
+    ],
+    "feedback": {
+      "0": "Démarrer modifie l'horloge, lance les services, écrit dans les logs = perte d'état.",
+      "2": "Casserait les références entre fichiers compagnons.",
+      "3": "Conversion possible mais à faire sur copie, et après avoir compris la chaîne."
+    },
+    "fiches": [
+      "vm_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Documents bureautiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le format Office moderne (.docx, .xlsx, .pptx) est en réalité quel type de fichier ?",
+    "opts": [
+      "Format binaire propriétaire Microsoft",
+      "Une archive ZIP contenant des fichiers XML (Office Open XML — OOXML, ISO/IEC 29500)",
+      "Un format texte UTF-8",
+      "Un format vectoriel SVG étendu"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Depuis Office 2007, les formats <strong>OOXML</strong> (.docx/.xlsx/.pptx) sont des <strong>archives ZIP</strong> normalisées <strong>ISO/IEC 29500</strong>. Renommer en .zip ou ouvrir avec 7-Zip révèle : <code>[Content_Types].xml</code>, <code>_rels/</code>, <code>docProps/core.xml</code> (auteur, dates, version), <code>docProps/app.xml</code> (template, app, lignes/mots), <code>word/document.xml</code> (contenu principal). Implication forensique : tracked changes (<code>w:ins</code>, <code>w:del</code>), commentaires, propriétés cachées sont tous extractibles. Outils : <code>oletools</code>, <code>oledump.py</code> (legacy .doc/.xls), <code>python-docx</code>, <code>exiftool</code>.",
+    "expl_ko": "OOXML = ZIP + XML. Renommer .docx → .zip pour explorer. Toutes les métadonnées dans <code>docProps/core.xml</code>.",
+    "refs": [
+      "ISO/IEC 29500 — Office Open XML File Formats",
+      "Microsoft — OOXML Documentation"
+    ],
+    "feedback": {
+      "0": "C'était le cas des anciens .doc/.xls (formats binaires CFBF) — .docx est ZIP+XML depuis 2007.",
+      "2": "Pas du texte plat — c'est binaire (ZIP).",
+      "3": "SVG est totalement différent (graphique vectoriel)."
+    },
+    "fiches": [
+      "documents_office_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Documents bureautiques",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Vous analysez un .docx suspect. Quels artefacts XML internes sont riches en informations forensiques ? (plusieurs réponses)",
+    "opts": [
+      "<code>docProps/core.xml</code> — auteur, date création, date modification, dernière personne ayant modifié, révision count",
+      "<code>docProps/app.xml</code> — application, template utilisé, lignes/mots/paragraphes",
+      "<code>word/document.xml</code> — corps du document, <code>w:ins</code>/<code>w:del</code> (tracked changes)",
+      "<code>word/comments.xml</code> — commentaires nominatifs avec timestamps",
+      "<code>word/styles.xml</code> — uniquement la mise en forme typographique"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Artefacts forensiques OOXML : (1) <strong>core.xml</strong> — Dublin Core metadata : <code>dc:creator</code>, <code>cp:lastModifiedBy</code>, <code>dcterms:created</code>, <code>dcterms:modified</code>, <code>cp:revision</code>. (2) <strong>app.xml</strong> — <code>Application</code> (ex. Word/Office), <code>Template</code> (souvent révélateur : <code>Normal.dotm</code> normal vs templates corporate), <code>Pages</code>/<code>Words</code>/<code>Characters</code> + <code>TotalTime</code> (minutes d'édition cumulées). (3) <strong>document.xml</strong> — tracked changes avec <code>w:author</code> et <code>w:date</code> par modification. (4) <strong>comments.xml</strong> — auteur + timestamp + texte. <code>styles.xml</code> est utile mais purement typographique.",
+    "expl_ko": "Triade docx : <strong>core + app + document + comments</strong>. Surtout, <code>TotalTime</code> (minutes d'édition) est souvent oublié — révélateur d'une rédaction express ou de copier-coller.",
+    "refs": [
+      "ECMA-376 — OOXML Specification",
+      "Microsoft — File Properties"
+    ],
+    "feedback": {
+      "4": "styles.xml n'a pas d'information sur les auteurs ou timestamps — purement typographique."
+    },
+    "fiches": [
+      "documents_office_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "PDF forensique avancé",
+    "diff": "hard",
+    "type": "single",
+    "q": "Un PDF suspect a été modifié 3 fois après sa création. Comment retrouve-t-on les <strong>versions précédentes</strong> directement dans le fichier ?",
+    "opts": [
+      "Impossible — un PDF est immuable",
+      "Via les <strong>Incremental Updates</strong> : chaque sauvegarde ajoute un nouveau xref et un nouveau trailer en fin de fichier — les versions antérieures sont préservées et extractibles",
+      "Dans un fichier .bak séparé",
+      "Sur le cloud Adobe uniquement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le format <strong>PDF (ISO 32000)</strong> utilise des <strong>incremental updates</strong> : chaque sauvegarde n'écrase pas le fichier mais <strong>ajoute</strong> à la fin un nouveau bloc d'objets + un nouveau <code>xref</code> + un nouveau <code>trailer</code>. Conséquences forensiques majeures : (1) les versions antérieures sont <strong>préservées dans le fichier</strong>, (2) une modification du contenu (tampon ajouté, signature, texte effacé) laisse une trace, (3) on peut <strong>reconstruire l'historique</strong> en parsant chaque section. Outils : <code>pdftk dump_data</code>, <code>peepdf</code>, <code>pdfid.py</code> (Didier Stevens), <code>qpdf --qdf</code> (humanise le fichier).",
+    "expl_ko": "PDF = append-only par incremental updates. Chaque <code>xref</code> + <code>trailer</code> en fin = un point dans le temps. <strong>Plus de xref/trailer = plus de modifications</strong>.",
+    "refs": [
+      "ISO 32000-2:2020 — PDF Format Specification",
+      "Didier Stevens — PDF tools"
+    ],
+    "feedback": {
+      "0": "Faux — PDF n'est pas immuable. Au contraire, il préserve l'historique par construction.",
+      "2": "Pas de .bak — c'est dans le fichier lui-même.",
+      "3": "Pas besoin du cloud — l'historique est local dans le PDF."
+    },
+    "fiches": [
+      "pdf_forensique_avance"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Steganographie",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quelle est la différence fondamentale entre <strong>stéganographie</strong> et <strong>cryptographie</strong> ?",
+    "opts": [
+      "Aucune, ce sont des synonymes",
+      "La cryptographie cache le <strong>contenu</strong> (le message reste visible mais illisible) ; la stéganographie cache l'<strong>existence</strong> du message (porteur d'apparence anodine)",
+      "La stéganographie est plus rapide",
+      "La cryptographie est illégale en Suisse"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Cryptographie</strong> = chiffrement (Caesar, AES, RSA…) — le message est manifestement chiffré (« ç%^&*Wq2 ») et l'attaquant sait qu'il y a un secret. <strong>Stéganographie</strong> = dissimulation — le porteur (image PNG, audio WAV, fichier ZIP) paraît anodin, l'existence même du message caché est masquée. Les deux sont complémentaires : on peut chiffrer ET cacher. Techniques classiques : <strong>LSB</strong> (Least Significant Bit dans pixels d'image), <strong>append data after EOF</strong> (concat fichier en fin d'image), <strong>metadata abuse</strong> (EXIF, ID3), <strong>JPEG DCT coefficients</strong> (Steghide, JPHide), <strong>zsteg</strong> pour PNG, <strong>StegOnline</strong>, <strong>stegseek</strong> (bruteforce). Détection : statistical analysis (chi-squared, RS analysis), entropie anormale.",
+    "expl_ko": "Crypto cache le contenu, stégano cache l'existence. <strong>Souvent combinés</strong> : chiffrer puis cacher.",
+    "refs": [
+      "Johnson & Jajodia — Steganography Principles",
+      "Niels Provos — Statistical Steganalysis"
+    ],
+    "feedback": {
+      "0": "Faux — concepts distincts complémentaires.",
+      "2": "La vitesse n'est pas le critère.",
+      "3": "La cryptographie est légale en Suisse."
+    },
+    "fiches": [
+      "steganographie"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Logs avancés",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Vous suspectez qu'un attaquant a tenté d'effacer ses traces dans les logs Windows. Quels indicateurs de <strong>log tampering</strong> recherchez-vous ? (plusieurs réponses)",
+    "opts": [
+      "EID 1102 (Security log cleared) ou EID 104 (System log cleared)",
+      "Trous temporels anormaux sans events Sysmon attendus",
+      "Modification de l'ACL du fichier .evtx (event 4719 Audit Policy Change)",
+      "Présence du processus <code>wevtutil cl</code> dans le history PowerShell ou Sysmon EID 1",
+      "Présence de fichiers .docx récents"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Indicateurs de tampering : (1) <strong>EID 1102</strong> dans Security = audit log effacé, automatiquement loggé après le wipe (Windows écrit cet event juste avant). (2) <strong>EID 104</strong> dans System = autres logs effacés. (3) <strong>Trous temporels</strong> de minutes/heures sans event quand on en attendait (Sysmon configuration normale). (4) <strong>EID 4719</strong> = Audit Policy Change (l'attaquant a désactivé un audit avant son action). (5) Commande <code>wevtutil cl &lt;LogName&gt;</code> dans les historiques PowerShell/cmd. Mitigation : forwarding centralisé (Winlogbeat/NXLog/Splunk UF) — l'attaquant ne peut pas effacer ce qui est déjà parti.",
+    "expl_ko": "Tampering Windows : <strong>EID 1102 + 104 + 4719 + trous</strong>. Toujours croiser avec le SIEM externe (forwarding empêche les effacements).",
+    "refs": [
+      "Microsoft — Audit Policy Change Events",
+      "SANS — Windows Log Forensics"
+    ],
+    "feedback": {
+      "4": "Les .docx récents n'ont aucun lien avec le tampering de logs."
+    },
+    "fiches": [
+      "log_forensique_avance",
+      "windows_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries d'entreprise",
+    "diff": "medium",
+    "type": "single",
+    "q": "Pour acquérir légalement le contenu d'un canal Slack lors d'une investigation, quelle est la source canonique ?",
+    "opts": [
+      "Capture d'écran de chaque message par l'enquêteur",
+      "<strong>Slack Discovery API</strong> (Enterprise Grid + plan eDiscovery) ou <strong>Corporate Export</strong> (Standard/Plus) — récupère messages, fichiers, threads avec métadonnées intactes",
+      "Reverse engineering du client desktop",
+      "Demande à chaque utilisateur de copier-coller"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Slack propose deux niveaux d'export selon le plan : (1) <strong>Standard/Plus</strong> — export des canaux publics uniquement (admin/export → JSON). (2) <strong>Enterprise Grid + eDiscovery Add-on</strong> — accès via <strong>Discovery API</strong> à TOUS les messages (canaux publics, privés, DMs), fichiers, threads. Format : JSON structuré avec <code>ts</code>, <code>user</code>, <code>text</code>, <code>reactions</code>, <code>thread_ts</code>. C'est la source canonique pour eDiscovery juridique. Alternative locale : parser le cache <strong>LevelDB</strong> de l'app desktop (<code>%APPDATA%\\Slack\\</code> Windows ou <code>~/Library/Application Support/Slack/</code> macOS) — partiel mais utile si pas d'accès admin.",
+    "expl_ko": "Slack source canonique = <strong>Discovery API</strong> (Enterprise Grid) ou <strong>Corporate Export</strong>. Cache LevelDB local en complément.",
+    "refs": [
+      "Slack — Discovery API Documentation",
+      "Slack — Compliance Exports"
+    ],
+    "feedback": {
+      "0": "Capture d'écran perd métadonnées, threads, et n'a pas de valeur juridique pour des milliers de messages.",
+      "2": "Inutile — l'API officielle suffit.",
+      "3": "Méthode non scalable et non probante juridiquement."
+    },
+    "fiches": [
+      "entreprise_messaging_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Messageries d'entreprise",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pour acquérir le contenu de Microsoft Teams lors d'une enquête, quelle est la source de référence ?",
+    "opts": [
+      "Le cache local Teams sur le poste",
+      "Microsoft 365 Compliance (Purview) — Content Search ou eDiscovery couvrant Teams (messages stockés dans Exchange/SharePoint en arrière-plan)",
+      "Slack Discovery API",
+      "Une copie écran de chaque conversation"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Teams stocke les messages dans <strong>Exchange Online</strong> (système boîtes individuelles : « Teams Messages » sub-folder), les fichiers dans <strong>SharePoint/OneDrive</strong>. Conséquence : la source canonique pour eDiscovery est <strong>Microsoft Purview Compliance</strong> avec Content Search ou eDiscovery Standard/Advanced. On peut rechercher par utilisateur, mots-clés, dates, et placer un <strong>eDiscovery Hold</strong> pour préserver. Le cache desktop Teams (<code>%APPDATA%\\Microsoft\\Teams\\</code> sur Win, format LevelDB/SQLite) est un complément local mais incomplet.",
+    "expl_ko": "Teams = stocké dans Exchange + SharePoint. Source canonique = <strong>Microsoft Purview</strong>. Cache local secondaire.",
+    "refs": [
+      "Microsoft Purview — eDiscovery for Teams",
+      "Microsoft — Teams Compliance Architecture"
+    ],
+    "feedback": {
+      "0": "Cache local incomplet et perd les threads multi-utilisateurs.",
+      "2": "Slack Discovery API ne touche pas Teams.",
+      "3": "Pas scalable ni probant juridiquement."
+    },
+    "fiches": [
+      "entreprise_messaging_forensique",
+      "m365_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Apps mobiles tierces",
+    "diff": "easy",
+    "type": "single",
+    "q": "Lors d'une extraction iOS, dans quel ordre de priorité forensique abordez-vous les apps tierces (Snapchat, Instagram, Bumble, banques) ?",
+    "opts": [
+      "Toutes les apps dans l'ordre alphabétique",
+      "Messageries (WhatsApp, Telegram, Signal) en priorité absolue, puis dating (Bumble, Tinder), puis cloud (Dropbox, Drive), puis finance",
+      "Uniquement les apps de jeux",
+      "Apps installées en dernier d'abord"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Priorité forensique typique iOS : (1) <strong>Messageries</strong> (WhatsApp, Telegram, Signal, Wickr, Threema) = contenu communicationnel critique. (2) <strong>Réseaux sociaux</strong> (Instagram, Snapchat, TikTok, Twitter) = identité publique + DMs. (3) <strong>Dating</strong> (Tinder, Bumble, Grindr, Hinge) = rencontres datées et géolocalisées. (4) <strong>Cloud Storage</strong> (Dropbox, Drive, OneDrive, iCloud) = exfiltration potentielle. (5) <strong>Finance</strong> (Revolut, banque, crypto wallets) = flux financiers. (6) <strong>Voyage/Navigation</strong> (Google Maps, Waze) = géolocalisation. Toutes stockent en SQLite dans <code>/var/mobile/Containers/Data/Application/&lt;UUID&gt;/</code>. Outils : iLEAPP modules dédiés.",
+    "expl_ko": "Priorité : <strong>Messageries → Dating → Cloud → Finance</strong>. Le contenu communicationnel a souvent la valeur probante la plus directe.",
+    "refs": [
+      "Sarah Edwards — iOS Apps Forensics",
+      "iLEAPP — module catalog"
+    ],
+    "feedback": {
+      "0": "Alphabétique = aveugle à la valeur probante.",
+      "2": "Trop restreint — manque tout le reste.",
+      "3": "L'ordre d'installation n'a aucune valeur d'enquête."
+    },
+    "fiches": [
+      "mobile_apps_forensique",
+      "ios_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Systèmes spéciaux",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lors d'une perquisition, vous saisissez un NAS Synology. Quelle est la difficulté forensique principale par rapport à un disque dur classique ?",
+    "opts": [
+      "Aucune — c'est un disque comme un autre",
+      "Le NAS utilise du <strong>RAID</strong> (souvent SHR/Btrfs) + plusieurs disques. Acquisition image par image puis reconstruction RAID en lab — ou acquisition logique via interface admin",
+      "Le NAS ne contient jamais de données utiles",
+      "Le NAS efface ses données automatiquement à la saisie"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "NAS = défis multiples : (1) <strong>RAID</strong> (SHR Synology, RAID 1/5/6/10) — un disque seul est inutilisable, il faut tous les disques ET la config RAID pour reconstruire. (2) <strong>Filesystem propriétaire</strong> souvent : Btrfs (Synology) ou ZFS (QNAP avec TrueNAS). (3) <strong>Snapshots Btrfs/ZFS</strong> = mine d'or temporelle (versions antérieures préservées). (4) <strong>Chiffrement</strong> parfois activé (Synology Hyper Backup). Approche : (a) imager chaque disque (write blocker), (b) noter l'ordre des slots, (c) reconstruction RAID en lab avec Reclaim, R-Studio, ou montage Btrfs RAID natif Linux, (d) ALTERNATIVE : acquisition logique via admin Synology si credentials récupérés.",
+    "expl_ko": "NAS = RAID + Btrfs/ZFS + snapshots. <strong>Imager TOUS les disques en notant l'ordre des slots</strong>, jamais juste un.",
+    "refs": [
+      "Synology — Hyper Backup Forensics",
+      "QNAP — ZFS Forensics"
+    ],
+    "feedback": {
+      "0": "Faux — c'est l'un des cas les plus complexes (RAID).",
+      "2": "Au contraire — NAS = backups familles, archives entreprise, parfois CCTV.",
+      "3": "Aucun NAS ne wipe automatiquement à la saisie."
+    },
+    "fiches": [
+      "nas_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Systèmes spéciaux",
+    "diff": "hard",
+    "type": "single",
+    "q": "Qu'est-ce qu'un <strong>SMS Blaster</strong> et quel est le cadre légal suisse applicable ?",
+    "opts": [
+      "Un service marketing autorisé",
+      "Un équipement émulant une <strong>fausse station de base GSM/4G</strong> (IMSI catcher actif) pour envoyer en masse des SMS frauduleux sans passer par les opérateurs — usage <strong>strictement interdit en Suisse</strong> (LTC + radiocommunication)",
+      "Une simple application Android",
+      "Un type de spam email"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>SMS Blaster</strong> est un dispositif radio (boîtier portable ~50×30cm ou plus discret) qui émule une <strong>BTS (Base Transceiver Station)</strong> GSM/LTE avec une puissance suffisante pour forcer les téléphones environnants à se connecter à lui. Il envoie ensuite des SMS arbitraires (sans MSISDN d'origine, contournant les opérateurs et les blocages anti-fraude). Cas réels : phishing bancaire en Asie 2022-2024, manifestants visés, fraude au paquet livreur. <strong>Cadre suisse</strong> : utilisation soumise à la <strong>LTC (Loi sur les télécommunications)</strong> et à la <strong>OFCOM</strong> (concession radio) — usage non autorisé = délit. Détection : tours GSM inconnues, RSSI anormal, baisse soudaine de service.",
+    "expl_ko": "SMS Blaster = IMSI catcher actif émetteur. Strictement interdit en Suisse (LTC). Détection via monitoring radio et alertes opérateur.",
+    "refs": [
+      "LTC — Loi sur les télécommunications (CH)",
+      "OFCOM — Concessions radio",
+      "EU Cellular Network Security 2023"
+    ],
+    "feedback": {
+      "0": "Faux — c'est un dispositif illégal en CH.",
+      "2": "Faux — c'est du matériel radio (SDR + ampli).",
+      "3": "Faux — c'est radio cellulaire, pas email."
+    },
+    "fiches": [
+      "sms_blaster"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Conteneurs & Orchestration",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Sur un cluster Kubernetes compromis, quels artefacts forensiques cherchez-vous prioritairement ? (plusieurs réponses)",
+    "opts": [
+      "<code>kubectl get events --all-namespaces</code> (events récents)",
+      "Manifests YAML/JSON des Pods + audit logs API server (<code>/var/log/audit/audit.log</code> ou kube-apiserver flag <code>--audit-log-path</code>)",
+      "Container images dans le registre (Docker Hub, ECR, GCR) — chercher images suspectes pulled récemment",
+      "ConfigMaps et Secrets accessibles (secrets en base64, pas chiffrés par défaut)",
+      "Le wallpaper du desktop"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "expl_ok": "Cibles K8s forensique : (1) <strong>kubectl events</strong> + <code>kubectl get pods -o wide --all-namespaces</code> = vue d'ensemble. (2) <strong>Audit logs</strong> kube-apiserver = qui a fait quoi via l'API (création Pods, exec, port-forward). Activation avec <code>--audit-policy-file</code>. (3) <strong>Container images</strong> — chercher des images pulled depuis des registres suspects, des tags <code>:latest</code> récents, des images sans signature. (4) <strong>Secrets/ConfigMaps</strong> — en K8s par défaut les Secrets sont juste en Base64 (pas chiffrés), facilement extractibles avec accès cluster. Tools : <code>kubectl-trace</code>, <code>Falco</code> (runtime security), <code>kube-bench</code>, <code>kube-hunter</code>, <code>kubeaudit</code>.",
+    "expl_ko": "K8s forensique : <strong>events + audit logs API server + images + secrets</strong>. Falco + audit policy activée = essentiels avant l'incident.",
+    "refs": [
+      "Kubernetes — Auditing",
+      "Falco Security — Runtime detection",
+      "MITRE ATT&CK — Containers Matrix"
+    ],
+    "feedback": {
+      "4": "Aucun rapport avec K8s."
+    },
+    "fiches": [
+      "docker_kubernetes_forensique"
     ]
   }
 ]

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Forensique OT et modèle Purdue — CAS-IN</title>
+<meta name="description" content="Modèle Purdue · ICS · SCADA · PLC · ATG · BACnet · Modbus · S7 · GRASSMARLIN · ISA-99">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" aria-label="Retour en haut" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FORENSIQUE OT / ICS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-iot&ot">IoT &amp; OT</a><span class="bc-sep">›</span>
+    <span class="bc-current">Forensique OT — Purdue</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~20 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🏭</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">OT</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">ICS</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Purdue</span>
+    <span class="tag tag-red" style="margin-left:.3rem">DFIR</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Forensique OT et modèle Purdue</h1>
+    <div class="meta">Modèle Purdue 1992 · Protocoles ATG / BACnet / Modbus / Siemens S7 · GRASSMARLIN · Wireshark dissectors · ISA-99 / IEC 62443</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ics_forensique.html" class="prereq-pill">📖 ICS forensique</a><a href="iot_forensique.html" class="prereq-pill">📖 IoT forensique</a><a href="network_traffic_analysis_avance.html" class="prereq-pill">📖 Analyse trafic</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../campaign.html?id=jauges-pression" class="tp-pill">🎮 Saga 4 — Veeder-Root</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="apt_attribution_methodology.html" class="related-pill">🔗 Attribution APT</a><a href="alternate_data_streams.html" class="related-pill">🔗 ADS</a></div>
+  </div>
+</div>
+
+<section class="page-wrap" style="padding-top:1.5rem">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe — Le monde OT obéit à d'autres lois que l'IT</div>
+  En IT classique, la priorité est la <strong>confidentialité, intégrité, disponibilité</strong> (CIA) — dans cet ordre. En OT (Operational Technology), la priorité est inversée : <strong>disponibilité, intégrité, confidentialité</strong> — et la <strong>sécurité humaine</strong> prime sur tout le reste. Couper un serveur web = quelques minutes d'indisponibilité. Couper un PLC qui contrôle une vanne = potentielle explosion, fuite chimique, victimes humaines. La forensique OT n'est pas la forensique IT avec un autre vocabulaire — c'est une discipline avec sa propre logique.
+</div>
+
+<div class="sec-title">📐 1. Modèle Purdue — 6 niveaux d'abstraction</div>
+
+<p>Le <strong>Purdue Enterprise Reference Architecture (PERA)</strong>, publié en 1992 par l'Université Purdue (Indiana, USA), est devenu le standard mondial pour modéliser les architectures industrielles. Adopté par ISA-99 / IEC 62443, NIST SP 800-82, et toutes les normes de sécurité ICS.</p>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1rem 0;font-family:var(--mono);font-size:.78rem;line-height:1.7">
+<pre style="margin:0;text-align:left">
+┌───────────────────────────────────────────────────────────┐
+│ LEVEL 5 — Internet / WAN                                   │
+│ (Cloud, partenaires, web)                                  │
+├───────────────────────────────────────────────────────────┤
+│ LEVEL 4 — IT enterprise                                    │
+│ (ERP, mail, bureautique, MES corporate)                    │
+├───────────────────────────────────────────────────────────┤
+│ ★ LEVEL 3.5 — DMZ INDUSTRIELLE ★ (CRITIQUE)               │
+│ (Data diodes, jump servers, firewalls dédiés)             │
+├───────────────────────────────────────────────────────────┤
+│ LEVEL 3 — Production / MES                                 │
+│ (Manufacturing Execution System, historians, optimization) │
+├───────────────────────────────────────────────────────────┤
+│ LEVEL 2 — Supervision SCADA / HMI                          │
+│ (Human-Machine Interface, SCADA local, alarmes)           │
+├───────────────────────────────────────────────────────────┤
+│ LEVEL 1 — Contrôle de processus                            │
+│ (PLC, RTU, DCS — boucles de régulation, ms→sec)           │
+├───────────────────────────────────────────────────────────┤
+│ LEVEL 0 — Processus physique                               │
+│ (Capteurs, actionneurs, vannes, pompes, valves)           │
+└───────────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Level</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Contenu typique</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Période de temps</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 0</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Capteurs (température, pression, niveau), actionneurs, vannes, pompes</td><td style="padding:.5rem;border:1px solid var(--border)">μs - ms</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 1</strong></td><td style="padding:.5rem;border:1px solid var(--border)">PLC (Programmable Logic Controller), RTU (Remote Terminal Unit), DCS (Distributed Control System)</td><td style="padding:.5rem;border:1px solid var(--border)">ms - s</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 2</strong></td><td style="padding:.5rem;border:1px solid var(--border)">HMI (Human-Machine Interface), SCADA local, historians locaux</td><td style="padding:.5rem;border:1px solid var(--border)">s - min</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 3</strong></td><td style="padding:.5rem;border:1px solid var(--border)">MES (Manufacturing Execution System), historians, optimisation production</td><td style="padding:.5rem;border:1px solid var(--border)">min - h</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 3.5</strong></td><td style="padding:.5rem;border:1px solid var(--border)">DMZ industrielle (data diodes, jump servers, firewalls OT/IT)</td><td style="padding:.5rem;border:1px solid var(--border)">N/A (zone tampon)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 4</strong></td><td style="padding:.5rem;border:1px solid var(--border)">ERP, mail, bureautique, MES corporate, BI</td><td style="padding:.5rem;border:1px solid var(--border)">h - jours</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Level 5</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Internet, cloud, partenaires externes, supervision multi-sites</td><td style="padding:.5rem;border:1px solid var(--border)">N/A</td></tr>
+</tbody>
+</table>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚠️ Le Level 3.5 — vulnérabilité critique #1 des PME industrielles CH</strong><br>
+La DMZ industrielle est précisément ce qui SÉPARE le monde OT (Level 0-3, sécurité humaine) du monde IT (Level 4-5, productivité). Sans Level 3.5 : un attaquant qui pénètre par le mail corporate (Level 4) peut potentiellement atteindre une vanne carburant (Level 0). C'est exactement l'architecture défaillante observée à Tamoil Sierre (saga 4) — Veeder-Root TLS-350 directement exposé au routeur Sunrise sans DMZ.
+</div>
+
+<div class="sec-title">📡 2. Protocoles industriels — ce qui circule sur les fils</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Protocole</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Port défaut</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Domaine</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Sécurité native</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Modbus TCP</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 502</td><td style="padding:.5rem;border:1px solid var(--border)">Génériquement industriel, le plus répandu</td><td style="padding:.5rem;border:1px solid var(--border)">❌ Aucune (clair)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Siemens S7 / ISO-TSAP</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 102</td><td style="padding:.5rem;border:1px solid var(--border)">Automates Siemens S7-300/400/1200/1500</td><td style="padding:.5rem;border:1px solid var(--border)">⚠️ Faible (auth simple, optionnel)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>EtherNet/IP</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 44818 + UDP 2222</td><td style="padding:.5rem;border:1px solid var(--border)">Rockwell Allen-Bradley</td><td style="padding:.5rem;border:1px solid var(--border)">⚠️ Faible</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>BACnet / IP</strong></td><td style="padding:.5rem;border:1px solid var(--border)">UDP/TCP 47808</td><td style="padding:.5rem;border:1px solid var(--border)">HVAC bâtiments (Schneider, Honeywell, Siemens Desigo)</td><td style="padding:.5rem;border:1px solid var(--border)">⚠️ Faible (BACnet/SC arrive)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>ATG Veeder-Root</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 10001</td><td style="padding:.5rem;border:1px solid var(--border)">Jauges carburant stations-service</td><td style="padding:.5rem;border:1px solid var(--border)">❌ Aucune (clair, sans auth)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>DNP3</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP/UDP 20000</td><td style="padding:.5rem;border:1px solid var(--border)">Énergie électrique, eau</td><td style="padding:.5rem;border:1px solid var(--border)">⚠️ DNP3 Secure Authentication v5+ disponible</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>OPC UA</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 4840</td><td style="padding:.5rem;border:1px solid var(--border)">Standard moderne d'interopérabilité industrielle</td><td style="padding:.5rem;border:1px solid var(--border)">✅ Auth + chiffrement natif</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>IEC 60870-5-104</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 2404</td><td style="padding:.5rem;border:1px solid var(--border)">Téléconduite énergie (Europe)</td><td style="padding:.5rem;border:1px solid var(--border)">❌ Aucune (clair)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>IEC 61850</strong></td><td style="padding:.5rem;border:1px solid var(--border)">TCP 102 + UDP multicast</td><td style="padding:.5rem;border:1px solid var(--border)">Postes électriques modernes</td><td style="padding:.5rem;border:1px solid var(--border)">⚠️ Variant sécurisé IEC 62351</td></tr>
+</tbody>
+</table>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>Le constat amer</strong> : la majorité des protocoles industriels ont été conçus dans les années 1990-2000 pour des réseaux SÉRIE isolés (RS-232, RS-485). Quand ils ont été portés sur TCP/IP (sans modification de fond), ils ont hérité de l'<strong>absence native d'authentification et de chiffrement</strong>. L'exposition Internet de ces protocoles = open bar pour les attaquants.
+</div>
+
+<div class="sec-title">🔬 3. Outils de forensique OT</div>
+
+<h3 style="font-family:var(--sans);font-size:1.1rem;margin-top:1rem">Wireshark — avec dissectors industriels</h3>
+
+<p>Wireshark dispose nativement de dissectors pour la plupart des protocoles industriels. Filtres utiles :</p>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;font-family:var(--mono);font-size:.8rem;line-height:1.7">
+<code style="color:var(--gold)">modbus</code>                  # Tout le trafic Modbus<br>
+<code style="color:var(--gold)">modbus.func_code == 6</code>   # Write Single Register (modification possible)<br>
+<code style="color:var(--gold)">s7comm</code>                  # Tout le trafic Siemens S7<br>
+<code style="color:var(--gold)">s7comm.param.func == 0x05</code> # Write Var (modification possible)<br>
+<code style="color:var(--gold)">bacapp</code>                  # BACnet/IP<br>
+<code style="color:var(--gold)">bacapp.confirmed_service == 15</code> # WriteProperty (modification)<br>
+<code style="color:var(--gold)">tcp.port == 10001</code>       # ATG Veeder-Root (pas de dissector officiel)<br>
+<code style="color:var(--gold)">dnp3</code>                    # DNP3 (énergie)<br>
+<code style="color:var(--gold)">iec104</code>                  # IEC 60870-5-104
+</div>
+
+<p>Pour Veeder-Root ATG, pas de dissector officiel Wireshark — il existe des plugins communautaires (LUA scripts) pour décoder les commandes I-series (lecture) et S-series (écriture).</p>
+
+<h3 style="font-family:var(--sans);font-size:1.1rem;margin-top:1.5rem">GRASSMARLIN — Mapping OT passif</h3>
+
+<p><strong>GRASSMARLIN</strong> (développé par NSA puis open source) est un outil de découverte passive OT. Analyse les PCAP industriels pour :</p>
+<ul>
+<li>Identifier les équipements (par fingerprint protocole)</li>
+<li>Cartographier la topologie réseau OT</li>
+<li>Détecter les protocoles utilisés et leurs versions</li>
+<li>Produire des rapports compatibles Visio</li>
+</ul>
+
+<h3 style="font-family:var(--sans);font-size:1.1rem;margin-top:1.5rem">Autres outils</h3>
+
+<ul>
+<li><strong>Shodan / Censys / Onyphe</strong> : OSINT industriel (cf. <a href="apt_attribution_methodology.html" style="color:var(--cyan)">attribution APT</a> et saga 4 acte 4)</li>
+<li><strong>Nmap NSE scripts industriels</strong> : <code>modbus-discover</code>, <code>s7-info</code>, <code>bacnet-info</code>, <code>enip-info</code></li>
+<li><strong>SCADAfence, Dragos, Claroty, Nozomi Networks</strong> : solutions commerciales SOC OT (détection comportementale, alertes)</li>
+<li><strong>Suricata + signatures ICS</strong> : IDS open source avec rules ICS</li>
+<li><strong>PLC Scout, PLC Hunter</strong> : outils de scan d'équipements industriels</li>
+</ul>
+
+<div class="sec-title">⚡ 4. Acquisition forensique OT — spécificités</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚠️ DIFFÉRENCE CLÉ avec IT</strong><br>
+En IT classique : on coupe le câble réseau → on image le disque → on analyse en lab. Le système est arrêté.<br>
+En OT : on NE PEUT PAS arrêter le processus physique. Un PLC qui contrôle un réacteur chimique ne se débranche pas comme un PC. L'acquisition forensique se fait <strong>en parallèle</strong> de l'opération continue.
+</div>
+
+<h3 style="font-family:var(--sans);font-size:1.1rem;margin-top:1rem">Méthodologie d'acquisition OT</h3>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;line-height:1.7">
+<strong style="color:var(--gold)">Phase 1 — Réunion préparatoire avec l'exploitant</strong><br>
+→ Comprendre le processus (sécurité humaine en jeu ?)<br>
+→ Identifier ce qu'on peut sans risque vs ce qui demande coupure planifiée<br>
+→ Plan de continuité d'activité en cas de problème<br><br>
+
+<strong style="color:var(--cyan)">Phase 2 — Capture passive (sans interférer)</strong><br>
+→ <strong>Port mirror</strong> sur switch industriel (si disponible) — copie du trafic vers analyseur<br>
+→ <strong>TAP réseau passif</strong> (idéal) — boîtier hardware qui duplique le trafic sans le perturber<br>
+→ Capture PCAP via Wireshark / tcpdump / SPAN port<br>
+→ Logs équipements existants (PLC, HMI, historians)<br><br>
+
+<strong style="color:var(--blue)">Phase 3 — Extraction configuration</strong><br>
+→ Exports config PLC via logiciel constructeur (TIA Portal Siemens, RSLogix Rockwell)<br>
+→ Snapshots historians (InfluxDB, OSIsoft PI System, AspenTech IP.21)<br>
+→ Backups SCADA (Wonderware, Iconics, Ignition)<br><br>
+
+<strong style="color:#a371f7">Phase 4 — Analyse en lab</strong><br>
+→ PCAP analysis avec dissectors<br>
+→ Reverse engineering protocole si nécessaire<br>
+→ Corrélation avec logs SIEM / Sysmon (côté IT)<br>
+→ Reconstitution chronologique<br><br>
+
+<strong style="color:#3fb950">Phase 5 — Rapport et recommendations</strong><br>
+→ Qualification juridique<br>
+→ Recommandations remédiation (DMZ Level 3.5, segmentation, monitoring)<br>
+→ Diffusion sectorielle si applicable
+</div>
+
+<div class="sec-title">🛡️ 5. ISA-99 / IEC 62443 — Le standard de sécurité OT</div>
+
+<p>L'<strong>ISA-99 / IEC 62443</strong> est la norme internationale de référence pour la sécurité des systèmes d'automatisation et de contrôle industriels (IACS). Famille de documents :</p>
+
+<ul>
+<li><strong>IEC 62443-1</strong> : Concepts et modèles généraux</li>
+<li><strong>IEC 62443-2</strong> : Politiques et procédures de sécurité</li>
+<li><strong>IEC 62443-3</strong> : Architecture de sécurité système</li>
+<li><strong>IEC 62443-4</strong> : Sécurité des composants</li>
+</ul>
+
+<p>Concepts clés introduits par 62443 :</p>
+<ul>
+<li><strong>Security Level (SL)</strong> : niveau de sécurité requis (SL1 à SL4 selon criticité)</li>
+<li><strong>Zones et conduits</strong> : segmentation logique du réseau industriel</li>
+<li><strong>Foundational Requirements (FR)</strong> : 7 exigences fondamentales (identification, contrôle d'accès, intégrité, confidentialité, restriction du flux de données, réponse aux événements, disponibilité des ressources)</li>
+</ul>
+
+<div class="sec-title">🇨🇭 6. Le contexte suisse — LSI 2024 + OCyS 2025</div>
+
+<p>Depuis le 1er janvier 2024, la <strong>LSI (Loi fédérale sur la sécurité de l'information)</strong> et son ordonnance <strong>OCyS</strong> structurent les obligations cybersécurité pour les infrastructures critiques en CH. Depuis le 1er avril 2025, <strong>obligation de signalement à l'OFCS sous 24h</strong> pour tout incident cyber sur infrastructure critique.</p>
+
+<p>Sont concernés au sens LSI :</p>
+<ul>
+<li><strong>Énergie</strong> (production, transport, distribution électrique ; gaz ; carburant)</li>
+<li><strong>Santé</strong> (hôpitaux universitaires + cantonaux + grandes cliniques)</li>
+<li><strong>Eau potable et assainissement</strong> (municipal et cantonal)</li>
+<li><strong>Transports</strong> (CFF, aéroports, transports urbains majeurs)</li>
+<li><strong>Télécommunications</strong> (Swisscom, Salt, Sunrise et infrastructure)</li>
+<li><strong>Finance</strong> (banques systémiques, places de marché)</li>
+<li><strong>Administration publique</strong></li>
+</ul>
+
+<p>Les stations-service (cas saga 4) ne sont <strong>pas individuellement</strong> infrastructures critiques au sens LSI, mais les <strong>chaînes</strong> (Tamoil, AVIA, Migrol, BP, Shell, Coop Pronto) le sont. Donc obligation de signalement au niveau corporate, pas par site.</p>
+
+<div class="sec-title">📚 7. Cas concrets — saga 4 jauges sous pression</div>
+
+<p>La saga 4 illustre l'ensemble de cette méthodologie :</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Acte</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Application Purdue / OT</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 1 — PWNED Sierre</td><td style="padding:.5rem;border:1px solid var(--border)">Triage initial, isolation graduée (pas couper bêtement), capture PCAP</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 2 — Inventaire OT/LAN</td><td style="padding:.5rem;border:1px solid var(--border)">Application Purdue site : Level 0 (cuves) → Level 5 (Internet). Constat Level 3.5 absent.</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 3 — Reverse ATG</td><td style="padding:.5rem;border:1px solid var(--border)">Analyse PCAP, documentation commandes ATG (I201, S07300), identification Mullvad VPN</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 4 — Shodan/Censys CH</td><td style="padding:.5rem;border:1px solid var(--border)">OSINT industriel : 187 Veeder-Root + 1'077 équipements OT exposés en CH</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 5 — OFCS/fedpol attribution</td><td style="padding:.5rem;border:1px solid var(--border)">Diamond Model + MITRE ICS + confidence score Mandiant 92/100</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 6 — Qualifications CP</td><td style="padding:.5rem;border:1px solid var(--border)">CP 143bis + 144bis + 271 + 239 (Aarau) en concours art. 49 CP</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Acte 7 — TPF Bellinzone</td><td style="padding:.5rem;border:1px solid var(--border)">Jugement par défaut, doctrine cyber-OT CH</td></tr>
+</tbody>
+</table>
+
+<div class="sec-title">💰 8. Coûts de remédiation typiques (PME industrielle CH)</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Mesure</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Coût indicatif par site</th>
+<th style="text-align:left;padding:.5rem;border:1px solid var(--border)">Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Audit Purdue par site (consulting)</td><td style="padding:.5rem;border:1px solid var(--border)">1'500 - 2'500 CHF</td><td style="padding:.5rem;border:1px solid var(--border)">~1-2 jours</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Mise en place DMZ industrielle + firewall OT</td><td style="padding:.5rem;border:1px solid var(--border)">3'000 - 5'000 CHF</td><td style="padding:.5rem;border:1px solid var(--border)">~3-5 jours</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">VPN télémaintenance dédié (au lieu d'exposition directe)</td><td style="padding:.5rem;border:1px solid var(--border)">1'500 - 2'500 CHF</td><td style="padding:.5rem;border:1px solid var(--border)">~1-2 jours</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)">Formation gérants/techniciens (1 jour)</td><td style="padding:.5rem;border:1px solid var(--border)">800 CHF</td><td style="padding:.5rem;border:1px solid var(--border)">1 jour</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Total par site</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><strong>~7'000 - 11'000 CHF</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><strong>5-10 jours</strong></td></tr>
+</tbody>
+</table>
+
+<p>Pour une chaîne de 18 stations-service Tamoil VS : ~125'000-200'000 CHF total. Programme national LSI sur 1'077 sites identifiés : ~10 millions CHF, partiellement subventionné via SECO/SEFRI.</p>
+
+<div class="sec-title">📖 Références</div>
+
+<ul style="font-size:.9rem;line-height:1.7">
+<li>Purdue Enterprise Reference Architecture (PERA) — Purdue University, 1992</li>
+<li>ISA-99 / IEC 62443 — Sécurité des systèmes d'automatisation et de contrôle industriels</li>
+<li>NIST SP 800-82 Rev. 3 (2023) — Guide to Operational Technology Security</li>
+<li>MITRE ATT&CK for ICS — collaborative.mitre.org/attackics</li>
+<li>HD Moore (Rapid7) 2015 — <em>The Internet of Gas Station Tank Gauges</em></li>
+<li>Bitsight (2024) — Critical Vulnerabilities in ATG Systems</li>
+<li>GRASSMARLIN (NSA, open source 2017)</li>
+<li>SCADAfence, Dragos, Claroty — vendor reports OT threat landscape</li>
+<li>Suisse — LSI (RS 128) et OCyS (entrée en vigueur 1.4.2025)</li>
+<li>OFCS — Office fédéral de la cybersécurité, alertes sectorielles</li>
+<li>Saga 4 CAS-IN — Jauges sous pression (Cyber Av3ngers vs Tamoil Sierre)</li>
+</ul>
+
+</section>
+
+<footer style="margin-top:3rem;padding:2rem;border-top:1px solid var(--border);text-align:center;font-size:.85rem;color:var(--text-mute)">
+  <p>Fiche CAS-IN — Forensique OT et modèle Purdue</p>
+  <p style="margin-top:.5rem">Rédigée à l'occasion de la saga 4 (Jauges sous pression, 2026)</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,158 @@
+{
+  "id": "jauges-3-veeder-root-reverse",
+  "title": "Jauges sous pression — Acte 3 : Reverse du protocole Veeder-Root ATG",
+  "icon": "🔬",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Reverse du protocole ATG Veeder-Root complet. Commandes documentées : I201 (Get Inventory), S07300 (Set Front Panel Display — utilisée pour PWNED), S04 (Set Tank Parameters — calibration). HD Moore (Rapid7) 2015 — exposition documentée publiquement confirmée et exploitée. Forensique des logs Sunrise : connexion entrante depuis IP 89.221.XXX.XXX (VPN exit node Mullvad utilisé par l'attaquant) le 1er mai à 14h47 UTC, durée 18 secondes, commande S07300 envoyée. Capture trafic réseau récupérée. Méthodologie reproductible pour les 186 autres sites.",
+    "degraded": "Reverse partiel — commandes principales identifiées mais sans documentation complète des sous-commandes. Forensique logs incomplète (rétention Sunrise limitée à 7 jours, on est à J+7 pile).",
+    "failure": "Reverse non abouti — méconnaissance du protocole ATG, dépendance excessive à la documentation Veeder-Root (limitée, partiellement obsolète). Forensique logs perdue (J+8, rétention Sunrise dépassée)."
+  },
+  "tags": [
+    "REVERSE ENGINEERING",
+    "PROTOCOLE ATG",
+    "VEEDER-ROOT",
+    "HD Moore (Rapid7) 2015 — exposition documentée publiquement",
+    "MITRE T0855",
+    "CAPTURE PCAP",
+    "LOGS SUNRISE",
+    "MULLVAD VPN"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP — Accès indu",
+    "Art. 144bis CP — Détérioration de données",
+    "HD Moore (Rapid7) 2015 — exposition documentée publiquement — Veeder-Root TLS series accessible without authentication",
+    "MITRE ATT&CK for ICS — T0855 Unauthorized Command Message",
+    "ISO/IEC 27037 — Forensique numérique",
+    "RFC 793 — TCP (cadre du protocole ATG sur TCP/IP)"
+  ],
+  "intro": "Lundi 11 mai 2026, 09h00. Lab Compass Security, Berne. Dr Marc Senn et vous (Lt Berisha) commencez le reverse engineering complet du protocole ATG Veeder-Root. Objectif : documenter toutes les commandes utilisées par l'attaquant Cyber Av3ngers, identifier les indices techniques d'attribution, et préparer un rapport reproductible pour les 186 autres sites CH potentiellement affectés. La capture PCAP du 1er mai (1h de trafic capturé par routeur Sunrise) + logs Sunrise (firewall) sont prêts.",
+  "alertLevel": "🔬 LAB COMPASS · Reverse protocole ATG · HD Moore (Rapid7) 2015 — exposition documentée publiquement · PCAP 1er mai + logs Sunrise · Documentation pour 186 sites CH",
+  "objectives": [
+    {
+      "icon": "📡",
+      "text": "Analyser la capture PCAP de l'incident pour identifier les commandes ATG envoyées"
+    },
+    {
+      "icon": "📚",
+      "text": "Documenter le protocole ATG (référence + commandes exploitables par attaquant)"
+    },
+    {
+      "icon": "🌍",
+      "text": "Identifier l'IP source de l'attaquant et son fingerprint"
+    },
+    {
+      "icon": "🔄",
+      "text": "Produire un rapport reproductible pour audit des 186 autres sites"
+    }
+  ],
+  "debrief": "<p>L'acte 3 est l'archéologie technique du protocole ATG. C'est où on apprend qu'un système peut être attaqué non par exploitation d'un bug, mais par UTILISATION CONFORME d'un protocole conçu sans sécurité.</p><p><strong>Le protocole ATG — anatomie.</strong> Veeder-Root ATG (Automated Tank Gauge) est un protocole de niveau application sur TCP/IP, port 10001 par défaut. Conçu années 1990, formalisé par Veeder-Root sans contribution standardisation publique. Format des trames : (a) byte SOH (0x01) = Start of Header, (b) command code (3-5 caractères ASCII, ex. I201, S07300, I801), (c) parameters (variables selon commande), (d) byte EOT (0x03) ou checksum. Pas de chiffrement, pas d'authentification, pas de session — chaque commande est indépendante.</p><p><strong>Commandes principales documentées.</strong></p><ul><li><strong>I201</strong> — Inventory Report : retourne niveaux carburant pour tous réservoirs.</li><li><strong>I401</strong> — Delivery Report : historique des livraisons (information commerciale sensible).</li><li><strong>I80100</strong> — Tank Tightness Test : test étanchéité réservoirs (sensible — peut révéler fuites).</li><li><strong>S04XX</strong> — Set Tank Parameters : calibration (HAUTEMENT critique — modifier la calibration = fausser les niveaux = créer fuites non détectées ou fausses alarmes).</li><li><strong>S07300</strong> — Set Front Panel Display : modifie le texte affiché sur l'écran client (utilisée par Cyber Av3ngers pour « PWNED »).</li><li><strong>S00200</strong> — Clear All Alarm Codes : efface les alarmes (dangereux — peut masquer fuites/incidents).</li></ul><p><strong>L'exposition publique documentée depuis 11 ans.</strong> En 2015, HD Moore (Rapid7) publie « The Internet of Gas Station Tank Gauges » qui démontre la vulnérabilité du protocole ATG exposé sur Internet (port TCP 10001 sans authentification). Le rapport recommande explicitement : (a) ne pas exposer le TLS-350 à Internet, (b) si exposition nécessaire, utiliser VPN + authentification, (c) firewall restrictif. Les déploiements en CH (et globalement) ont massivement IGNORÉ ces recommandations entre 2015 et 2026, faute de pression réglementaire (jusqu'à LSI).</p><p><strong>L'attaquant Cyber Av3ngers — fingerprint technique.</strong> Cyber Av3ngers (groupe pro-iranien, hacktiviste) a une signature reconnaissable : (a) commandes ATG en clair sans tentative de masquage, (b) message PWNED ou variantes politiques (« Down with Israel ») sur l'écran, (c) durée d'attaque très courte (10-30 secondes par victime — automated scanning + exploitation), (d) usage de VPN commerciaux (Mullvad, ProtonVPN, Nord) comme IP source. Une victime = un IP exit Mullvad. Plusieurs victimes simultanées = plusieurs IP. Coordination peu sophistiquée mais effective sur les cibles non-sécurisées.</p><p><strong>Forensique logs Sunrise — fenêtre de 7 jours.</strong> Les Fritzbox Sunrise gardent les logs (DHCP, NAT, firewall events) pendant ~7 jours par défaut (configurable mais peu de gérants le savent). À J+7 (qui est l'instant T = 8 mai sur incident 1er mai), les logs sont au bord de l'effacement. Récupération urgente : (a) extraction des logs immédiate via interface admin Sunrise + accord gérant + base légale (consentement victime + art. 273 CPP au besoin), (b) sauvegarde locale au lab forensique avec hash SHA-256. Sans cette extraction le 8 mai, à J+8 (9 mai) les logs étaient perdus.</p><p><strong>Rapport reproductible pour 186 autres sites.</strong> Le OFCS va devoir alerter les opérateurs station-service CH. Le rapport doit inclure : (a) description de la vulnérabilité (exposition publique du protocole ATG sans authentification, documentée par HD Moore Rapid7 en 2015), (b) indicateurs de compromission (commandes ATG non sollicitées dans les logs routeur, écrans modifiés inexpliqués, alarmes effacées), (c) instructions de remédiation (blocage ports 10001 et 102, mise en place DMZ industrielle), (d) outils de test (script Python d'audit local pour vérifier exposition). Le rapport va circuler en TLP:AMBER vers les directions cybersécurité de Tamoil, AVIA, Migrol, BP, Shell, Coop Pronto, Migros, Migrolino. Coordination OFCS + Office fédéral de l'énergie (OFEN) car les stations-service sont parties d'infrastructures critiques au sens de LSI.</p><p><strong>Références</strong> : Veeder-Root ATG Protocol documentation (partielle, semi-publique), HD Moore (Rapid7) 2015 — exposition documentée publiquement, MITRE ATT&CK for ICS T0855, OFCS reports 2024-2026 sur Cyber Av3ngers.</p>",
+  "steps": [
+    {
+      "phase": "📡 09h15 — Analyse PCAP de l'incident",
+      "situation": "Vous chargez la capture PCAP du 1er mai dans Wireshark + un dissector personnalisé Veeder-Root ATG que Dr Senn a développé.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Analyse PCAP — filtre <code>tcp.port == 10001</code> :</strong><br><br>\n📊 1er mai 2026, 14h47:23 UTC — Connexion TCP entrante depuis <strong>89.221.XXX.XXX</strong> vers 213.55.XXX.XXX:10001<br>\n📊 14h47:24 — Handshake TCP complet (SYN, SYN-ACK, ACK)<br>\n📊 14h47:25 — Première commande envoyée : <code>\\x01I20100\\x03</code> = I201 Get Inventory Report (probablement pour confirmer la cible avant attaque)<br>\n📊 14h47:26 — Réponse Veeder-Root : niveaux des 3 cuves (95-octanes, 98-octanes, diesel) + températures + alarmes<br>\n📊 14h47:30 — Deuxième commande : <code>\\x01S07300PWNED\\x03</code> = S07300 Set Front Panel Display avec texte « PWNED »<br>\n📊 14h47:31 — Réponse Veeder-Root : ACK<br>\n📊 14h47:32 — Connexion fermée (FIN)<br><br>\n<strong>Durée totale d'attaque : 9 secondes.</strong><br><br>\n🌍 <strong>IP source 89.221.XXX.XXX :</strong><br>\n→ Whois : Mullvad VPN, exit node Bucharest (Roumanie)<br>\n→ Mullvad ne conserve PAS les logs utilisateurs (politique no-logs vérifiée par audits)<br>\n→ Identifier l'utilisateur final est techniquement impossible via cette IP — l'attaquant est anonymisé<br><br>\n🔍 <strong>Pattern reconnu :</strong><br>\n→ Commande I201 préalable pour confirmer cible = classique scan automatisé Cyber Av3ngers<br>\n→ Commande S07300 PWNED = signature documentée Cyber Av3ngers depuis 2023<br>\n→ Durée 9 secondes = automated tool, pas action manuelle<br>\n→ Conclusion : attribution Cyber Av3ngers très probable, à confirmer par corrélation avec autres victimes\n</div>",
+      "law": "<strong>Art. 273 CPP</strong> — Données accessoires télécom (PCAP).<br><strong>Art. 143bis / 144bis CP</strong> — Qualifications.<br><strong>MITRE ATT&CK for ICS</strong> — T0855 Unauthorized Command Message.<br><strong>HD Moore (Rapid7) 2015 — exposition documentée publiquement</strong> — Référencée.",
+      "question": "<strong>Que pouvez-vous établir sur l'attribution à partir de ces données ?</strong>",
+      "choices": [
+        {
+          "text": "Analyse d'attribution : (1) Pattern technique cohérent avec Cyber Av3ngers — I201 préalable + S07300 PWNED + automatisation 9 secondes + signature texte = match exact avec rapports threat intel publics (Sekoia, Mandiant, OFCS). (2) IP source Mullvad VPN = anonymisation cohérente avec doctrine Cyber Av3ngers (utilisation VPN commerciaux documentée depuis 2023). (3) Limite : on ne peut PAS remonter à l'opérateur individuel via Mullvad (politique no-logs vérifiée). L'attribution se fait par CONVERGENCE D'INDICES (signature technique + cible cohérente + timing géopolitique tensions Iran-Israël en mai 2026), pas par identification IP réelle. (4) À corroborer : croisement avec autres victimes potentielles CH dans la même fenêtre temporelle (1er mai ± quelques jours), partage MISP TLP:AMBER avec partenaires threat intel pour voir si d'autres victimes ont des IOC similaires. (5) Confiance d'attribution actuelle : moyenne-haute (~75-80/100). Hausse possible à 90+ avec corroboration multi-victimes.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Analyse d'attribution rigoureuse. (1) Pattern technique = signature comportementale documentée. (2) IP Mullvad = anonymisation reconnue, pas un signal d'innocence ni d'inversion. (3) Limite reconnue (impossibilité de remonter à l'individu) sans renoncer à l'attribution = posture mature. (4) Stratégie de corroboration multi-victimes = la voie pour faire monter la confiance. (5) Score d'attribution honnête (75-80, hausse possible) — pas de sur-affirmation. Cette méthodologie sera réutilisée pour les futurs cas Cyber Av3ngers en CH. Cyber Av3ngers est attribué à l'IRGC par CISA + FBI depuis l'alerte AA23-335A (novembre 2023). TTP signature : exploitation OT (Unitronics, Veeder-Root, Schneider) + signature texte PWNED/Down with Israel + VPN commerciaux (Mullvad, ProtonVPN). <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Méthodologie d'attribution rigoureuse. MITRE ATT&CK T0855. Convergence d'indices.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "On a l'IP Mullvad — je contacte Mullvad pour leur demander de fournir les logs de l'utilisateur qui s'est connecté à 14h47 le 1er mai. Avec une réquisition art. 273 CPP, ils doivent coopérer.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Méconnaissance de Mullvad. (1) Mullvad VPN est une entreprise suédoise avec politique no-logs DOCUMENTÉE et auditée. Ils ne CONSERVENT PAS les logs utilisateurs — ce n'est pas qu'ils refusent de fournir, c'est qu'ils n'ont rien à fournir. (2) Une réquisition art. 273 CPP suisse vers une entreprise suédoise = passage par EIMP avec la Suède, délai 4-12 semaines minimum. (3) Même si EIMP réussie, Mullvad répondra « no logs available » comme ils l'ont fait dans plusieurs autres cas (cf. rapports publics 2020-2024). (4) Cette voie est connue comme dead end technique et juridique. (5) L'attribution Cyber Av3ngers se construit autrement = convergence d'indices + corroboration multi-sources, pas remontée individuelle. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "EIMP Suède × no logs = sans effet. Méconnaissance pratique Mullvad.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Avec IP Mullvad + commande PWNED, j'ai assez pour attribuer Cyber Av3ngers à 100%. Je rédige le rapport d'attribution formelle pour fedpol.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sur-affirmation prématurée. (1) « 100% Cyber Av3ngers » sur la base de UNE victime = sur-confidence. La rigueur exige corroboration multi-sources. (2) Risque de faux positif : d'autres groupes hacktivistes ou attaquants opportunistes ont pu reproduire la signature Cyber Av3ngers (le code source de leurs outils est partiellement public depuis 2024). (3) Une attribution à « 100% » est inappropriée scientifiquement — on parle toujours en termes de confidence (90-95% = très haute, 75-85% = haute, 50-75% = moyenne, etc.). 100% n'existe pas en threat intel sans aveux du suspect ou preuves matérielles directes (saisie d'infrastructure attaquante = rare). (4) Rédiger le rapport « formel » avant corroboration multi-victimes = vous publiez une attribution qui peut être discréditée par les partenaires OFCS. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Méthodologie d'attribution insuffisamment rigoureuse. Sur-confidence.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📚 11h00 — Documentation protocole pour les 186 sites",
+      "situation": "Vous documentez maintenant le protocole ATG en détail pour servir de référence aux audits des 186 autres sites CH potentiellement affectés. Dr Senn vous aide à structurer.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Structure du rapport technique (à remettre OFCS, fedpol, OFEN, opérateurs station-service CH) :</strong><br><br>\n📋 <strong>Section 1 — Résumé exécutif (1 page) :</strong><br>\n→ 187 équipements ATG Veeder-Root exposés Internet en CH (selon Shodan 8 mai 2026)<br>\n→ Vulnérabilité HD Moore (Rapid7) 2015 — exposition documentée publiquement connue depuis 2015<br>\n→ Attaque confirmée Cyber Av3ngers contre 1 station Tamoil/Coop Pronto Sierre le 1er mai 2026<br>\n→ Risque potentiel : pollution environnementale (calibration faussée → fuites non détectées), pénurie ponctuelle (livraisons faussées), atteinte à la réputation, sanction LSI<br><br>\n📋 <strong>Section 2 — Protocole ATG (technique, 3-4 pages) :</strong><br>\n→ Anatomie des trames<br>\n→ Commandes principales documentées (10-15 commandes critiques)<br>\n→ Commandes lecture (I-series) — risque info disclosure<br>\n→ Commandes écriture (S-series) — risque atteinte intégrité<br><br>\n📋 <strong>Section 3 — Indicateurs de compromission (1-2 pages) :</strong><br>\n→ Connexions entrantes inattendues sur ports 10001 (ATG) ou 102 (Siemens) dans logs routeur<br>\n→ Modifications inexpliquées sur écran client<br>\n→ Calibration inhabituelle ou alarmes effacées<br>\n→ Trafic vers IPs Mullvad/ProtonVPN/Nord (à corroborer avec corrélation autres victimes)<br><br>\n📋 <strong>Section 4 — Remédiation (2-3 pages) :</strong><br>\n→ Blocage immédiat ports 10001 et 102 entrant sur firewall<br>\n→ Architecture cible : DMZ industrielle Level 3.5 + VPN télémaintenance<br>\n→ Audit Purdue par site<br>\n→ Coûts estimés 7-11 KCHF par site<br><br>\n📋 <strong>Section 5 — Script Python d'audit (annexe) :</strong><br>\n→ Outil simple pour gérants : tester si propre IP publique a port 10001 ou 102 ouvert<br>\n→ Diffusion sous licence libre, mais sous TLP:AMBER (pas publication publique avant remédiation massive)\n</div>",
+      "law": "<strong>LSI</strong> — Coordination OFCS pour infrastructures critiques.<br><strong>OCyS</strong> — Annonces obligatoires.<br><strong>TLP:AMBER FIRST.org</strong> — Partage threat intel encadré.",
+      "question": "<strong>Quel est le bon niveau de diffusion pour ce rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Diffusion graduée : (1) OFCS / GovCERT + fedpol : intégralité du rapport en TLP:AMBER pour distribution aux opérateurs station-service CH identifiés (Tamoil, AVIA, Migrol, BP, Shell, Coop Pronto, Migrolino, distributeurs régionaux). (2) OFEN (Office fédéral de l'énergie) : information stratégique sur le risque sectoriel, sans détails techniques exploitables. (3) MISP TLP:AMBER vers partenaires threat intel internationaux (Sekoia, Mandiant, ESET, CERT EU, OFCS / GovCERT) — enrichissement réciproque + alerte aux autres pays. (4) Veeder-Root corporate (US) : courtoisie professionnelle, partage du rapport (sans détails attaquant) pour qu'ils puissent mettre à jour leur documentation de sécurité. (5) Publication publique du script Python d'audit après 90 jours — délai de remédiation suffisant pour les sites identifiés. (6) Conférence (Insomni'Hack 2027 par exemple) sur la méthodologie après clôture procédure pénale.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Diffusion graduée exemplaire. (1) OFCS en pilote = canal national approprié pour l'alerte sectorielle. (2) OFEN information stratégique sans détails techniques = bon équilibre. (3) MISP TLP:AMBER international = effet multiplicateur. (4) Courtoisie Veeder-Root = bonne pratique professionnelle, ils peuvent aider la communauté en mettant à jour leurs propres recommandations. (5) Publication script Python différée = pas alimenter les futurs attaquants pendant la phase de remédiation. (6) Conférence post-clôture = partage pédagogique long terme. Cette architecture de diffusion équilibre protection enquête + protection victimes + partage scientifique. Le protocole ATG Veeder-Root (port TCP 10001) n'a <strong>pas d'authentification native</strong> — exposition Internet = open bar. HD Moore (Rapid7) l'a démontré en 2015 ('Internet of Gas Station Tank Gauges'). En CH, encore 187 sites exposés en mai 2026 (saga 4 acte 4). La LSI (en vigueur 1.1.2024) + OCyS (obligation signalement 1.4.2025) imposent la déclaration à l'<strong>OFCS</strong> (ex-OFCS, rattaché DDPS depuis 2024) dans les 24h. Délai court : pas le temps d'investigation poussée — déclaration préliminaire + complémentaires. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "TLP:AMBER respecté. LSI — coordination OFCS. Art. 73 CPP — secret enquête partiel.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Publication immédiate du rapport intégral en open access (GitHub, blog Compass Security) — c'est de la cybersécurité ouverte, plus on partage, mieux la communauté est protégée.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Précipitation contre-productive. (1) Publication immédiate = alerter Cyber Av3ngers et opportunistes mondiaux sur les 187 cibles potentielles CH (avec votre script Python d'audit, ils trouveront les sites encore exposés en 5 minutes). (2) Les 186 autres sites CH n'ont pas encore corrigé — entre publication et remédiation, fenêtre d'exploitation massive. (3) « Cybersécurité ouverte » = principe valable APRÈS remédiation. Pendant la phase de fix, partage en TLP:AMBER avec parties prenantes uniquement. (4) Mauvaise compréhension du timing publication = erreur fréquente chez les jeunes professionnels enthousiastes. (5) Le bon réflexe = diffusion graduée + publication différée 90 jours. Sur attaque OT : la <strong>règle d'or = ne PAS arrêter le processus physique</strong>. Couper un PLC qui contrôle une vanne carburant = potentielle explosion, fuite, victimes humaines. L'isolation est graduée : segmenter avant de couper. Capture PCAP en sortie 5-15 min, puis isolation complète. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP risque. Mise en danger des 186 autres sites.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "Le rapport reste interne Compass Security + Polcant VS. Pas de diffusion externe — on garde l'expertise, c'est notre avantage commercial.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Posture isolationniste injustifiée. (1) Les 186 autres sites CH sont potentiellement vulnérables ET attaqués (ou en cours). Garder l'info en interne = laisser ces sites sans alerte = manquement éthique + manquement aux obligations de coordination LSI. (2) « Avantage commercial Compass Security » = Compass Security a tout à gagner à partager via OFCS (positionnement comme acteur expert reconnu, contrats consultatifs ultérieurs sur les 186 audits, etc.). Ne pas partager = perte d'opportunité commerciale ET impact réputationnel négatif si on apprend plus tard qu'ils savaient. (3) « Avantage » de l'enquêteur public (Polcant VS) ne s'oppose pas au partage sectoriel — au contraire, OFCS valorise précisément les services cantonaux qui partagent. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "LSI — coopération sectorielle attendue. Manquement éthique.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🔄 14h00 — Audit reproductible pour OFCS",
+      "situation": "Vous finalisez le script Python d'audit pour distribution OFCS vers les opérateurs. Le script doit être simple, sécurisé, et applicable par n'importe quel gérant de station-service avec aide minimale de son IT prestataire.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Spécification du script audit_atg_exposure.py :</strong><br><br>\n📋 <strong>Input :</strong> IP publique de la station-service (saisie manuelle par gérant ou prestataire IT)<br>\n📋 <strong>Tests :</strong> port 10001/TCP (ATG Veeder-Root) + port 102/TCP (Siemens S7) ouverts depuis Internet ?<br>\n📋 <strong>Output :</strong> Rapport clair en 3 lignes :<br>\n→ ✅ « Pas d'exposition détectée sur ports 10001 / 102 — votre site est protégé »<br>\n→ ⚠️ « ATTENTION : exposition détectée sur port [10001 ou 102]. Action urgente requise : contacter votre prestataire réseau pour bloquer ces ports »<br>\n→ ❌ « ERREUR de connexion — vérifier l'IP saisie ou les paramètres réseau »<br>\n📋 <strong>Sécurité :</strong> ne PAS envoyer de commandes ATG/S7 réelles, juste tester l'ouverture du port (TCP SYN scan)<br>\n📋 <strong>Diffusion :</strong> OFCS packagés en exécutable Windows .exe (avec PyInstaller) pour les gérants non-techniques, et code Python source pour les prestataires IT<br>\n📋 <strong>Documentation :</strong> guide utilisateur 1 page (manuel d'auto-audit) + FAQ + contacts OFCS pour assistance<br><br>\n<strong>Dilemme :</strong> le script doit-il faire l'audit en interne (depuis le LAN de la station, donc test trivial) OU en externe (depuis un VPS OFCS, ce qui simule mieux l'attaquant) ?\n</div>",
+      "law": "<strong>LSI</strong> — Outils de mise en conformité.<br><strong>Bonnes pratiques cybersécurité</strong> — Auto-audit non destructif.<br><strong>Art. 143bis CP</strong> — Limites des outils (pas d'accès indu).",
+      "question": "<strong>Quelle est votre solution pour le dilemme « audit interne vs externe » ?</strong>",
+      "choices": [
+        {
+          "text": "Solution hybride : audit DEPUIS EXTERNE comme le ferait l'attaquant — c'est la vraie validation. Architecture : (1) Le gérant ou son prestataire IT saisit l'IP publique du site dans une interface web OFCS. (2) Le OFCS opère un VPS d'audit qui effectue le test depuis l'extérieur (TCP SYN scan ports 10001 et 102). (3) Résultat retourné en quelques secondes. (4) Sécurité : (a) le VPS est opéré par OFCS (autorité publique), donc l'audit n'est pas un « accès indu » (consentement explicite du gérant + cadre étatique), (b) audit non destructif (juste test d'ouverture port, pas d'envoi commande ATG), (c) résultats archivés OFCS pour suivi sectoriel. (5) Diffusion : interface web OFCS (https://audit-atg.ncsc.admin.ch) + numéro vert OFCS pour assistance + courrier postal aux 187 sites identifiés Shodan. (6) Variante locale (script Python à exécuter sur le LAN) reste disponible pour les sites qui préfèrent l'auto-audit interne (mais résultat moins fiable car ne reflète pas la perspective attaquant).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Architecture exemplaire pour audit massif sectoriel. (1) Audit externe = validation réelle (comme attaquant). (2) Interface OFCS = canal officiel, consentement explicite, traçabilité. (3) Sécurité du test non destructif = pas d'accès indu (art. 143bis CP non applicable car consentement victime + intérêt légitime). (4) Diffusion multi-canaux (interface web + numéro vert + courrier) = touche tous les opérateurs même non-techniques. (5) Variante locale en option = flexibilité. Cette architecture est ce que OFCS / GovCERT recommande pour les audits sectoriels obligatoires depuis LSI. La LSI (en vigueur 1.1.2024) + OCyS (obligation signalement 1.4.2025) imposent la déclaration à l'<strong>OFCS</strong> (ex-OFCS, rattaché DDPS depuis 2024) dans les 24h. Délai court : pas le temps d'investigation poussée — déclaration préliminaire + complémentaires. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "LSI — auto-audit sectoriel encadré. Art. 143bis CP — consentement explicite. Bonnes pratiques OFCS.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Audit interne uniquement (script Python à exécuter sur le LAN du site) — c'est plus simple et le gérant n'a pas besoin de saisir son IP publique (récupérée automatiquement).",
+          "ok": false,
+          "pts": -15,
+          "fb": "Limitation technique. (1) L'audit interne teste l'ACCESSIBILITÉ DEPUIS LE LAN — qui n'est PAS la perspective de l'attaquant externe. Le port 10001 peut être ouvert localement (normal) mais bloqué en sortie par firewall (= site protégé) ou ouvert en sortie (= site exposé). L'audit interne ne distingue pas les deux cas. (2) Sans test depuis l'extérieur, on ne valide pas la vraie exposition. (3) « Plus simple » = vrai pour le gérant mais résultat MOINS UTILE. (4) Pour un audit sectoriel critique, l'option « plus simple » ne doit pas primer sur l'option « plus précise ». La bonne solution combine les deux (audit externe principal + audit local en complément). Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais inefficacité technique.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Le script doit envoyer la commande I201 réelle pour confirmer si c'est bien un TLS-350 derrière le port 10001 — un autre service pourrait écouter sur ce port. C'est plus précis.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sortie de cadre légal. (1) Envoyer la commande I201 = communiquer avec le système Veeder-Root du site = accès au protocole ATG = accès indu (art. 143bis CP) sauf si consentement explicite du propriétaire du site. (2) Si le script est diffusé largement et utilisé par des tiers sans consentement explicite (ex. : journalistes investigateurs, étudiants en cybersécurité, opportunistes), on devient complices d'accès indus en facilitant l'outil. (3) Le test TCP SYN scan (ouverture du port) n'est PAS un accès indu — c'est de la reconnaissance passive, légale partout. (4) Si on a besoin de confirmer la nature du service derrière, c'est le rôle d'analyse manuelle PAR L'ENQUÊTEUR (Lt Berisha) avec autorisation procureur, pas d'un outil de masse mis à disposition des gérants. Sur attaque OT : la <strong>règle d'or = ne PAS arrêter le processus physique</strong>. Couper un PLC qui contrôle une vanne carburant = potentielle explosion, fuite, victimes humaines. L'isolation est graduée : segmenter avant de couper. Capture PCAP en sortie 5-15 min, puis isolation complète. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 143bis CP — risque d'accès indu si tiers utilisent. Outil dangereux à diffuser largement.",
+          "critical": true,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

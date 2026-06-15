@@ -1,0 +1,158 @@
+{
+  "id": "ads-4-dump-ram-process-orphelin",
+  "title": "Le compartiment fantôme — Acte 4 : Dump RAM et process orphelin",
+  "icon": "🧠",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'analyse approfondie révèle le mécanisme complet : un PE injecté dans explorer.exe se charge à l'ouverture de session via une scheduled task, télécharge update.dat depuis workers.dev, le décrypte en RAM (jamais sur disque !), et exécute le second stage qui établit le canal Telegram. Tout le code malveillant principal est in-memory only — d'où l'invisibilité disque qui justifie ADS comme persistance. La voie est ouverte pour l'acte 5 (découverte ADS).",
+    "degraded": "Vous avez compris le mécanisme mais sans extraire le second stage (chiffrement non cassé en temps imparti). Les indicateurs sont partiels mais suffisants pour l'attribution. Acte 5 (ADS) sera plus difficile sans tous les éléments.",
+    "failure": "L'analyse stagne sur le premier loader sans comprendre la chaîne d'infection complète. Le persistance mechanism reste flou, et la découverte des ADS ne se fera que par hasard ultérieurement."
+  },
+  "tags": [
+    "VOLATILITY AVANCÉ",
+    "PROCESS HOLLOWING",
+    "PE INJECTION",
+    "MITRE T1055.012",
+    "IN-MEMORY MALWARE",
+    "FILELESS",
+    "REVERSE ENGINEERING",
+    "GAMMALOAD"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP — Accès indu à un système informatique",
+    "Art. 144bis CP — Détérioration de données",
+    "Art. 271 CP — Actes pour État étranger",
+    "MITRE ATT&CK T1055 / T1055.012",
+    "ISO/IEC 27037",
+    "NIST SP 800-86"
+  ],
+  "intro": "Dimanche 18 janvier 2026, 10h00. Lab forensique Polcant VD. Analyse RAM approfondie phase 2. L'identification du process injection était hier — aujourd'hui : reverse engineering du second stage Gamaredon, identification du mécanisme de persistance complet, et préparation de la base pour comprendre le rôle des ADS (qu'on découvrira en acte 5). Lara Schmidlin (RAM), Vincent Chevalley (réseau), et Dr Stephan Sutter de Compass Security en renfort comme consultant externe via le cadre LSI.",
+  "alertLevel": "🧠 ANALYSE RAM PHASE 2 · Process injection confirmée · Second stage à reverse · Persistance à identifier · Consultant externe Compass Security",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Extraire et analyser le PE injecté dans explorer.exe (T1055.012 Process Hollowing potentiel)"
+    },
+    {
+      "icon": "🔓",
+      "text": "Décrypter ou comprendre la structure du second stage chargé en RAM"
+    },
+    {
+      "icon": "📌",
+      "text": "Identifier le mécanisme de persistance (scheduled task, run key, ou autre)"
+    },
+    {
+      "icon": "🎯",
+      "text": "Mapper la chaîne d'infection complète sur MITRE ATT&CK avec tous les TTP"
+    }
+  ],
+  "debrief": "<p>L'acte 4 est le cœur technique de la saga. C'est où le DFIR utilise Volatility comme un microscope pour disséquer ce que Gamaredon a déployé en mémoire. Le contraste avec l'analyse disque est saisissant : sur le disque, le malware est presque invisible (un binaire <code>update.dat</code> dans %TEMP%, des entrées scheduled task génériques) ; en mémoire, on voit toute l'architecture.</p><p><strong>Process Hollowing — T1055.012.</strong> La technique spécifique utilisée par Gamaredon : (a) le loader (powershell.exe ici) lance un processus suspendu (explorer.exe en mode CREATE_SUSPENDED, ou plus rarement un nouveau explorer), (b) il libère le code original via ZwUnmapViewOfSection, (c) il alloue de la nouvelle mémoire avec VirtualAllocEx et copie son propre PE malveillant via WriteProcessMemory, (d) il modifie le entry point via SetThreadContext, (e) il reprend l'exécution via ResumeThread. Le processus continue de s'appeler « explorer.exe » avec le bon PID, mais exécute le code malveillant. Détection : (1) comparaison hash PE en mémoire vs PE disque (différent = injection), (2) sections RWX dans le processus (anormal pour un PE Microsoft), (3) modules chargés incohérents avec le rôle attendu du processus.</p><p><strong>In-memory only malware — le défi forensique 2020+.</strong> La tendance APT depuis 2020 : ne jamais écrire le payload principal sur disque. Le téléchargement passe par PowerShell <code>Invoke-WebRequest</code> avec contenu en mémoire, le décryptage et l'exécution se font in-memory via réflection .NET, ou via shellcode injecté. Le seul artefact disque est le loader initial (qui est lui-même obfusqué et souvent supprimé après exécution). Conséquence : si le poste est éteint avant dump RAM, on ne retrouve rien d'utile. C'est précisément pourquoi l'instruction « ne PAS éteindre » de l'acte 1 était cruciale.</p><p><strong>Décrypter le second stage — entropie et clés.</strong> Quand on extrait une section chiffrée de la RAM, deux approches : (1) brute force des clés courtes si on suspecte XOR avec clé répétée (entropy analysis + chi-squared sur shifts), (2) chercher la clé dans la même image mémoire (le code de décryptage a forcément la clé à proximité — analyse statique du loader pour identifier l'appel à <code>CryptDecrypt</code> ou équivalent, et la mémoire pointée par les paramètres). Gamaredon utilise généralement AES-256-CBC avec clé hardcodée stockée chiffrée en RC4 — pas inviolable, mais ça prend 2-4h d'analyse pour extraire.</p><p><strong>Persistance — où Gamaredon survit aux redémarrages.</strong> Plusieurs options pour APT : (a) Run keys du registre (HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run — très visible, détecté par AutoRuns), (b) Scheduled Tasks (T1053 — plus discret, surtout si nommé comme tâche système), (c) WMI Event Subscription (T1546.003 — très discret, peu d'AV regardent), (d) DLL hijacking (T1574.001 — invisible pour AV), (e) <strong>Alternate Data Streams</strong> (T1564.004 — l'angle d'attaque de cette saga, à découvrir en acte 5). Gamaredon utilise souvent Scheduled Task + ADS combinés : la tâche pointe sur un fichier qui semble normal mais dont le contenu réel est dans le stream caché.</p><p><strong>Références</strong> : MITRE ATT&CK T1055.012, T1053, T1546, T1564.004 ; Sekoia TDR « Gamaredon Living Off the Land 2025 » ; Volatility 3 documentation ; Andrea Allievi blog (analyste reverse Windows internals).</p>",
+  "steps": [
+    {
+      "phase": "🔬 10h15 — Extraction du PE injecté",
+      "situation": "Dr Sutter prend la main sur Volatility. Extraction du PE injecté dans explorer.exe (PID 3128) :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Volatility windows.dumpfiles + windows.malfind extension :</strong><br><br>\n<code>vol -f memdump.raw windows.dumpfiles --pid 3128 --virtaddr 0x00007FFE12340000</code><br><br>\n📦 Extraction réussie : <code>pid.3128.0x00007FFE12340000.dmp</code> (16'384 octets, 16 Ko)<br>\n📊 Header magic : <code>4D 5A</code> (MZ — PE Windows confirmé)<br>\n📊 Structure PE : DOS Header → PE Signature → COFF Header → Optional Header → Section Headers<br>\n📊 Sections détectées : .text (code), .rdata (read-only data), .data (initialized data), .reloc (relocations)<br>\n📊 Imports observés : kernel32.dll (CreateFileA, WriteFile, ReadFile, CreateThread, VirtualAlloc), ws2_32.dll (socket, connect, send, recv), wininet.dll (InternetOpenA, InternetConnectA, HttpSendRequestA), advapi32.dll (CryptDecrypt, CryptHashData)<br>\n📊 Strings extraits : <code>user32.dll, kernel32.dll, ntdll.dll</code> (libs Windows), <code>POST /d8s9 HTTP/1.1, Host: %s.workers.dev</code> (template HTTP C2), <code>AES-256-CBC</code> (algo de chiffrement utilisé), <code>schtasks /create /tn \"%s\" /tr \"%s\" /sc onlogon /rl highest</code> (création tâche planifiée)<br>\n📊 Hash SHA-256 du dump : <code>bf24c0...</code><br>\n📊 Match Mandiant_PteroDo_loader_v3 confirmé sur ce dump<br>\n<br>\n💡 <strong>Conclusion préliminaire :</strong> on a extrait le LOADER Gamaredon. C'est lui qui télécharge update.dat. La structure des imports révèle : crypto (AES), réseau (wininet), persistance (schtasks). Loader minimaliste, ~16 Ko. Le second stage est ailleurs.\n</div>",
+      "law": "<strong>MITRE ATT&CK</strong> — T1055.012 Process Hollowing.<br><strong>ISO/IEC 27037</strong> — Extraction préservant l'intégrité.<br><strong>Reverse Engineering</strong> — Pas de loi spécifique en CH ; bonnes pratiques EICAR / FIRST.",
+      "question": "<strong>Où chercher le second stage du malware ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Le loader télécharge update.dat depuis workers.dev — nous avons extrait update.dat du disque (acte 2, %TEMP%). Analyse statique d'update.dat : chiffré AES-256-CBC selon les strings du loader. (2) Chercher la clé de décryptage dans le loader extrait : analyse statique avec IDA / Ghidra des appels à CryptDecrypt, traçage des paramètres, identification de la clé hardcodée ou dérivée. (3) Une fois le second stage décrypté, analyse statique pour identifier ses TTP propres : persistance (schtasks confirmé par strings du loader), C2 secondaire (Telegram), capacités (keylogging, screenshot, exfiltration de fichiers). (4) En parallèle : chercher le second stage chargé en RAM, peut-être pas dans explorer.exe mais dans un autre processus (svchost.exe, dllhost.exe candidats classiques) — Volatility <code>malfind</code> sur tous les processus.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Stratégie de reverse engineering méthodique. L'approche est complète : (1) On a le binaire chiffré (update.dat) et l'outil de décryptage (loader avec ses strings AES). On doit pouvoir extraire la clé. (2) IDA / Ghidra sur le loader pour tracer CryptDecrypt — c'est la méthode standard pour identifier les clés hardcodées des APT modernes. (3) Une fois le second stage décrypté, on aura la vue complète. (4) Cherche aussi en RAM dans d'autres processus — Gamaredon a souvent un foothold dans plusieurs processus pour résilience. Cette approche méthodique va probablement prendre 4-6h mais ouvre la voie à l'acte 5 (découverte ADS). Gamaredon (G0047 MITRE) est documenté depuis 2014 par CERT-UA, Mandiant, ESET, Sekoia. Sa <strong>signature distinctive</strong> : commodity tooling + intensité opérationnelle élevée + cibles humanitaires/gouvernementales pro-UA. La convergence des indices construit l'attribution. L'ADS NTFS (MITRE T1564.004) est invisible à <code>dir</code> standard ; il faut <code>dir /R</code> (Vista+) ou <code>streams.exe</code> (Sysinternals). Sysmon Event ID 15 (FileCreateStreamHash) capture la création en temps réel — outil de détection moderne. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Méthodologie reverse engineering rigoureuse. ISO/IEC 27037 respectée.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Le loader est suffisant — on a déjà l'attribution Gamaredon et les TTP MITRE. Pas la peine de creuser plus pour le second stage. On clôture l'analyse technique ici et on passe à la phase juridique.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sous-investigation. Sans le second stage, on ne sait pas : (1) quelles données ont été collectées sur le poste de Maria (keylogger ? screenshots ? exfiltration sélective de fichiers ?), (2) si une persistance secondaire existe (le loader peut être supprimé sans tuer la compromission si le second stage a sa propre persistance), (3) quels privilèges sont accessibles à l'attaquant. Pour la qualification CP 144bis (détérioration de données) et CP 143bis (accès indu — étendue de l'accès), il faut documenter la PORTÉE de la compromission. La défense — si on attribuait un opérateur Gamaredon identifié dans le futur — pourra arguer du doute sur l'étendue des actes. Sans second stage, on a la preuve de l'intrusion mais pas la cartographie de ses effets. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Art. 143bis / 144bis CP — qualification étendue requiert documentation de la portée. Sous-investigation préjudiciable.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Je tente immédiatement de déchiffrer update.dat avec hashcat en brute force GPU — j'ai un cluster de 8 RTX 4090, ça devrait passer en quelques heures même pour AES-256.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur cryptographique. AES-256 brute force est computationnellement INFAISABLE — l'espace de clés est 2^256 ≈ 10^77 combinaisons, soit largement au-delà de l'âge de l'univers même avec tous les GPU de la planète. La voie n'est PAS le brute force, c'est l'EXTRACTION de la clé depuis le loader (qui a forcément la clé, sinon il ne peut pas déchiffrer). Le reverse engineering du loader pour trouver la clé prend 2-4h ; le brute force serait infini. Cette confusion entre attaques cryptographiques pratiques (extraction de clé) et théoriques (brute force pur) est une erreur de débutant qui démontre méconnaissance des fondamentaux. À un examen ou en audience, ce raisonnement vous décrédibiliserait totalement. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais erreur technique sévère. Démonstration de méconnaissance cryptographique.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔓 14h00 — Décryptage du second stage et persistance",
+      "situation": "4 heures de reverse engineering plus tard, Dr Sutter a extrait la clé AES du loader. Décryptage d'update.dat réussi :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Second stage révélé (340 Ko de PE) :</strong><br><br>\n📊 PE Windows DLL .NET (managed, .NET Framework 4.x)<br>\n📊 Strings notables : <code>Telegram Bot API v6.x</code>, <code>https://api.telegram.org/bot{TOKEN}/sendDocument</code>, <code>screenshotBytes</code>, <code>keylogBuffer</code>, <code>processList</code>, <code>FilesToExfiltrate.txt</code><br>\n📊 Match YARA Sekoia_Gamaredon_GammaSteel_2024 (signature stealer principal de Gamaredon)<br>\n📊 Capacités identifiées (analyse statique + simulation dans sandbox isolée) :<br>\n→ Keylogging passif (hook clavier global)<br>\n→ Capture d'écran toutes les 5 minutes<br>\n→ Liste des fichiers récents dans Documents, Desktop, OneDrive sync folder<br>\n→ Exfiltration fichiers .docx, .xlsx, .pdf, .eml de moins de 10 Mo<br>\n→ Capture des credentials stockés (Chrome, Firefox, Edge — via DPAPI)<br>\n→ Listing des contacts Outlook (carnet d'adresses)<br>\n<br>\n📊 Persistance identifiée :<br>\n→ Scheduled Task créée : <code>\\Microsoft\\Windows\\Application Experience\\SystemUpdate</code> (nom imitant tâche système légitime)<br>\n→ Trigger : at logon, highest privileges<br>\n→ Action : <code>cmd.exe /c start /b mshta.exe \"C:\\ProgramData\\Microsoft\\Crypto\\config.dat:hidden.hta\"</code><br>\n→ <strong>⚠️ NOTABLE : la syntaxe <code>config.dat:hidden.hta</code> est un Alternate Data Stream NTFS !</strong><br>\n→ Le fichier <code>config.dat</code> existe (visible, semble innocent, 4 Ko de contenu apparent), mais contient un STREAM caché nommé <code>hidden.hta</code> avec le vrai payload<br>\n<br>\n💡 <strong>EUREKA :</strong> on vient de découvrir le mécanisme ADS Gamaredon. Le malware est invisible parce qu'il vit dans un compartiment NTFS que la plupart des outils ignorent.\n</div>",
+      "law": "<strong>MITRE ATT&CK</strong> — T1564.004 NTFS File Attributes / Alternate Data Streams, T1053.005 Scheduled Task, T1547.001 Boot or Logon Autostart.<br><strong>Sous-technique référencée</strong> — T1059.005 mshta VBScript via ADS.<br><strong>NIST SP 800-86</strong> — Windows artifacts forensique.",
+      "question": "<strong>Vous venez de découvrir l'ADS. Quelles sont vos prochaines étapes ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Documentation rigoureuse de la découverte ADS dans le rapport technique : exemple de syntaxe <code>config.dat:hidden.hta</code>, capture des outils utilisés (Volatility, reverse engineering, sandbox), screenshots des sections révélant la persistance. (2) Préparation acte 5 : analyse approfondie de l'ADS sur l'image disque — extraction du stream caché, analyse de son contenu (probablement HTA / VBScript / PowerShell). (3) Vérification que tous les autres postes ONG ne sont pas compromis avec le même schéma — analyse rapide des disques de 13 autres postes pour streams cachés. (4) Mise à jour de la fiche `alternate_data_streams.html` (à créer si absente — la saga inspirera précisément cette fiche). (5) Briefing complet du procureur Daudin lundi matin avec dossier consolidé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Plan cohérent qui ouvre la voie à l'acte 5. La découverte de l'ADS est précisément le pivot pédagogique de cette saga : montrer que NTFS contient des fonctionnalités héritées des années 1990 (compatibilité Mac HFS via Services for Macintosh) qui restent exploitables 30 ans après par des APT modernes. Documenter rigoureusement, vérifier l'extension sur d'autres postes (chasse à la propagation latérale), et préparer la fiche éducative (alternate_data_streams.html) sont les bons réflexes professionnels. Le briefing procureur consolide la qualification juridique. L'ADS NTFS (MITRE T1564.004) est invisible à <code>dir</code> standard ; il faut <code>dir /R</code> (Vista+) ou <code>streams.exe</code> (Sysinternals). Sysmon Event ID 15 (FileCreateStreamHash) capture la création en temps réel — outil de détection moderne. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "MITRE ATT&CK T1564.004 confirmé. Méthodologie d'investigation complète.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "ADS = découverte super intéressante. Je rédige un article sur LinkedIn pour partager avec la communauté DFIR suisse — c'est un cas pédagogique fantastique.",
+          "ok": false,
+          "pts": -30,
+          "fb": "VIOLATION grave. Vous êtes en plein milieu d'une enquête en cours, ENCORE EN COURS d'investigation, avec : (1) attribution non encore formelle, (2) autres victimes en cours de notification, (3) attaquant toujours actif sur son infrastructure. Publier sur LinkedIn : (a) viole l'art. 73 CPP (secret enquête), (b) signale à Gamaredon que sa technique ADS est repérée, ce qui le pousse à migrer (perte d'un foothold précieux pour l'identification d'autres victimes futures), (c) est complètement déontologiquement inacceptable comme initiative individuelle d'un fonctionnaire de police cantonale. Une publication pédagogique sur ADS, c'est POST-clôture du dossier, avec accord du procureur, et idéalement via les canaux officiels du OFCS / centres de formation (CAS-IN typiquement, justement). Pas sur LinkedIn en plein milieu d'une enquête active. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP — secret enquête violé. Art. 320 CP — violation du secret de fonction. Risque disciplinaire majeur.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "On clôture l'analyse technique ici. ADS = mécanisme de persistance identifié, c'est suffisant. Pas besoin d'extraire le stream caché et d'aller plus loin, on a assez pour le procureur.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sous-utilisation de la découverte. (1) Le stream caché <code>hidden.hta</code> contient probablement encore d'autres éléments : URLs C2 supplémentaires (au-delà de workers.dev déjà identifié), capacités encore non documentées (peut-être lateral movement), peut-être même des données déjà exfiltrées que l'attaquant a temporairement stockées en local. (2) Sans extraction du stream, vous documentez la persistance MAIS pas son contenu réel — c'est comme dire « j'ai trouvé un coffre-fort » mais ne pas l'ouvrir. (3) Pour la qualification CP 143bis et l'attribution finale Gamaredon, plus on a de contenu analysé, plus le dossier est solide. (4) L'extension à d'autres postes (l'ONG en compte 14) est cruciale : si UN poste est compromis et qu'on rate la propagation latérale, on aura un retour rapide à la compromission après remise en service. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Sous-investigation. Documentation incomplète de la portée pour qualification pénale.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📋 17h30 — Synthèse chaîne d'infection complète",
+      "situation": "Fin de journée. Vous avez maintenant la chaîne d'infection complète, prête à être documentée pour le procureur Daudin et pour la fiche pédagogique alternate_data_streams.html :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Chaîne d'infection Gamaredon — Solidarité Dnipro (15 jan 2026) :</strong><br><br>\n<strong>Étape 1 — Initial Access (T1566.001 Phishing Attachment)</strong><br>\nMail apparemment de Ihor Marchenko (Dnipro, identité usurpée), pièce jointe <code>rapport-trimestriel-Q4-2025-Dnipro.rar</code>.<br>\n<br>\n<strong>Étape 2 — Execution (T1059.005 VBScript via Archive)</strong><br>\nArchive contient un .lnk shortcut qui exécute <code>mshta.exe</code> avec script VBS obfusqué — invisible pour Maria qui voit juste le PDF leurre s'ouvrir.<br>\n<br>\n<strong>Étape 3 — Defense Evasion (T1564.004 ADS NTFS)</strong><br>\nLe VBS écrit le loader principal dans <code>C:\\ProgramData\\Microsoft\\Crypto\\config.dat:hidden.hta</code> — STREAM CACHÉ NTFS, invisible Explorer, invisible la plupart des AV.<br>\n<br>\n<strong>Étape 4 — Persistence (T1053.005 Scheduled Task)</strong><br>\nCréation tâche planifiée <code>\\Microsoft\\Windows\\Application Experience\\SystemUpdate</code> qui exécute le contenu de l'ADS à chaque logon.<br>\n<br>\n<strong>Étape 5 — Process Injection (T1055.012 Process Hollowing)</strong><br>\nLa scheduled task lance mshta qui crée un explorer.exe suspendu, hollows son contenu avec le loader malveillant. Hash mémoire ≠ hash disque.<br>\n<br>\n<strong>Étape 6 — Command & Control (T1071.001 Web Protocols + T1102 Web Service)</strong><br>\nLoader télécharge update.dat depuis <code>wnoufqebrm.workers.dev</code>, le déchiffre AES-256 en RAM, exécute en mémoire.<br>\n<br>\n<strong>Étape 7 — Collection (T1056.001 Keylogging + T1113 Screen Capture + T1083 File Discovery)</strong><br>\nGammaSteel collecte keylog, screenshots, fichiers Office récents, credentials navigateurs.<br>\n<br>\n<strong>Étape 8 — Exfiltration (T1041 Exfiltration over C2 + T1567.002 Telegram)</strong><br>\nDonnées envoyées via Telegram Bot API et beaconing Cloudflare Workers (canaux séparés pour résilience).<br>\n<br>\n💡 <strong>8 étapes, 10 TTP MITRE ATT&CK confirmées.</strong> Attribution Gamaredon désormais confidence très haute.\n</div>",
+      "law": "<strong>MITRE ATT&CK ENTERPRISE</strong> — Cadre de référence pour l'attribution APT.<br><strong>LRens / 13</strong> — Signalement formel SRC désormais qualifié.<br><strong>LSI</strong> — Coordination OFCS pour partage sectoriel.<br><strong>Art. 271 CP</strong> — Actes pour État étranger (FSB) : qualification renforcée.",
+      "question": "<strong>Avec cette synthèse complète, comment finalisez-vous le rapport et la suite ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Rapport technique consolidé : 8 étapes + 10 TTP MITRE + chaîne complète documentée + indicateurs de compromission (IOC) consolidés. Format STIX 2.1 pour partage threat intel. (2) Signalement formel SRC : LRens — attribution Gamaredon confidence très haute, partage de la chaîne d'infection complète, recommandation d'alerte sectorielle nationale pour les ONG romandes soutenant l'UA et les think tanks est-européens. (3) Transmission procureur Daudin lundi matin : dossier consolidé pour qualification pénale CP 143bis + CP 144bis + CP 271 (actes pour État étranger). (4) Coordination OFCS / OFCS / GovCERT : alerte sectorielle aux autres ONG potentielles, avec IOC anonymisés (pas de noms de victimes). (5) Préparation acte 5 : focus pédagogique ADS — la saga deviendra la référence d'enseignement sur cette technique en Suisse romande. (6) Sutter et Compass Security : remerciements formels, possibilité de co-signature du rapport pour la partie reverse.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Synthèse de niveau professionnel haut. Toutes les pistes sont couvertes : technique (rapport STIX), institutionnelle (SRC, OFCS, OFCS / GovCERT), judiciaire (procureur), pédagogique (préparation acte 5 et fiche ADS), partenariat (reconnaissance Compass Security). Le mapping MITRE complet (10 TTP, 8 étapes) est exactement ce dont les analystes threat intel suisses et internationaux ont besoin pour comparaisons. La qualification CP 271 (actes pour État étranger) en plus des CP 143bis/144bis est une qualification rare mais juridiquement justifiée quand l'attribution étatique est solide — elle alourdit la qualification et ouvre la voie aux mesures diplomatiques ultérieures (le procureur peut transmettre au MPC qui peut transmettre au DFAE). L'ADS NTFS (MITRE T1564.004) est invisible à <code>dir</code> standard ; il faut <code>dir /R</code> (Vista+) ou <code>streams.exe</code> (Sysinternals). Sysmon Event ID 15 (FileCreateStreamHash) capture la création en temps réel — outil de détection moderne. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 143bis + 144bis + 271 CP. LRens — attribution formelle qualifiée. LSI — coordination nationale. EIMP préparation ultérieure.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Rapport technique uniquement, transmission procureur. Pas besoin de partager avec OFCS/SRC/OFCS / GovCERT à ce stade — on a tout sur l'attaquant, mais autant garder l'avantage tactique pour notre propre exploitation.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Posture isolationniste qui contredit les obligations légales et l'éthique professionnelle. (1) LRens IMPOSE le signalement SRC pour les opérations de renseignement étatique étrangère — ce n'est pas une option. (2) LSI prévoit la coordination OFCS pour les acteurs critiques ; les ONG humanitaires en zone de conflit entrent typiquement dans le périmètre. (3) « Garder l'avantage tactique » : pour faire quoi ? Vous n'avez pas vocation à mener une opération offensive contre Gamaredon — votre rôle est d'enquêter sur les compromissions en Suisse, qualifier juridiquement, et coopérer pour la défense collective. L'attaquant a probablement déjà 50 autres victimes en Europe ; le partage avec OFCS / GovCERT/Sekoia/Mandiant accélère leur identification. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "LRens violé. LSI — coopération attendue. Manquement à l'éthique professionnelle.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "On a tout, on lance maintenant l'opération offensive : hackback vers le serveur Cloudflare Worker pour identifier les opérateurs Gamaredon et exfiltrer leurs propres outils.",
+          "ok": false,
+          "pts": -30,
+          "fb": "VIOLATION criminelle. Le « hackback » (offensive en représailles contre un attaquant) est ILLÉGAL en Suisse comme dans la quasi-totalité des juridictions occidentales. (1) Art. 143bis et 144bis CP s'appliquent à VOUS si vous attaquez un système informatique tiers, même si ce système est lui-même malveillant. (2) Cloudflare est une entreprise américaine légitime ; attaquer leur infrastructure est une atteinte à un opérateur tiers en plus. (3) Aucune base légale en CH ne permet à un enquêteur cantonal de mener une opération offensive — pas même au niveau fédéral (le SRC a des capacités limitées et strictement encadrées par LRens). (4) Cette proposition cumule violation pénale + risque diplomatique + risque opérationnel (vous pourriez exposer l'enquête à des contre-mesures de l'attaquant si vous vous faites repérer). C'est une réponse à fortement déconseiller même en discussion informelle. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 143bis / 144bis CP — l'enquêteur deviendrait lui-même auteur d'infractions. LRens — pas d'autorisation pour opérations offensives au niveau cantonal. Risque pénal personnel grave.",
+          "critical": true,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

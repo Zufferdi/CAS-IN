@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Forensique mobile — CAS-IN</title>
+<meta name="description" content="Cellebrite UFED · GrayKey · Magnet AXIOM · checkm8 · iOS/Android · BFU vs AFU · extraction logique vs physique">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" aria-label="Retour en haut" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FORENSIQUE NUMÉRIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-forensique">Forensique numérique</a><span class="bc-sep">›</span>
+    <span class="bc-current">Forensique mobile</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~20 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📱</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">MOBILE</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Cellebrite</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">iOS/Android</span>
+    <span class="tag tag-red" style="margin-left:.3rem">BFU/AFU</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Forensique mobile</h1>
+    <div class="meta">Cellebrite UFED · GrayKey · Magnet AXIOM · checkm8 · iOS Secure Enclave · Android FBE</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="requisitions_telecoms_ch.html" class="prereq-pill">📖 Réquisitions télécoms</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../campaign.html?id=disparition-bus" class="tp-pill">🎮 Saga 3 — Disparition Léa (bornage)</a><a href="../campaign.html?id=talus" class="tp-pill">🎮 Saga 1 — Fraude PME (mobile)</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="forensique_comptable.html" class="related-pill">🔗 Forensique comptable</a><a href="alternate_data_streams.html" class="related-pill">🔗 ADS NTFS</a></div>
+  </div>
+</div>
+
+<section class="page-wrap" style="padding-top:1.5rem">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe — Le mobile = le coffre-fort numérique d'une vie</div>
+  Le téléphone mobile est aujourd'hui l'objet le plus dense en preuves numériques : localisation, communications, photos, contacts, applications, traces de navigation, transactions crypto. Sa forensique se distingue radicalement du forensique PC : <strong>chiffrement par défaut</strong> (iOS depuis 2014, Android depuis 2017), <strong>Secure Enclave</strong> matériel, <strong>cycle de vie court</strong> (~3 ans), <strong>écosystèmes fermés</strong>. Cellebrite, GrayKey et Magnet AXIOM dominent le marché. Le critère discriminant : avoir le bon outil au bon moment pour le bon device, avant qu'un patch ne ferme la faille exploitée.
+</div>
+
+<div class="sec-title">🗝️ 1. Les 4 niveaux d'extraction</div>
+
+<p>Toute extraction mobile se classe sur une échelle de complétude croissante, qui dépend de l'OS, du modèle, de l'état du device (verrouillé ou non) et des outils disponibles.</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Niveau</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Données obtenues</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Difficulté</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>1. Manual examination</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Captures écran, photos du device. Pas d'extraction réelle.</td><td style="padding:.5rem;border:1px solid var(--border)">🟢 Faible</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>2. Logical extraction</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Données accessibles via API standard (contacts, SMS, photos, journal d'appels)</td><td style="padding:.5rem;border:1px solid var(--border)">🟡 Standard</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>3. File System / Advanced Logical</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Système de fichiers complet, équivalent backup iTunes étendu (incluant SQLite apps tierces)</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Moyenne</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>4. Full File System (FFS) / Physical</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Dump complet de la NAND, y compris zones supprimées, keychain, attributs sécurité</td><td style="padding:.5rem;border:1px solid var(--border)">🔴 Élevée</td></tr>
+</tbody>
+</table>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>📚 BFU vs AFU — la distinction critique</strong> : <strong>BFU</strong> (Before First Unlock) = le device a été redémarré et n'a pas encore été déverrouillé une seule fois — la plupart des données sont chiffrées et inaccessibles. <strong>AFU</strong> (After First Unlock) = le device a été déverrouillé au moins une fois depuis le démarrage — les clés de chiffrement sont en mémoire, permettant beaucoup plus d'accès. En perquisition, <strong>NE PAS ÉTEINDRE</strong> un device trouvé AFU. Mettre en mode avion + Faraday bag immédiatement.
+</div>
+
+<div class="sec-title">🍏 2. iOS — l'écosystème fermé</div>
+
+<p>Apple a construit un modèle de sécurité matériel-logiciel extrêmement intégré, qui complique fortement l'extraction.</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Composant</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Secure Enclave Processor (SEP)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Co-processeur ARM dédié, isolé du SoC principal. Stocke les clés de chiffrement et empreintes biométriques. Inaccessible logiciellement.</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>File-based encryption</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Chaque fichier chiffré individuellement (Data Protection API : NSFileProtectionComplete, etc.)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Keychain</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Stockage chiffré des mots de passe et clés. Extraction nécessite full file system.</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>iCloud sync</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Photos, contacts, messages synchronisés cloud. Récupérables via Apple (warrant) ou backup iCloud.</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Lockdown Mode (iOS 16+)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Mode renforcé activable par l'utilisateur, bloque la plupart des vecteurs d'extraction</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>USB Restricted Mode</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Désactive le port Lightning/USB-C pour data après ~1h verrouillé — complique drastiquement Cellebrite/GrayKey</td></tr>
+</tbody>
+</table>
+
+<p><strong>L'exploit checkm8</strong> (publié par axi0mX en septembre 2019) reste l'un des outils fondamentaux pour la forensique iOS : exploite une faille du <strong>bootrom</strong> (donc inpatchable par mise à jour logicielle). Couvre les SoC A5 à A11, soit <strong>iPhone 4s à iPhone X</strong>. Permet un Full File System en mode BFU si le passcode est connu. Pour les iPhone récents (A12+ depuis iPhone XS, 2018), seul <strong>Cellebrite Premium</strong> ou <strong>GrayKey</strong> offrent des solutions — qui dépendent du firmware actuel et sont en course continue avec Apple.</p>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚠️ La course aux exploits iOS</strong> : Apple patche, Cellebrite/Grayshift trouvent — le cycle se répète à chaque version iOS. Le forensique iOS est <strong>une fenêtre temporelle</strong> : un device iPhone 15 saisi aujourd'hui sera peut-être extractible la semaine prochaine (nouveau build Cellebrite), ou jamais (faille trop coûteuse à exploiter ou patchée plus vite que découverte). Prioriser les saisies de devices récents.
+</div>
+
+<div class="sec-title">🤖 3. Android — la fragmentation</div>
+
+<p>Android est un écosystème <strong>radicalement plus hétérogène</strong> : centaines de constructeurs, des dizaines de versions actives, des sécurités matérielles variables (Samsung Knox, Pixel Titan M, Huawei HiSec, etc.). Le forensique Android est donc moins universel que iOS.</p>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Mécanisme</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Impact forensique</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>FBE (File-Based Encryption)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Standard depuis Android 7 (2016) — chaque fichier chiffré séparément. Avant : FDE (Full-Disk Encryption).</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Verified Boot</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Vérifie l'intégrité du firmware au boot. Bootloader verrouillé par défaut.</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>TEE (Trusted Execution Environment)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Zone sécurisée ARM TrustZone, équivalent du SEP iOS — stocke clés et biométrie</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Samsung Knox</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Surcouche sécurité Samsung, e-fuse au bootloader unlock — détectable post-mortem</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Bootloader unlock</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Mode root via fastboot — possible sur certains modèles, détruit les données dans le process</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>ADB debugging</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Si activé par l'utilisateur, facilite extraction logique. Souvent désactivé.</td></tr>
+</tbody>
+</table>
+
+<p>Méthodes d'extraction Android par ordre de complétude :</p>
+
+<ul style="line-height:1.8">
+<li><strong>MTP / backup standard</strong> — données utilisateur visibles (médias surtout)</li>
+<li><strong>ADB pull</strong> (si debug ON) — accès limité aux espaces non sandbox</li>
+<li><strong>Cellebrite/MSAB exploit propriétaire</strong> — varient par constructeur, parfois full FS</li>
+<li><strong>Chip-off / ISP</strong> — méthode physique destructive, dump direct de la NAND (eMMC/UFS) — devient inopérante avec FBE Android moderne car les données restent chiffrées</li>
+<li><strong>JTAG</strong> — interface debug processeur, devenu rare (devices récents la désactivent)</li>
+</ul>
+
+<div class="sec-title">🛠️ 4. L'écosystème d'outils</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Outil</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Éditeur</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Particularité</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Cellebrite UFED</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Cellebrite (Israël)</td><td style="padding:.5rem;border:1px solid var(--border)">Leader marché, support très large, UFED Touch 3 / 4PC / Ruggedized</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Cellebrite Premium</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Cellebrite</td><td style="padding:.5rem;border:1px solid var(--border)">Service avancé pour iPhone récents (12-15+), accès labos Cellebrite</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Cellebrite Physical Analyzer</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Cellebrite</td><td style="padding:.5rem;border:1px solid var(--border)">Décodage et analyse des dumps (timeline, carving, parsing apps)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>GrayKey</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Grayshift (USA)</td><td style="padding:.5rem;border:1px solid var(--border)">Spécialisé iOS, alternative à Cellebrite Premium</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Magnet AXIOM</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Magnet Forensics (Canada)</td><td style="padding:.5rem;border:1px solid var(--border)">Analyse multi-source (mobile + PC + cloud), excellent pour corrélation</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>MSAB XRY</strong></td><td style="padding:.5rem;border:1px solid var(--border)">MSAB (Suède)</td><td style="padding:.5rem;border:1px solid var(--border)">Alternative européenne à Cellebrite, fort en LE Europe</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Oxygen Forensic Detective</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Oxygen Forensics</td><td style="padding:.5rem;border:1px solid var(--border)">Bon pour parsing apps de messagerie chiffrée (Telegram, Signal)</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Belkasoft Evidence Center</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Belkasoft</td><td style="padding:.5rem;border:1px solid var(--border)">Solution mid-range, intégration mobile + endpoint</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>iLEAPP / ALEAPP</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Open-source (A. Brignoni)</td><td style="padding:.5rem;border:1px solid var(--border)">Scripts Python pour parsing iOS/Android — gratuit, complémentaire</td></tr>
+</tbody>
+</table>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>📚 Limites des outils propriétaires</strong> : Cellebrite et GrayKey sont controversés — accès LE, mais cas documentés de revente sur eBay (~100 USD pour des UFED obsolètes 2019-2020). Ils ne sont <strong>pas omniscients</strong> : un device récent + iOS up-to-date + Lockdown Mode + USB Restricted Mode = souvent inextractible même par Cellebrite Premium. Documenter les limites de l'outil dans le rapport est crucial pour la défense.
+</div>
+
+<div class="sec-title">📋 5. Workflow forensique mobile — bonnes pratiques</div>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;line-height:1.7">
+<strong>① Saisie</strong> — sur les lieux : photo de l'écran si déverrouillé, mode avion immédiat, Faraday bag (sac blindé) pour bloquer signaux. Ne JAMAIS éteindre un device AFU.<br>
+<strong>② Documentation</strong> — IMEI, modèle, OS, état (verrouillé/déverrouillé, BFU/AFU), niveau de batterie, fissures éventuelles (chip-off impossible si chip endommagé).<br>
+<strong>③ Chaîne de garde</strong> — scellement immédiat, scellés numérotés, registre.<br>
+<strong>④ Préparation labo</strong> — Faraday box, chargement via Faraday cable (charge sans signal).<br>
+<strong>⑤ Choix de la méthode</strong> — du moins au plus invasif : logical → advanced logical → FFS → physical/chip-off. Documenter chaque tentative.<br>
+<strong>⑥ Extraction</strong> — calcul hash SHA-256 du dump immédiatement après extraction. Conservation copie sur stockage isolé.<br>
+<strong>⑦ Analyse</strong> — Physical Analyzer / AXIOM / Oxygen pour parsing structuré. Carving manuel pour données effacées (Recoverable + Free space).<br>
+<strong>⑧ Rapport</strong> — horodaté, signé numériquement, exportable en PDF + CSV. Inclure les limites et hypothèses.
+</div>
+
+<div class="sec-title">🔍 6. Sources de preuve à ne pas oublier</div>
+
+<ul style="line-height:1.8">
+<li><strong>Applications de messagerie chiffrée</strong> — WhatsApp (SQLite + clés), Signal (SQLCipher), Telegram (chats secrets jamais sauvegardés), Threema, Wire</li>
+<li><strong>Notes et journaux</strong> — Apple Notes (peut être chiffré), Google Keep, OneNote — données souvent oubliées</li>
+<li><strong>Health / Fitness</strong> — Apple Health, Google Fit, Samsung Health — géolocalisation indirecte, pas (timing/positions)</li>
+<li><strong>Wallet et NFC</strong> — Apple Wallet (cartes), Google Pay, Samsung Pay — historique transactions, traces de paiement</li>
+<li><strong>Crypto wallets</strong> — Trust Wallet, MetaMask, Coinbase Wallet — adresses, transactions, seed phrase ?</li>
+<li><strong>Photos et vidéos</strong> — EXIF, géolocalisation, dates, miniatures système (caches Photos.app)</li>
+<li><strong>Calendrier et contacts</strong> — base de données critique de connexions sociales</li>
+<li><strong>Knowledge_C / biome.sqlite</strong> (iOS) — base de données système qui historise l'usage des apps (très riche)</li>
+<li><strong>Wi-Fi connus</strong> — Plist de SSID connectés, localisation indirecte</li>
+<li><strong>Significant Locations</strong> (iOS) — historique des lieux fréquentés</li>
+<li><strong>Carrier files</strong> — IMSI, IMEI, métadonnées télécom</li>
+</ul>
+
+<div class="sec-title">🇨🇭 7. Cadre légal CH</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Référence</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Pertinence forensique mobile</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>CPP art. 263-268</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Séquestre — base juridique de la saisie d'un téléphone</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>CPP art. 246-248</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Perquisition de documents et données — extension au mobile</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>CPP art. 248</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Mise sous scellés et levée — applicable aux extractions mobile contestées</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>CPP art. 269-279</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Surveillance des télécommunications — au-delà du simple séquestre, pour les données vivantes</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>CP art. 321ter</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Secret des télécommunications — protection légale des données télécom</td></tr>
+<tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Jurisprudence TF</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Le mobile peut être perquisitionné mais l'accès au contenu chiffré nécessite mandat spécifique. Refus de fournir le code = silence licite (CEDH).</td></tr>
+</tbody>
+</table>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚖️ Droit au silence vs déverrouillage</strong> : la jurisprudence européenne (CEDH) protège le droit au silence — la personne ne peut être contrainte de fournir son code de déverrouillage. Mais l'utilisation de la biométrie (empreinte digitale, Face ID) sur la personne saisie peut être ordonnée par un magistrat selon la jurisprudence cantonale (sujet à débat juridique constant). Pratique : si le suspect a les empreintes enregistrées sur le device, présenter le doigt rapidement avant déverrouillage forcé impossible.
+</div>
+
+<div class="sec-title">⚠️ 8. Anti-patterns courants</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Anti-pattern #1 — éteindre le device AFU</strong> : si trouvé déverrouillé, ne JAMAIS éteindre. Le passer en mode avion, brancher au chargeur, Faraday bag, transport vers labo en restant alimenté.
+</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Anti-pattern #2 — connecter au PC perso</strong> : iTunes/Finder peut déclencher des changements (synchronisations, mises à jour iOS, dernier accès). Toujours utiliser une station forensique isolée.
+</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Anti-pattern #3 — confondre déverrouillage et extraction</strong> : déverrouiller un device permet une logical extraction, mais pas un FFS. Pour le FFS sur iPhone récent, il faut Cellebrite Premium ou GrayKey en plus du passcode.
+</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Anti-pattern #4 — ignorer les apps tierces</strong> : un dump FFS contient des centaines de SQLite/Realm d'applications. Les outils auto-parsing en couvrent les plus connues (WhatsApp, Telegram, Signal, Instagram, TikTok…). Pour les apps spécifiques (banques, crypto wallets, apps locales CH), parsing manuel ou scripts iLEAPP/ALEAPP nécessaires.
+</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>🎯 Anti-pattern #5 — négliger le cloud</strong> : le device mobile est souvent synchronisé. Un device verrouillé inextractible peut quand même livrer ses secrets via réquisition Apple iCloud / Google (avec entraide internationale si nécessaire).
+</div>
+
+<div class="sec-title">📖 Références</div>
+
+<ul style="font-size:.9rem;line-height:1.7">
+<li>NIST SP 800-101 Rev. 1 — <em>Guidelines on Mobile Device Forensics</em> (2014)</li>
+<li>SWGDE Best Practices for Mobile Phone Forensics</li>
+<li>Cellebrite — Knowledge Base et release notes UFED</li>
+<li>Apple — <em>Platform Security Guide</em> (annuel, support.apple.com/guide/security)</li>
+<li>axi0mX — checkm8 exploit annonce (septembre 2019)</li>
+<li>Sarah Edwards — <em>iOS Forensic Analysis</em>, formations SANS FOR518</li>
+<li>Heather Mahalik — <em>Practical Mobile Forensics</em></li>
+<li>Alexis Brignoni — iLEAPP / ALEAPP (github.com/abrignoni)</li>
+<li>CPP suisse — art. 246-248, 263-268, 269-279</li>
+<li>Fiche CAS-IN — Réquisitions télécoms CH (suite logique pour les données live)</li>
+</ul>
+
+</section>
+
+<footer style="margin-top:3rem;padding:2rem;border-top:1px solid var(--border);text-align:center;font-size:.85rem;color:var(--text-mute)">
+  <p>Fiche CAS-IN — Forensique mobile</p>
+  <p style="margin-top:.5rem">Le mobile est le coffre-fort numérique d'une vie — sa forensique est une course continue contre les patches de sécurité</p>
+</footer>
+
+</body>
+</html>

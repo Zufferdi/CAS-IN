@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Alternate Data Streams (ADS) — CAS-IN Forensique</title>
+<meta name="description" content="NTFS · ADS · fichier:stream:$DATA · T1564.004 · streams.exe · Sysmon Event 15">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+<link rel="stylesheet" href="../style/gamification-tiers.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" aria-label="Retour en haut" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">Alternate Data Streams</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🗂️</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">NTFS</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows</span>
+    <span class="tag tag-red" style="margin-left:.3rem">APT</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Alternate Data Streams (ADS) NTFS</h1>
+    <div class="meta">Le compartiment fantôme · fichier:stream:$DATA · T1564.004 · Saga Gamaredon 2026</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ntfs.html" class="prereq-pill">📖 NTFS</a><a href="windows.html" class="prereq-pill">📖 Windows artefacts</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../campaign.html?id=compartiment-fantome" class="tp-pill">🎮 Saga 2 — Le compartiment fantôme</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="malware_forensique.html" class="related-pill">🔗 Malware</a><a href="ram_forensique.html" class="related-pill">🔗 RAM</a><a href="mitre_attack.html" class="related-pill">🔗 MITRE ATT&CK</a></div>
+  </div>
+</div>
+
+<section class="page-wrap" style="padding-top:1.5rem">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe — Le compartiment caché</div>
+  Tout fichier NTFS a un <strong>stream principal sans nom</strong> (le « data fork » classique, ce que vous voyez quand vous ouvrez le fichier). Mais NTFS permet de greffer sur n'importe quel fichier des <strong>streams supplémentaires nommés</strong>, illimités, chacun avec son propre contenu. Ces streams sont <strong>invisibles dans Windows Explorer</strong>, <strong>ignorés par la plupart des antivirus</strong>, et <strong>copiables seulement vers NTFS</strong> (perdus si copie vers FAT32/exFAT). Un cadeau pour les APT.
+</div>
+
+<div class="sec-title">📜 Origine — Compatibilité Mac HFS</div>
+
+<p>Microsoft introduit les ADS dans NTFS au milieu des années 1990 pour assurer la compatibilité avec le système de fichiers Mac HFS, qui utilisait des « <strong>resource forks</strong> » (un fichier Mac contenait deux flux : <em>data fork</em> pour le contenu, <em>resource fork</em> pour les métadonnées d'icône, type, association, etc.). Les fonctionnalités <em>Services for Macintosh</em> sur Windows NT Server permettaient à un partage SMB de servir des fichiers à des Macs en préservant leurs resource forks via les ADS.</p>
+
+<p>Services for Macintosh a été supprimé de Windows 2008. Mais les ADS sont restés dans NTFS — c'est une fonctionnalité native du système de fichiers, <strong>impossible à désactiver</strong>. Documentation Microsoft officielle limitée, parfois contradictoire entre versions Windows.</p>
+
+<div class="sec-title">🔤 Syntaxe — fichier:stream:$DATA</div>
+
+<p>Syntaxe officielle Microsoft : <code>nomfichier:nomstream:$DATA</code>. Le suffixe <code>:$DATA</code> est l'attribut type, généralement omis car implicite pour les streams de données.</p>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;font-family:var(--mono);font-size:.85rem;line-height:1.6">
+<strong style="color:var(--gold)">Création triviale (CMD ou PowerShell) :</strong><br>
+<code>C:\&gt; echo "secret" &gt; visible.txt:hidden.txt</code><br><br>
+Le fichier <code>visible.txt</code> continue d'afficher son contenu d'origine, mais contient désormais un stream caché <code>hidden.txt</code>.<br><br>
+<strong style="color:var(--cyan)">Lecture du stream :</strong><br>
+<code>C:\&gt; more &lt; visible.txt:hidden.txt</code><br>
+<code>secret</code><br><br>
+<strong style="color:var(--blue)">PowerShell équivalent :</strong><br>
+<code>PS&gt; Set-Content -Path visible.txt -Stream hidden.txt -Value "secret"</code><br>
+<code>PS&gt; Get-Content -Path visible.txt -Stream hidden.txt</code>
+</div>
+
+<p><strong>Propriétés clés des ADS :</strong></p>
+<ul>
+<li>Pas d'impact sur la taille apparente du fichier hôte (mais consomme l'espace disque réel)</li>
+<li>Pas de timestamps propres au stream — seul nom + taille visibles via API</li>
+<li>Streams illimités par fichier — un seul fichier peut contenir des centaines de streams nommés</li>
+<li>Les exécutables stockés en ADS peuvent être lancés directement : <code>start visible.txt:hidden.exe</code> (Windows historique ; bloqué partiellement depuis Windows 10 1709 mais contournements existent)</li>
+</ul>
+
+<div class="sec-title">❌ Pourquoi les outils ratent les ADS</div>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>Le grand silence :</strong> la majorité des outils Windows standards ignorent les ADS par défaut. C'est précisément pourquoi ils restent un vecteur APT efficace en 2026.
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0">
+<thead>
+<tr style="background:rgba(88,166,255,.1)">
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Outil</th>
+<th style="text-align:left;padding:.6rem;border:1px solid var(--border)">Comportement avec ADS</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>Windows Explorer</strong></td><td style="padding:.6rem;border:1px solid var(--border)">❌ N'affiche jamais les streams, même en mode « afficher fichiers cachés »</td></tr>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>FTK Imager</strong></td><td style="padding:.6rem;border:1px solid var(--border)">⚠️ Image les ADS dans le bitstream mais ne les expose pas dans l'arbre — l'analyste doit les chercher activement</td></tr>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>Antivirus standard</strong></td><td style="padding:.6rem;border:1px solid var(--border)">⚠️ La plupart (Bitdefender, McAfee, Norton) scannent uniquement le stream principal sans nom</td></tr>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>Microsoft Defender (2017+)</strong></td><td style="padding:.6rem;border:1px solid var(--border)">✅ Scanne aussi les streams nommés depuis 2017, ratio detection variable selon configuration</td></tr>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>EnCase</strong></td><td style="padding:.6rem;border:1px solid var(--border)">⚠️ Expose les ADS dans la vue « entries » mais nécessite que l'analyste sache où regarder</td></tr>
+<tr><td style="padding:.6rem;border:1px solid var(--border)"><strong>X-Ways Forensics</strong></td><td style="padding:.6rem;border:1px solid var(--border)">✅ EXCELLENT pour les ADS — colonne « Attr » affiche un suffixe « e? » pour signaler la présence d'un stream extra</td></tr>
+</tbody>
+</table>
+
+<div class="sec-title">🔧 Les bons outils de détection</div>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;font-family:var(--mono);font-size:.85rem;line-height:1.7">
+<strong style="color:var(--gold)">1. dir /R (Windows builtin depuis Vista)</strong><br>
+<code>C:\&gt; dir /R C:\target\</code><br>
+Liste les streams supplémentaires de tous les fichiers. Outil rapide de détection. Output :<br>
+<code>     4'096  config.dat</code><br>
+<code>    47'104  config.dat:hidden.hta:$DATA</code><br><br>
+
+<strong style="color:var(--cyan)">2. streams.exe (Sysinternals, gratuit)</strong><br>
+<code>C:\&gt; streams.exe -s C:\target\</code> — liste récursive<br>
+<code>C:\&gt; streams.exe -d fichier</code> — supprime tous les streams<br>
+<code>C:\&gt; streams.exe -accepteula</code> — contourne le prompt licence (utile en script)<br><br>
+
+<strong style="color:var(--blue)">3. PowerShell Get-Item -Stream</strong><br>
+<code>PS&gt; Get-Item -Path "C:\target\config.dat" -Stream "*"</code><br>
+Liste les streams associés. Pour lire le contenu :<br>
+<code>PS&gt; Get-Content -Path "config.dat" -Stream "hidden.hta"</code><br><br>
+
+<strong style="color:#a371f7">4. NirSoft AlternateStreamView (GUI gratuite)</strong><br>
+Scan disque entier, export CSV, filtrage par taille/nom. Idéal pour audit de masse.<br><br>
+
+<strong style="color:#3fb950">5. Linux (ntfs-3g) — getfattr</strong><br>
+<code>$ getfattr -d -m "^user." /mnt/disk/path/fichier</code><br>
+Extrait via attributs étendus xattr. Méthode forensique idéale en lecture seule (pas de modification du fichier hôte).
+</div>
+
+<div class="sec-title">🎯 ADS et APT — T1564.004 MITRE</div>
+
+<p>MITRE ATT&CK référence cette technique sous <strong>T1564.004 — Hide Artifacts: NTFS File Attributes</strong>. Groupes documentés utilisant les ADS :</p>
+
+<ul>
+<li><strong>Gamaredon (FSB Centre 18, Russie)</strong> — saga 2 CAS-IN 2026 (cas anonymisé Solidarité Dnipro). VBScript GammaSteel stocké en ADS sur <code>%PROGRAMDATA%\Microsoft\Crypto\config.dat:hidden.hta</code>. Persistance via Scheduled Task pointant directement vers le path avec « : ».</li>
+<li><strong>Astaroth</strong> — campagne 2019 Brésil, payload bancaire stocké en ADS.</li>
+<li><strong>LokiBot</strong> — variantes 2020-2022, info stealer.</li>
+<li><strong>Emotet</strong> — historique 2018 (avant takedown 2021).</li>
+</ul>
+
+<p><strong>Patterns courants à monitorer :</strong></p>
+<ul>
+<li>ADS sur fichiers de <code>%APPDATA%</code>, <code>%PROGRAMDATA%</code>, <code>%TEMP%</code></li>
+<li>Streams avec extensions exécutables (.hta, .ps1, .vbs, .js, .scr, .exe, .dll)</li>
+<li>Streams &gt; 10 Ko (rare pour stream légitime Zone.Identifier qui contient typiquement &lt; 100 octets)</li>
+<li>Scheduled Tasks pointant vers des paths contenant « : » (signal très fort)</li>
+</ul>
+
+<div class="sec-title">🛡 Défense et détection</div>
+
+<div class="concept-card" style="background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.4)">
+  <div class="concept-title" style="color:#3fb950">✅ Détection temps réel — Sysmon Event ID 15</div>
+  <p>Sysmon (Sysinternals) propose l'événement <strong>Event ID 15 — FileCreateStreamHash</strong> qui enregistre la création d'un ADS avec hash MD5/SHA1 du stream créé. C'est la détection comportementale en temps réel.</p>
+  <div style="font-family:var(--mono);font-size:.75rem;margin-top:.5rem;line-height:1.6">
+  Config recommandée dans <code>sysmon.xml</code> :<br>
+  <code>&lt;FileCreateStreamHash onmatch="exclude"&gt;</code><br>
+  <code>  &lt;TargetFilename condition="end with"&gt;:Zone.Identifier&lt;/TargetFilename&gt;</code><br>
+  <code>&lt;/FileCreateStreamHash&gt;</code><br>
+  (exclut les streams Zone.Identifier légitimes, alerte sur tous les autres)
+  </div>
+</div>
+
+<p><strong>Autres défenses complémentaires :</strong></p>
+<ul>
+<li><strong>EDR comportementaux</strong> (Defender for Endpoint, CrowdStrike, SentinelOne) — détectent l'écriture/exécution depuis ADS</li>
+<li><strong>Application Whitelisting</strong> (AppLocker, WDAC) — bloque l'exécution depuis ADS de manière proactive</li>
+<li><strong>Monitoring des Scheduled Tasks</strong> — alerte sur les tâches pointant vers des paths avec « : »</li>
+<li><strong>Audit régulier</strong> via streams.exe sur les zones sensibles (<code>%APPDATA%</code>, <code>%PROGRAMDATA%</code>)</li>
+</ul>
+
+<div class="warning-card" style="margin:1rem 0">
+<strong>⚠️ Limite involontaire :</strong> les ADS ne survivent pas à une copie vers FAT32/exFAT. Backup sur clé USB FAT32, transfert via certains protocoles cloud, ou restauration depuis backup non-NTFS = perte des ADS. Cela peut être un mécanisme de désinfection involontaire pour le défenseur, mais aussi une perte de preuves forensiques (à éviter pendant collecte).
+</div>
+
+<div class="sec-title">🔬 Forensique post-mortem</div>
+
+<p><strong>Où chercher en investigation :</strong></p>
+<ul>
+<li>ADS sur fichiers fréquemment utilisés (config, log, dat) dans <code>%PROGRAMDATA%</code></li>
+<li>ADS dans <code>%APPDATA%\Local\Temp</code> (zone d'écriture massive, signal faible mais fréquent chez APT)</li>
+<li>Streams Zone.Identifier — légitimes (créés par Windows pour fichiers téléchargés depuis Internet, contiennent juste « ZoneId=3 ») — à filtrer mais à conserver pour traçabilité origine</li>
+<li>Streams suspects — extensions exécutables, taille &gt; 10 Ko, noms ne correspondant pas à Zone.Identifier</li>
+</ul>
+
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;font-family:var(--mono);font-size:.8rem;line-height:1.6">
+<strong>Méthode forensique propre — extraction via Linux (ntfs-3g) :</strong><br><br>
+<code># Monter image en lecture seule</code><br>
+<code>$ sudo mount -t ntfs-3g -o ro,loop image.dd /mnt/forensic</code><br><br>
+<code># Localiser et confirmer le stream</code><br>
+<code>$ getfattr -d -m "^user." /mnt/forensic/ProgramData/Microsoft/Crypto/config.dat</code><br>
+<code># Output: user.hidden.hta="..." (47'104 octets)</code><br><br>
+<code># Extraction propre sans modifier le fichier hôte</code><br>
+<code>$ getfattr -n -n "user.hidden.hta" \</code><br>
+<code>    /mnt/forensic/ProgramData/Microsoft/Crypto/config.dat \</code><br>
+<code>    &gt; /lab/extracted/hidden.hta</code><br><br>
+<code># Hash de vérification d'intégrité</code><br>
+<code>$ sha256sum /lab/extracted/hidden.hta</code><br>
+<code>$ sha256sum /mnt/forensic/ProgramData/Microsoft/Crypto/config.dat</code><br>
+<code># (le hash du fichier hôte ne doit PAS avoir changé)</code>
+</div>
+
+<div class="sec-title">📚 Saga CAS-IN — Le compartiment fantôme (saga 2)</div>
+
+<div class="concept-card">
+  <div class="concept-title">🎮 Cas d'application — Solidarité Dnipro 2026</div>
+  <p>La saga 2 CAS-IN « Le compartiment fantôme » couvre un cas réel anonymisé d'une ONG humanitaire suisse compromise par Gamaredon en janvier 2026. Le VBScript GammaSteel était stocké dans un ADS sur <code>config.dat:hidden.hta</code>. L'enquête a permis l'attribution formelle Gamaredon/FSB Centre 18 par le MPC, première en CH (jugement TPF octobre 2026).</p>
+  <p style="margin-top:.5rem"><a href="../campaign.html?id=compartiment-fantome" class="tp-pill">🎮 Jouer la saga 2 →</a></p>
+</div>
+
+<div class="sec-title">📖 Références</div>
+
+<ul style="font-size:.9rem;line-height:1.7">
+<li>Microsoft Documentation — File Streams (MSDN)</li>
+<li>Mark Russinovich — Sysinternals Blog (streams.exe)</li>
+<li>MITRE ATT&CK — T1564.004 Hide Artifacts: NTFS File Attributes</li>
+<li>ECMA-167 — NTFS Specification (partielle)</li>
+<li>CERT-EU TLP:WHITE — Gamaredon advisories 2024-2026</li>
+<li>Sekoia TDR — Gamaredon reports (GammaLoad, GammaSteel, PteroDo)</li>
+<li>Mandiant — APT methodology + Diamond Model attribution</li>
+<li>Saga 2 CAS-IN — Le compartiment fantôme (cas pédagogique anonymisé)</li>
+</ul>
+
+</section>
+
+<footer style="margin-top:3rem;padding:2rem;border-top:1px solid var(--border);text-align:center;font-size:.85rem;color:var(--text-mute)">
+  <p>Fiche CAS-IN — Alternate Data Streams (ADS) NTFS</p>
+  <p style="margin-top:.5rem">Rédigée à l'occasion de l'enquête saga 2 (Le compartiment fantôme, 2026)</p>
+</footer>
+
+</body>
+</html>

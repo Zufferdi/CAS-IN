@@ -2,6 +2,261 @@
   {
     "theme": "Système de fichiers",
     "theme_icon": "📁",
+    "chapter": "SQLite Avancé",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la taille de page par défaut d'une base SQLite moderne, ce qui détermine la structure des B-Tree pages ?",
+    "opts": [
+      "512 octets",
+      "1024 octets",
+      "4096 octets",
+      "65536 octets"
+    ],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>4096 octets</strong> est la taille de page SQLite par défaut depuis la version 3.12.0 (2016). Cette valeur correspond à la taille de page courante des systèmes de fichiers modernes (NTFS, ext4) → optimisation I/O. Les pages plus petites (512, 1024) étaient le défaut sur les anciennes versions. Pour confirmer : <code>PRAGMA page_size;</code> renvoie la taille en octets.",
+    "expl_ko": "<strong>4096 octets</strong> par défaut depuis 2016. Le carving SQLite cherche les bornes de pages à cette taille (les pages B-Tree sont alignées).",
+    "refs": [
+      "sqlite.org — File Format Spec §1.3",
+      "Paul Sanderson — SQLite Forensics"
+    ],
+    "feedback": {
+      "0": "512 = taille de secteur disque historique, pas la page SQLite moderne.",
+      "1": "1024 était fréquent dans les anciennes versions SQLite (avant 2016).",
+      "3": "Trop grand — possible mais non par défaut."
+    },
+    "fiches": [
+      "sqlite_forensique_avance",
+      "sqlite_forensique"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "🗂️",
+    "chapter": "ADS — Zone.Identifier",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lorsque vous téléchargez un fichier depuis Internet sur Windows, quel stream ADS est automatiquement ajouté par le système ?",
+    "opts": [
+      "fichier:Mark-of-the-Web:$DATA",
+      "fichier:Zone.Identifier:$DATA",
+      "fichier:WebOrigin:$DATA",
+      "fichier:Internet.Cache:$DATA"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>fichier:Zone.Identifier:$DATA</strong> est ajouté par Windows. Contenu typique : <code>[ZoneTransfer]\\nZoneId=3</code> (Zone Internet). Ce stream alimente la « Mark of the Web » (MOTW) qui permet à Office, Defender et autres applications de détecter les fichiers téléchargés et activer la « Protected View » ou bloquer les macros. À FILTRER lors d'audit ADS pour ne pas être noyé sous les Zone.Identifier légitimes.",
+    "expl_ko": "Le stream s'appelle <strong>Zone.Identifier</strong> (avec un point). C'est le mécanisme MOTW. Les autres noms sont inventés.",
+    "refs": [
+      "Microsoft Documentation Zone.Identifier",
+      "MOTW (Mark of the Web)"
+    ],
+    "feedback": {
+      "0": "MOTW est le mécanisme, pas le nom du stream.",
+      "2": "Nom inventé.",
+      "3": "Nom inventé."
+    },
+    "fiches": [
+      "alternate_data_streams"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "🗂️",
+    "chapter": "Alternate Data Streams (NTFS)",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la syntaxe officielle Microsoft pour un Alternate Data Stream NTFS ?",
+    "opts": [
+      "fichier&stream",
+      "fichier:stream:$DATA",
+      "fichier/stream/$DATA",
+      "fichier#stream#data"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La syntaxe officielle est <code>fichier:stream:$DATA</code>. Le suffixe <code>:$DATA</code> est l'attribut type, généralement omis car implicite.",
+    "expl_ko": "La syntaxe officielle Microsoft est <code>fichier:stream:$DATA</code>. Tout autre format est invalide en NTFS.",
+    "refs": [
+      "Microsoft Documentation — File Streams",
+      "MITRE ATT&CK T1564.004"
+    ],
+    "feedback": {
+      "0": "Le séparateur n'est jamais '&' en NTFS.",
+      "2": "Confusion avec un séparateur Unix.",
+      "3": "Le '#' n'est jamais utilisé pour les ADS."
+    },
+    "fiches": [
+      "alternate_data_streams",
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "🗂️",
+    "chapter": "Alternate Data Streams (NTFS)",
+    "diff": "medium",
+    "type": "single",
+    "q": "Vous enquêtez sur un poste Windows. Quel outil Windows builtin permet de lister les ADS d'un répertoire ?",
+    "opts": [
+      "dir /S",
+      "dir /R",
+      "dir /A:H",
+      "ls -la"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<code>dir /R</code> (depuis Windows Vista) liste les streams supplémentaires de tous les fichiers. C'est l'outil rapide de détection builtin Windows.",
+    "expl_ko": "L'option correcte est <code>dir /R</code> depuis Vista. <code>/S</code> est récursif standard, <code>/A:H</code> affiche les fichiers cachés mais pas les streams.",
+    "refs": [
+      "Microsoft Documentation dir command",
+      "Windows builtin tools forensique"
+    ],
+    "feedback": {
+      "0": "/S est pour la récursivité, pas les ADS.",
+      "2": "/A:H affiche les fichiers cachés au sens classique, pas les streams.",
+      "3": "ls -la est Linux, pas Windows."
+    },
+    "fiches": [
+      "alternate_data_streams"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "🗂️",
+    "chapter": "Alternate Data Streams (NTFS)",
+    "diff": "hard",
+    "type": "single",
+    "q": "Vous voulez extraire le contenu d'un ADS sur une image disque NTFS montée en lecture seule sous Linux (ntfs-3g). Quelle commande utilisez-vous pour garantir l'intégrité du fichier hôte ?",
+    "opts": [
+      "cat fichier:stream",
+      "getfattr -n user.streamname fichier (les ADS NTFS sont exposés en xattrs user.* par ntfs-3g)",
+      "strings fichier | grep stream",
+      "dd if=fichier:stream of=output"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sous Linux avec <strong>ntfs-3g</strong> (mode <code>streams_interface=xattr</code>, défaut), les ADS NTFS sont exposés comme attributs étendus dans l'espace <code>user.*</code>. La commande <code>getfattr -n user.streamname fichier</code> récupère le contenu d'un stream nommé. Pour lister tous les streams : <code>getfattr -d fichier</code>. Le préfixe est simplement <code>user.</code> suivi du nom direct du stream — pas de sous-préfixe ",
+    "expl_ko": "Sur une image NTFS montée avec ntfs-3g (xattr mode), les ADS sont accessibles via les utilitaires <code>getfattr</code>/<code>setfattr</code>. La syntaxe Windows <code>cat file:stream</code> ne fonctionne pas sur Linux (sauf en mode <code>streams_interface=windows</code> qui n'est pas le défaut). <code>strings</code> et <code>dd</code> ne ciblent pas spécifiquement les ADS.",
+    "refs": [
+      "ntfs-3g(8) man page — option streams_interface=xattr",
+      "Tuxera ntfs-3g wiki — Using Extended Attributes",
+      "getfattr(1) / setfattr(1) man pages",
+      "ISO/IEC 27037 préservation preuves"
+    ],
+    "feedback": {
+      "0": "La syntaxe Windows fichier:stream ne fonctionne pas sous Linux ntfs-3g.",
+      "2": "strings extrait les chaînes du fichier principal, pas les streams.",
+      "3": "dd ne reconnaît pas la syntaxe Windows des streams."
+    },
+    "fiches": [
+      "alternate_data_streams",
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "📁",
+    "chapter": "F2FS Android",
+    "diff": "medium",
+    "type": "single",
+    "q": "Pourquoi le système de fichiers <strong>F2FS</strong> (Flash-Friendly File System) est-il incontournable en forensique mobile moderne ?",
+    "opts": [
+      "Parce qu'il est plus rapide qu'ext4 sur HDD",
+      "Parce qu'il est le système de fichiers par défaut de nombreux Android récents (Samsung, Google Pixel) — optimisé pour la NAND flash avec un Log-Structured design",
+      "Parce qu'il fonctionne sur iOS",
+      "Parce qu'il est open-source Microsoft"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>F2FS</strong> a été développé par Samsung en 2012 spécifiquement pour la <strong>NAND flash</strong> (smartphones, SSDs). Conçu comme un <strong>Log-Structured File System</strong> : les écritures vont séquentiellement dans un log, avec garbage collection en arrière-plan — adapté aux contraintes du flash (wear leveling, write amplification). Devenu <strong>filesystem par défaut sur de nombreux Android récents</strong> (Samsung Galaxy depuis 2013, Google Pixel 3+). Conséquence forensique : maîtriser sa structure (Superblock, Checkpoint Area, SIT/NAT, Main Area avec segments de 2 MiB) pour parser les images. Outils : <code>f2fs-tools</code>, <code>fsck.f2fs</code>, <code>dump.f2fs</code>, Autopsy avec module dédié.",
+    "expl_ko": "F2FS = filesystem flash Android moderne. Log-Structured, segments de 2 MiB. Différent d'ext4 — parsers dédiés.",
+    "refs": [
+      "Linux kernel — F2FS documentation",
+      "Samsung — F2FS whitepaper"
+    ],
+    "feedback": {
+      "0": "Au contraire — F2FS est spécifiquement pour NAND flash, pas HDD.",
+      "2": "iOS utilise APFS, pas F2FS.",
+      "3": "F2FS est Samsung-origine, intégré au noyau Linux."
+    },
+    "fiches": [
+      "f2fs",
+      "android_forensique"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "📁",
+    "chapter": "Localisation des fichiers",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur NTFS, quelle structure unique contient à la fois les <strong>métadonnées</strong> (nom, dates, taille, permissions) ET les <strong>données</strong> du fichier (si petit) ou les <strong>pointeurs vers les clusters</strong> (si grand) ?",
+    "opts": [
+      "L'inode comme sur EXT4",
+      "Le record MFT (Master File Table) — chaque fichier a un record MFT de 1024 octets contenant attributs ($STANDARD_INFORMATION, $FILE_NAME, $DATA…)",
+      "La FAT (File Allocation Table)",
+      "Le superbloc"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur NTFS, <strong>chaque fichier ou dossier = un record MFT</strong> de 1024 octets (par défaut). Le record contient une suite d'<strong>attributs</strong> : <code>$STANDARD_INFORMATION</code> (timestamps MACE, owner, flags), <code>$FILE_NAME</code> (nom + timestamps redondants), <code>$SECURITY_DESCRIPTOR</code>, <code>$DATA</code> (le contenu). Pour les <strong>petits fichiers</strong> (~700 o et moins), <code>$DATA</code> est <strong>resident</strong> = stocké directement dans la MFT. Pour les gros : <code>$DATA</code> devient <strong>non-resident</strong> = liste de <strong>data runs</strong> (LCN + longueur) pointant vers les clusters réels. Conséquence forensique : la MFT seule peut contenir le fichier entier ! Outils : <code>MFTECmd</code> (Zimmerman), <code>analyzeMFT</code>, Autopsy.",
+    "expl_ko": "NTFS = tout est attribut, tout est dans la MFT. Petits fichiers = resident (contenu DANS la MFT). Grand = pointeurs (data runs).",
+    "refs": [
+      "Brian Carrier — File System Forensic Analysis",
+      "Microsoft — NTFS File System"
+    ],
+    "feedback": {
+      "0": "Inode est EXT2/3/4 (Linux), pas NTFS.",
+      "2": "La FAT est utilisée par les filesystems FAT12/16/32, pas NTFS.",
+      "3": "Superbloc est un concept ext, pas NTFS."
+    },
+    "fiches": [
+      "file_location_fs",
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "📁",
+    "chapter": "Localisation des fichiers",
+    "diff": "easy",
+    "type": "single",
+    "q": "Sur ext4 (Linux/Android), quelle structure stocke les métadonnées d'un fichier (timestamps, permissions, pointeurs vers blocs) — sans le nom ?",
+    "opts": [
+      "L'inode",
+      "Le MFT record",
+      "La FAT",
+      "Le journal"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Sur ext2/3/4, chaque fichier/dossier est représenté par un <strong>inode</strong> (index node) — typiquement 256 octets en ext4. L'inode contient : mode (permissions + type), UID/GID, taille, <strong>timestamps</strong> (atime, mtime, ctime + crtime en ext4 : 4 timestamps en nanoseconde depuis ext4), liens, et <strong>pointeurs vers blocs de données</strong> (12 directs + indirect simple + double + triple, ou extents en ext4). <strong>Le nom du fichier n'est PAS dans l'inode</strong> — il est dans une <code>directory entry</code> du répertoire parent qui pointe vers l'inode. Conséquence : un fichier peut avoir plusieurs noms (hard links) pointant vers le même inode.",
+    "expl_ko": "ext4 : <strong>inode = métadonnées + pointeurs, directory entry = nom + numéro inode</strong>. Hard links possibles car nom et métadonnées sont séparés.",
+    "refs": [
+      "Linux kernel — ext4 documentation",
+      "Brian Carrier — File System Forensic Analysis"
+    ],
+    "feedback": {
+      "1": "MFT record est NTFS.",
+      "2": "FAT est FAT12/16/32.",
+      "3": "Le journal (jbd2 en ext4) loggue les transactions, pas les métadonnées par fichier."
+    },
+    "fiches": [
+      "file_location_fs"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "📁",
     "chapter": "FAT12 / FAT16 / FAT32",
     "diff": "easy",
     "type": "single",
